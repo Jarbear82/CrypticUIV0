@@ -19,6 +19,7 @@ fun terminalProgram() {
     println("Welcome to Cryptic Terminal!")
 
     val db = KuzuDBService()
+    db.initialize()
     var running = true
 
     while (running) {

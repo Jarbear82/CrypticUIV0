@@ -70,6 +70,7 @@ import kotlin.uuid.toKotlinUuid
         } catch (e: Exception) {
             println(e.message)
         }
+         printQuery(query, result)
          return result
     }
 
@@ -186,4 +187,12 @@ import kotlin.uuid.toKotlinUuid
 //            }
 //        }
 //    }
+}
+
+fun printQuery(query: String, result: QueryResult?) {
+    println("\n\n")
+    println("Executing: ${query}...")
+    println()
+    println("Result: ${result}")
+    println("\n\n")
 }
