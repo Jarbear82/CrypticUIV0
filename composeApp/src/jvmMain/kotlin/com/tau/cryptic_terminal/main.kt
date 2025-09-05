@@ -11,9 +11,5 @@ fun main() = application {
         App()
     }
 
-    var running: Boolean = true
-
-    while(running) {
-        terminalProgram()
-    }
+    terminalProgram()
 }

@@ -16,9 +16,6 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.toKotlinUuid
 
 
-
-
-
  class KuzuDBService {
     private var db: Database? = null
     private var conn: Connection? = null
@@ -78,19 +75,19 @@ import kotlin.uuid.toKotlinUuid
 
     // --- Private Helper Functions ---
 
-    private fun executeQuery(query: String, description: String, params: Map<String, Value> = emptyMap()): Boolean {
-        return try {
-            println("Executing query: $query")
-            val preparedStatement = conn?.prepare(query)
-            conn?.execute(preparedStatement, params)
-            println("Successfully executed query: $description")
-            true
-        } catch (e: Exception) {
-            println("Failed to execute query '$description': ${e.message}")
-            e.printStackTrace()
-            false
-        }
-    }
+//    private fun executeQuery(query: String, description: String, params: Map<String, Value> = emptyMap()): Boolean {
+//        return try {
+//            println("Executing query: $query")
+//            val preparedStatement = conn?.prepare(query)
+//            conn?.execute(preparedStatement, params)
+//            println("Successfully executed query: $description")
+//            true
+//        } catch (e: Exception) {
+//            println("Failed to execute query '$description': ${e.message}")
+//            e.printStackTrace()
+//            false
+//        }
+//    }
 
 //    private fun executeQueryAndParseResults(query: String, description: String, params: Map<String, Value> = emptyMap()): List<Map<String, Any?>> {
 //        val results = mutableListOf<Map<String, Any?>>()
