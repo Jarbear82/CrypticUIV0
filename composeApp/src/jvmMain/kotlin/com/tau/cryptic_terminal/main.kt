@@ -11,5 +11,9 @@ fun main() = application {
         App()
     }
 
-    println("Hello World")
+    var running: Boolean = true
+
+    while(running) {
+        terminalProgram()
+    }
 }
