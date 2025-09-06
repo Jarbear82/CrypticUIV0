@@ -56,6 +56,10 @@ class TerminalViewModel {
         executeQuery()
     }
 
+    fun clearQueryResult() {
+        _queryResult.value = null
+    }
+
     fun onCleared() {
         dbService.close()
     }

@@ -10,12 +10,13 @@ plugins {
 
 kotlin {
     jvm()
-    
+
     sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(libs.androidx.compose.material.icons.extended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -42,10 +43,15 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.tau.cryptic_ui_v0"
             packageVersion = "1.0.0"
+
         }
     }
 }
 
-tasks.withType<JavaExec>().configureEach {
-    standardInput = System.`in`
+configurations.all {
+    exclude(group = "androidx.compose.ui", module = "ui-util")
 }
+
+//tasks.withType<JavaExec>().configureEach {
+//    standardInput = System.`in`
+//}
