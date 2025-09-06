@@ -1,4 +1,4 @@
-package com.tau.cryptic_terminal
+package com.tau.cryptic_ui_v0
 
 // import androidx.compose.ui.window.Window
 // import androidx.compose.ui.window.application

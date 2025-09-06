@@ -1,4 +1,4 @@
-package com.tau.cryptic_terminal
+package com.tau.cryptic_ui_v0
 
 import com.kuzudb.Connection as KuzuConnection
 import com.kuzudb.Database as KuzuDatabase
@@ -23,7 +23,22 @@ import java.math.BigInteger
 //  --- Data classes for Actual Nodes and Relationships ---
 data class NodeTable(
     val id: BigInteger,
-    val label: 
+    val label: String,
+    val nodeProperties: List<Pair<String, Any>>
+)
+
+data class RelTable(
+    // TODO: ADD src and dest
+    val id: BigInteger,
+    val label: String,
+    val nodeProperties: List<Pair<String, Any>>
+)
+
+data class RecursiveRelTable(
+    // TODO: implement similar to java api recursive_rel
+    val id: BigInteger,
+    val label: String,
+    val nodeProperties: List<Pair<String, Any>>
 )
 
 // --- Data classes for Schema Representation ---

@@ -36,11 +36,11 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "com.tau.cryptic_terminal.MainKt"
+        mainClass = "com.tau.cryptic_ui_v0.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.tau.cryptic_terminal"
+            packageName = "com.tau.cryptic_ui_v0"
             packageVersion = "1.0.0"
         }
     }
