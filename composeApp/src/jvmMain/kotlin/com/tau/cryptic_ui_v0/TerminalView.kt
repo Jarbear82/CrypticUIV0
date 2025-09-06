@@ -21,63 +21,63 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
     Row(modifier = Modifier.fillMaxSize()) {
         // Left panel for controls and metadata
-        Column(modifier = Modifier.width(200.dp).padding(16.dp)) {
-            metaData?.let {
-                Text("Database Info", style = MaterialTheme.typography.headlineSmall)
-                Text("Name: ${it.name}")
-                Text("Version: ${it.version}")
-                Text("Storage: ${it.storage}")
+        LazyColumn(modifier = Modifier.width(200.dp).padding(16.dp)) {
+            item {
+                metaData?.let {
+                    Text("Database Info", style = MaterialTheme.typography.headlineSmall)
+                    Text("Name: ${it.name}")
+                    Text("Version: ${it.version}")
+                    Text("Storage: ${it.storage}")
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            item {
+                Button(onClick = { viewModel.showSchema() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Show Schema")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { viewModel.listNodes() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("List Nodes")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { viewModel.listEdges() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("List Edges")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { viewModel.listAll() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("List All")
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Button(onClick = { viewModel.showSchema() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Show Schema")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { viewModel.listNodes() }, modifier = Modifier.fillMaxWidth()) {
-                Text("List Nodes")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { viewModel.listEdges() }, modifier = Modifier.fillMaxWidth()) {
-                Text("List Edges")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { viewModel.listAll() }, modifier = Modifier.fillMaxWidth()) {
-                Text("List All")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = query,
-                onValueChange = {
-                    query = it
-                    viewModel.query.value = it.text
-                },
-                label = { Text("Cypher Query") },
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { viewModel.executeQuery() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Execute")
+            item {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        viewModel.query.value = it.text
+                    },
+                    label = { Text("Cypher Query") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { viewModel.executeQuery() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Execute")
+                }
             }
         }
 
-        // Right panel for results
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            if (schema != null) {
-                Text("Schema", style = MaterialTheme.typography.headlineSmall)
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    item {
-                        Text(schema ?: "Schema not loaded")
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+        // Middle panel for query results
+        Column(modifier = Modifier.weight(1f).padding(16.dp)) {
             Text("Query Result", style = MaterialTheme.typography.headlineSmall)
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                item {
-                    QueryResultView(queryResult)
-                }
-            }
+            QueryResultView(queryResult)
+        }
+
+        // Right panel for schema
+        Column(modifier = Modifier.weight(1f).padding(16.dp)) {
+            Text("Schema", style = MaterialTheme.typography.headlineSmall)
+            SchemaView(schema)
         }
     }
 }

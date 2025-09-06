@@ -11,8 +11,8 @@ class TerminalViewModel {
     private val dbService = KuzuDBService()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    private val _schema = MutableStateFlow<String?>(null)
-    val schema: StateFlow<String?> = _schema
+    private val _schema = MutableStateFlow<Schema?>(null)
+    val schema: StateFlow<Schema?> = _schema
 
     private val _queryResult = MutableStateFlow<ExecutionResult?>(null)
     val queryResult: StateFlow<ExecutionResult?> = _queryResult
@@ -37,12 +37,7 @@ class TerminalViewModel {
 
     fun showSchema() {
         viewModelScope.launch {
-            val schemaResult = dbService.getSchema()
-            _schema.value = if (schemaResult != null) {
-                formatSchema(schemaResult)
-            } else {
-                "Failed to retrieve schema."
-            }
+            _schema.value = dbService.getSchema()
         }
     }
 
@@ -59,25 +54,6 @@ class TerminalViewModel {
     fun listAll() {
         query.value = "MATCH ()-[r]->(), (n) RETURN n, r;"
         executeQuery()
-    }
-
-    private fun formatSchema(schema: Schema): String {
-        val builder = StringBuilder()
-        builder.append("Node Tables:\n")
-        for (table in schema.nodeTables) {
-            builder.append("  - ${table.name}\n")
-            for (prop in table.properties) {
-                builder.append("    - ${prop.first}: ${prop.second}\n")
-            }
-        }
-        builder.append("\nRelationship Tables:\n")
-        for (table in schema.relTables) {
-            builder.append("  - ${table.name} (${table.src} -> ${table.dst})\n")
-            for (prop in table.properties) {
-                builder.append("    - ${prop.first}: ${prop.second}\n")
-            }
-        }
-        return builder.toString()
     }
 
     fun onCleared() {
