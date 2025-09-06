@@ -2,17 +2,17 @@ package com.tau.cryptic_ui_v0
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
     val schema by viewModel.schema.collectAsState()
     val queryResult by viewModel.queryResult.collectAsState()
+    val metaData by viewModel.dbMetaData.collectAsState()
     var query by remember { mutableStateOf(TextFieldValue("")) }
 
     LaunchedEffect(viewModel.query.value) {
@@ -20,8 +20,16 @@ fun TerminalView(viewModel: TerminalViewModel) {
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // Left panel for controls
+        // Left panel for controls and metadata
         Column(modifier = Modifier.width(200.dp).padding(16.dp)) {
+            metaData?.let {
+                Text("Database Info", style = MaterialTheme.typography.headlineSmall)
+                Text("Name: ${it.name}")
+                Text("Version: ${it.version}")
+                Text("Storage: ${it.storage}")
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Button(onClick = { viewModel.showSchema() }, modifier = Modifier.fillMaxWidth()) {
                 Text("Show Schema")
             }
@@ -67,7 +75,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
             Text("Query Result", style = MaterialTheme.typography.headlineSmall)
             LazyColumn(modifier = Modifier.weight(1f)) {
                 item {
-                    Text(queryResult)
+                    QueryResultView(queryResult)
                 }
             }
         }

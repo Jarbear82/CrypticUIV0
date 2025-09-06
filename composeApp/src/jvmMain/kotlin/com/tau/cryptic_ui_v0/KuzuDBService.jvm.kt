@@ -76,15 +76,24 @@ sealed class ExecutionResult {
     data class Error(val message: String) : ExecutionResult()
 }
 
+// --- Data class for Database Metadata ---
+data class DBMetaData(
+    val name: String,
+    val version: String,
+    val storage: String
+)
+
 // --- The Main Service Class ---
 
 class KuzuDBService {
     private var db: KuzuDatabase? = null
     private var conn: KuzuConnection? = null
     private var currentSchemaSignature: String? = null
+    private var storagePath: String? = null
 
     fun initialize(directoryPath: String? = null) {
         try {
+            storagePath = directoryPath
             db = if (directoryPath != null) {
                 val dbDirectory = Paths.get(directoryPath)
                 if (!Files.exists(dbDirectory)) {
@@ -104,6 +113,14 @@ class KuzuDBService {
             throw IllegalStateException("Could not initialize Kuzu database.", e)
         }
     }
+
+    fun getDBMetaData(): DBMetaData {
+        val name = if (storagePath != null) Paths.get(storagePath).fileName.toString() else "In-Memory"
+        val version = KuzuVersion.getVersion()
+        val storage = storagePath ?: "In-Memory"
+        return DBMetaData(name, version, storage)
+    }
+
 
     fun close() {
         try {
@@ -310,7 +327,6 @@ class KuzuDBService {
                 }
                 rows.add(rowValues)
             }
-            result.resetIterator()
             val summary = "Execution: ${result.querySummary.executionTime}ms, Compilation: ${result.querySummary.compilingTime}ms"
             FormattedResult(headers, rows, dataTypesMap, summary, result.numTuples)
         }
