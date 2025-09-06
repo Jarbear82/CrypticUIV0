@@ -54,7 +54,7 @@ class TerminalViewModel {
     }
 
     fun listAll() {
-        query.value = "MATCH (n)-[r]->(m) RETURN n, r, m;"
+        query.value = "MATCH ()-[r]->(), (n) RETURN n, r;"
         executeQuery()
     }
 
@@ -74,7 +74,73 @@ class TerminalViewModel {
         }
     }
 
-     fun onCleared() {
+    private fun formatResultAsTable(result: FormattedResult): String {
+        val headers = result.headers
+        val rows = result.rows
+        if (headers.isEmpty() || rows.isEmpty()) {
+            return "No results to display."
+        }
+
+        val columnWidths = mutableMapOf<Int, Int>()
+        for (i in headers.indices) {
+            columnWidths[i] = headers[i].length
+        }
+
+        for (row in rows) {
+            for (i in row.indices) {
+                val cellLength = row[i]?.toString()?.length ?: 4
+                if (cellLength > (columnWidths[i] ?: 0)) {
+                    columnWidths[i] = cellLength
+                }
+            }
+        }
+
+        val builder = StringBuilder()
+        // Header
+        for (i in headers.indices) {
+            builder.append(headers[i].padEnd(columnWidths[i] ?: 0))
+            builder.append(" | ")
+        }
+        builder.append("\n")
+        // Separator
+        for (i in headers.indices) {
+            builder.append("-".repeat(columnWidths[i] ?: 0))
+            builder.append(" | ")
+        }
+        builder.append("\n")
+
+        // Rows
+        for (row in rows) {
+            for (i in row.indices) {
+                builder.append((row.getOrNull(i)?.toString() ?: "null").padEnd(columnWidths[i] ?: 0))
+                builder.append(" | ")
+            }
+            builder.append("\n")
+        }
+
+        return builder.toString()
+    }
+
+    private fun formatSchema(schema: Schema): String {
+        val builder = StringBuilder()
+        builder.append("Node Tables:\n")
+        for (table in schema.nodeTables) {
+            builder.append("  - ${table.name}\n")
+            for (prop in table.properties) {
+                builder.append("    - ${prop.first}: ${prop.second}\n")
+            }
+        }
+        builder.append("\nRelationship Tables:\n")
+        for (table in schema.relTables) {
+            builder.append("  - ${table.name} (${table.src} -> ${table.dst})\n")
+            for (prop in table.properties) {
+                builder.append("    - ${prop.first}: ${prop.second}\n")
+            }
+        }
+        return builder.toString()
+    }
+
+    fun onCleared() {
         dbService.close()
     }
 }

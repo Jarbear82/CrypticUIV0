@@ -301,7 +301,6 @@ class KuzuDBService {
             val dataTypesMap = headers.zip((0 until numColumns).map { result.getColumnDataType(it) }).toMap()
             val rows = mutableListOf<List<Any?>>()
 
-            result.resetIterator()
             while (result.hasNext()) {
                 val tuple = result.next
                 val rowValues = (0 until numColumns).map { colIdx ->
@@ -311,6 +310,7 @@ class KuzuDBService {
                 }
                 rows.add(rowValues)
             }
+            result.resetIterator()
             val summary = "Execution: ${result.querySummary.executionTime}ms, Compilation: ${result.querySummary.compilingTime}ms"
             FormattedResult(headers, rows, dataTypesMap, summary, result.numTuples)
         }
