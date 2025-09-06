@@ -66,7 +66,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             Column(modifier = Modifier.width(300.dp).padding(16.dp)) {
                 var tabIndex by remember { mutableStateOf(0) }
-                val tabs = listOf("Schema", "Metadata")
+                val tabs = listOf("Metadata", "Schema")
 
                 TabRow(selectedTabIndex = tabIndex) {
                     tabs.forEachIndexed { index, title ->
@@ -81,8 +81,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (tabIndex) {
-                    0 -> SchemaView(schema)
-                    1 -> {
+                    0 -> {
                         metaData?.let {
                             Text(
                                 "Database Info",
@@ -93,6 +92,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                             Text("Storage: ${it.storage}")
                         }
                     }
+                    1 -> SchemaView(schema)
                 }
             }
         }
