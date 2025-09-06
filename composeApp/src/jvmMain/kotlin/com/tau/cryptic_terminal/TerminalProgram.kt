@@ -1,5 +1,7 @@
 package com.tau.cryptic_terminal
 
+import kotlinx.coroutines.runBlocking
+import java.util.LinkedHashMap
 import kotlin.system.exitProcess
 
 enum class Choice(val value: String, val description: String) {
@@ -17,14 +19,12 @@ enum class Choice(val value: String, val description: String) {
     }
 }
 
-fun terminalProgram() {
+fun terminalProgram() = runBlocking {
     println("Welcome to Cryptic Terminal!")
 
-    // Using a file-based DB for persistence across sessions.
-    // To use in-memory, just call db.initialize() with no arguments.
     val db = KuzuDBService()
     try {
-        db.initialize()
+        db.initialize() // Initializes an in-memory database by default
     } catch (e: IllegalStateException) {
         println("Could not start the application. Exiting.")
         exitProcess(1)
@@ -60,52 +60,53 @@ fun terminalProgram() {
     }
 }
 
-/**
- * Handles the execution of a query and prints the formatted results or error.
- */
-private fun handleExecution(db: KuzuDBService, query: String) {
+private suspend fun handleExecution(db: KuzuDBService, query: String) {
     try {
         println("\nExecuting: $query")
-        val executionResult = db.executeQuery(query)
-        if (executionResult.isSchemaChanged) {
-            println("📢 Schema has changed as a result of the query.")
-        }
-        if (executionResult.results.isEmpty()) {
-            println("Query executed successfully, but returned no data.")
-            return
-        }
-        executionResult.results.forEachIndexed { index, result ->
-            if (executionResult.results.size > 1) {
-                println("\n--- Result Set ${index + 1} ---")
+        when (val executionResult = db.executeQuery(query)) {
+            is ExecutionResult.Success -> {
+                if (executionResult.isSchemaChanged) {
+                    println("📢 Schema has changed as a result of the query.")
+                }
+                if (executionResult.results.isEmpty()) {
+                    println("Query executed successfully, but returned no data.")
+                    return
+                }
+                executionResult.results.forEachIndexed { index, result ->
+                    if (executionResult.results.size > 1) {
+                        println("\n--- Result Set ${index + 1} ---")
+                    }
+                    if (result.rows.isEmpty()) {
+                        println("This result set is empty.")
+                    } else {
+                        println(formatResultAsTable(result))
+                    }
+                    println("Returned ${result.rowCount} rows. ${result.summary}")
+                }
             }
-            if (result.rows.isEmpty()) {
-                println("This result set is empty.")
-            } else {
-                println(formatResultAsTable(result))
+            is ExecutionResult.Error -> {
+                println("❌ An error occurred: ${executionResult.message}")
             }
-            println("Returned ${result.rowCount} rows. ${result.summary}")
         }
     } catch (e: Exception) {
-        println("❌ An error occurred: ${e.message}")
+        println("❌ An unexpected error occurred: ${e.message}")
     }
 }
 
-/**
- * Fetches the schema using the service and then prints a formatted version.
- */
-private fun showSchema(db: KuzuDBService) {
+private suspend fun showSchema(db: KuzuDBService) {
     try {
         println("\nFetching database schema...")
         val schema = db.getSchema()
-        println(formatSchema(schema))
+        if (schema != null) {
+            println(formatSchema(schema))
+        } else {
+            println("Could not retrieve schema.")
+        }
     } catch (e: Exception) {
         println("❌ An error occurred while fetching schema: ${e.message}")
     }
 }
 
-/**
- * Formats the Schema data class into a readable string.
- */
 fun formatSchema(schema: Schema): String {
     val sb = StringBuilder()
     sb.appendLine("--- Node Tables ---")
@@ -113,10 +114,9 @@ fun formatSchema(schema: Schema): String {
         sb.appendLine("  (No node tables found)")
     } else {
         schema.nodeTables.forEach { table ->
-            sb.appendLine("  ${table.name}:")
-            table.properties.forEach { prop ->
-                val pk = if (prop["primary_key"] == "true") " (PK)" else ""
-                sb.appendLine("    - ${prop["name"]}: ${prop["type"]}$pk")
+            sb.appendLine("  ${table.id}.${table.name}:")
+            table.properties.forEach { (name, type) ->
+                sb.appendLine("    - $name: $type")
             }
         }
     }
@@ -125,42 +125,73 @@ fun formatSchema(schema: Schema): String {
         sb.appendLine("  (No relationship tables found)")
     } else {
         schema.relTables.forEach { table ->
-            sb.appendLine("  ${table.name} (FROM ${table.src} TO ${table.dst}):")
-            table.properties.forEach { prop ->
-                sb.appendLine("    - ${prop["name"]}: ${prop["type"]}")
+            sb.appendLine("  ${table.id}. ${table.name} (FROM ${table.src} TO ${table.dst}):")
+            if (table.properties.isEmpty()) {
+                sb.appendLine("    (No properties)")
+            } else {
+                table.properties.forEach { (name, type) ->
+                    sb.appendLine("    - $name: $type")
+                }
             }
         }
     }
     return sb.toString()
 }
 
-/**
- * Formats a single query result into a pretty ASCII table string.
- * Truncates wide columns to keep the table readable.
- */
 fun formatResultAsTable(result: FormattedResult): String {
     if (result.rows.isEmpty()) return "No results to display."
+
+    val rowsAsStrings = result.rows.map { row ->
+        row.map { item ->
+            when (item) {
+                is Map<*, *> -> {
+                    if (item.containsKey("_nodes") && item.containsKey("_rels")) {
+                        // It's a Recursive Relationship (Path)
+                        "PATH(nodes=${item["_nodes"]}, rels=${item["_rels"]})"
+                    } else if (item.containsKey("_id") && item.containsKey("_label") && !item.containsKey("_src")) {
+                        // It's a Node
+                        val id = item["_id"]
+                        val label = item["_label"]
+                        val props = item.filterKeys { it != "_id" && it != "_label" }
+                        "NODE(id=$id, lbl='$label', props=$props)"
+                    } else if (item.containsKey("_src") && item.containsKey("_dst") && item.containsKey("_label")) {
+                        // It's a Relationship
+                        val src = item["_src"]
+                        val dst = item["_dst"]
+                        val label = item["_label"]
+                        val props = item.filterKeys { it !in listOf("_id", "_src", "_dst", "_label") }
+                        "REL($src)-[lbl='$label', props=$props]->($dst)"
+                    } else {
+                        item.toString() // Fallback for other map-like structures (STRUCT, MAP)
+                    }
+                }
+                else -> item?.toString() ?: "NULL"
+            }
+        }
+    }
+
     val headers = result.headers
-    val rows = result.rows
     val colWidths = headers.map { it.length }.toMutableList()
-    for (row in rows) {
+    for (row in rowsAsStrings) {
         for (i in headers.indices) {
-            val cellLength = row.getOrNull(i)?.length?.coerceAtMost(80) ?: 4 // Limit width and handle NULL
+            val cellLength = row.getOrNull(i)?.length?.coerceAtMost(80) ?: 4
             if (cellLength > colWidths[i]) {
                 colWidths[i] = cellLength
             }
         }
     }
+
     val sb = StringBuilder()
     val separator = colWidths.joinToString(prefix = "+-", postfix = "-+", separator = "-+-") { "-".repeat(it) }
+
     sb.appendLine(separator)
     val headerLine = headers.mapIndexed { i, h -> h.padEnd(colWidths[i]) }.joinToString(" | ", "| ", " |")
     sb.appendLine(headerLine)
     sb.appendLine(separator)
-    for (row in rows) {
+
+    for (row in rowsAsStrings) {
         val rowLine = row.mapIndexed { i, cell ->
-            val cellStr = cell ?: "NULL"
-            val truncatedCell = if (cellStr.length > 80) cellStr.substring(0, 77) + "..." else cellStr
+            val truncatedCell = if (cell.length > 80) cell.substring(0, 77) + "..." else cell
             truncatedCell.padEnd(colWidths[i])
         }.joinToString(" | ", "| ", " |")
         sb.appendLine(rowLine)
@@ -188,4 +219,3 @@ fun getChoice(): Choice {
         println("Invalid choice. Please try again.")
     }
 }
-
