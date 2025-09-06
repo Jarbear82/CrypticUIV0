@@ -20,38 +20,26 @@ fun TerminalView(viewModel: TerminalViewModel) {
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // Left panel for controls and metadata
-        LazyColumn(modifier = Modifier.width(200.dp).padding(16.dp)) {
-            item {
-                metaData?.let {
-                    Text("Database Info", style = MaterialTheme.typography.headlineSmall)
-                    Text("Name: ${it.name}")
-                    Text("Version: ${it.version}")
-                    Text("Storage: ${it.storage}")
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
 
+        // ------------------ Left panel for controls and query results --------------------------
+        
+        LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
             item {
-                Button(onClick = { viewModel.showSchema() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Show Schema")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.listNodes() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("List Nodes")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.listEdges() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("List Edges")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.listAll() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("List All")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { viewModel.showSchema() }) {
+                        Text("Show Schema")
+                    }
+                    Button(onClick = { viewModel.listNodes() }) {
+                        Text("List Nodes")
+                    }
+                    Button(onClick = { viewModel.listEdges() }) {
+                        Text("List Edges")
+                    }
+                    Button(onClick = { viewModel.listAll() }) {
+                        Text("List All")
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
                 OutlinedTextField(
                     value = query,
                     onValueChange = {
@@ -65,19 +53,44 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Button(onClick = { viewModel.executeQuery() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Execute")
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item {
+                Text("Query Result", style = MaterialTheme.typography.headlineSmall)
+                QueryResultView(queryResult)
             }
         }
 
-        // Middle panel for query results
-        Column(modifier = Modifier.weight(1f).padding(16.dp)) {
-            Text("Query Result", style = MaterialTheme.typography.headlineSmall)
-            QueryResultView(queryResult)
-        }
+        // --------------- Right panel for Schema and Metadata tabs ------------------------------
 
-        // Right panel for schema
-        Column(modifier = Modifier.weight(1f).padding(16.dp)) {
-            Text("Schema", style = MaterialTheme.typography.headlineSmall)
-            SchemaView(schema)
+        Column(modifier = Modifier.width(300.dp).padding(16.dp)) {
+            var tabIndex by remember { mutableStateOf(0) }
+            val tabs = listOf("Schema", "Metadata")
+
+            TabRow(selectedTabIndex = tabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        text = { Text(title) },
+                        selected = tabIndex == index,
+                        onClick = { tabIndex = index }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when (tabIndex) {
+                0 -> SchemaView(schema)
+                1 -> {
+                    metaData?.let {
+                        Text("Database Info", style = MaterialTheme.typography.headlineSmall)
+                        Text("Name: ${it.name}")
+                        Text("Version: ${it.version}")
+                        Text("Storage: ${it.storage}")
+                    }
+                }
+            }
         }
     }
 }
