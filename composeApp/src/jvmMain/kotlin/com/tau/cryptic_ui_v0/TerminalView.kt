@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -14,16 +13,13 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val schema by viewModel.schema.collectAsState()
     val queryResult by viewModel.queryResult.collectAsState()
     val metaData by viewModel.dbMetaData.collectAsState()
-    var query by remember { mutableStateOf(TextFieldValue("")) }
+    val query by viewModel.query
 
     // Collect the state for the MetadataView
     val nodes by viewModel.nodeList.collectAsState()
     val relationships by viewModel.relationshipList.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
 
-    LaunchedEffect(viewModel.query.value) {
-        query = query.copy(text = viewModel.query.value)
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -49,10 +45,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = query,
-                        onValueChange = {
-                            query = it
-                            viewModel.query.value = it.text
-                        },
+                        onValueChange = { viewModel.onQueryChange(it) },
                         label = { Text("Cypher Query") },
                         modifier = Modifier.fillMaxWidth()
                     )

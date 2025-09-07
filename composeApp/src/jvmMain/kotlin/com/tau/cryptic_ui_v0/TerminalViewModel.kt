@@ -1,5 +1,6 @@
 package com.tau.cryptic_ui_v0
 
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,12 @@ class TerminalViewModel {
     private val _selectedItem = MutableStateFlow<Any?>(null)
     val selectedItem: StateFlow<Any?> = _selectedItem
 
-    val query = mutableStateOf("")
+    private val _query = mutableStateOf("")
+    val query: State<String> = _query
+
+    fun onQueryChange(newQuery: String) {
+        _query.value = newQuery
+    }
 
     init {
         viewModelScope.launch {
