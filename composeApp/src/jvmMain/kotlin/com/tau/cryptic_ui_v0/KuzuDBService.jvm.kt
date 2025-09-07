@@ -331,4 +331,21 @@ class KuzuDBService {
             FormattedResult(headers, rows, dataTypesMap, summary, result.numTuples)
         }
     }
+
+    suspend fun getPrimaryKey(tableName: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
+            while (propertiesResult.hasNext()) {
+                val propRow = propertiesResult.next
+                val isPrimary = propRow.getValue(4).getValue<Boolean>()
+                if (isPrimary) {
+                    return@withContext propRow.getValue(1).getValue<Any>().toString()
+                }
+            }
+            null
+        } catch (e: Exception) {
+            println("Error getting primary key for table $tableName: ${e.message}")
+            null
+        }
+    }
 }

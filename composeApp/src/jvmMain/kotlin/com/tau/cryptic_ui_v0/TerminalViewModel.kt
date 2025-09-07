@@ -20,18 +20,32 @@ class TerminalViewModel {
     private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
     val dbMetaData: StateFlow<DBMetaData?> = _dbMetaData
 
+    private val _nodeList = MutableStateFlow<List<DisplayItem>>(emptyList())
+    val nodeList: StateFlow<List<DisplayItem>> = _nodeList
+
+    private val _relationshipList = MutableStateFlow<List<DisplayItem>>(emptyList())
+    val relationshipList: StateFlow<List<DisplayItem>> = _relationshipList
+
+    private val _selectedItem = MutableStateFlow<DisplayItem?>(null)
+    val selectedItem: StateFlow<DisplayItem?> = _selectedItem
+
     val query = mutableStateOf("")
 
     init {
         viewModelScope.launch {
             dbService.initialize()
             _dbMetaData.value = dbService.getDBMetaData()
+            showSchema()
         }
     }
 
     fun executeQuery() {
         viewModelScope.launch {
-            _queryResult.value = dbService.executeQuery(query.value)
+            val result = dbService.executeQuery(query.value)
+            _queryResult.value = result
+            if (result is ExecutionResult.Success && result.isSchemaChanged) {
+                showSchema()
+            }
         }
     }
 
@@ -42,22 +56,63 @@ class TerminalViewModel {
     }
 
     fun listNodes() {
-        query.value = "MATCH (n) RETURN n;"
-        executeQuery()
+        viewModelScope.launch {
+            val nodes = mutableListOf<DisplayItem>()
+            _schema.value?.nodeTables?.forEach { table ->
+                val pk = dbService.getPrimaryKey(table.name) ?: "_id"
+                val q = "MATCH (n:${table.name}) RETURN n._id, n.$pk"
+                val result = dbService.executeQuery(q)
+                if (result is ExecutionResult.Success) {
+                    result.results.firstOrNull()?.rows?.forEach { row ->
+                        nodes.add(DisplayItem(id = row[0].toString(), label = table.name, primaryKey = row[1].toString()))
+                    }
+                }
+            }
+            _nodeList.value = nodes
+        }
     }
 
     fun listEdges() {
-        query.value = "MATCH ()-[r]->() RETURN r;"
-        executeQuery()
+        viewModelScope.launch {
+            val rels = mutableListOf<DisplayItem>()
+            _schema.value?.relTables?.forEach { table ->
+                val pk = dbService.getPrimaryKey(table.name) ?: "_id"
+                val q = "MATCH ()-[r:${table.name}]->() RETURN r._id, r.$pk"
+                val result = dbService.executeQuery(q)
+                if (result is ExecutionResult.Success) {
+                    result.results.firstOrNull()?.rows?.forEach { row ->
+                        rels.add(DisplayItem(id = row[0].toString(), label = table.name, primaryKey = row[1].toString()))
+                    }
+                }
+            }
+            _relationshipList.value = rels
+        }
     }
 
     fun listAll() {
-        query.value = "MATCH ()-[r]->(), (n) RETURN n, r;"
-        executeQuery()
+        listNodes()
+        listEdges()
     }
 
     fun clearQueryResult() {
         _queryResult.value = null
+    }
+
+    fun selectItem(item: DisplayItem) {
+        viewModelScope.launch {
+            val q = "MATCH (n) WHERE n._id = '${item.id}' RETURN n"
+            val result = dbService.executeQuery(q)
+            if (result is ExecutionResult.Success) {
+                result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
+                    val properties = row[0] as? Map<String, Any?>
+                    _selectedItem.value = item.copy(properties = properties ?: emptyMap())
+                }
+            }
+        }
+    }
+
+    fun clearSelectedItem() {
+        _selectedItem.value = null
     }
 
     fun onCleared() {

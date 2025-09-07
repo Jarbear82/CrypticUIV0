@@ -35,7 +35,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                             Text("List Nodes")
                         }
                         Button(onClick = { viewModel.listEdges() }) {
-                            Text("List Edges")
+                            Text("List Rels")
                         }
                         Button(onClick = { viewModel.listAll() }) {
                             Text("List All")
@@ -64,7 +64,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             // --------------- Right panel for Schema and Metadata tabs ------------------------------
 
-            Column(modifier = Modifier.width(300.dp).padding(16.dp)) {
+            Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
                 var tabIndex by remember { mutableStateOf(0) }
                 val tabs = listOf("Metadata", "Schema")
 
@@ -81,17 +81,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (tabIndex) {
-                    0 -> {
-                        metaData?.let {
-                            Text(
-                                "Database Info",
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                            Text("Name: ${it.name}")
-                            Text("Version: ${it.version}")
-                            Text("Storage: ${it.storage}")
-                        }
-                    }
+                    0 -> MetadataView(viewModel)
                     1 -> SchemaView(schema)
                 }
             }
