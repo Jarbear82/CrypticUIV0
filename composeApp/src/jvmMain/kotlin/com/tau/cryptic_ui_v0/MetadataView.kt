@@ -59,6 +59,7 @@ fun MetadataView(
                     items(relationships) { rel ->
                         ListItem(
                             headlineContent = { Text("(${rel.srcLabel})-[${rel.label}]->(${rel.dstLabel})")},
+                            supportingContent = { Text(rel.id) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onRelationshipClick(rel) },

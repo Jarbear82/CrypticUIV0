@@ -150,10 +150,12 @@ class TerminalViewModel {
             val nodes = mutableListOf<DisplayItem>()
             _schema.value?.nodeTables?.forEach { table ->
                 val pk = dbService.getPrimaryKey(table.name) ?: return@forEach
-                val q = "MATCH (n:${table.name.withBackticks()}) RETURN n._id, n.${pk.withBackticks()}"
+                // Corrected the query to use the id() function for nodes
+                val q = "MATCH (n:${table.name.withBackticks()}) RETURN id(n), n.${pk.withBackticks()}"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
+                        // Assuming row[0] is the internal ID and row[1] is the primary key value
                         nodes.add(DisplayItem(id = row[0].toString(), label = table.name, primaryKey = row[1].toString()))
                     }
                 }
@@ -166,7 +168,7 @@ class TerminalViewModel {
         viewModelScope.launch {
             val rels = mutableListOf<RelDisplayItem>()
             _schema.value?.relTables?.forEach { table ->
-                val q = "MATCH (a)-[r:${table.name.withBackticks()}]->(b) RETURN a, r, b"
+                val q = "MATCH (src)-[r:${table.name.withBackticks()}]->(dst) RETURN src, r, dst, id(r)"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
@@ -175,7 +177,7 @@ class TerminalViewModel {
                         val dstNode = row[2] as Map<String, Any?>
                         rels.add(
                             RelDisplayItem(
-                                id = rel["_id"].toString(),
+                                id = row[3].toString(),
                                 label = rel["_label"].toString(),
                                 src = srcNode["_id"].toString(),
                                 dst = dstNode["_id"].toString(),
