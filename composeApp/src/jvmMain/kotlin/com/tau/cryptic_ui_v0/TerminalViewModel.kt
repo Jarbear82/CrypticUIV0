@@ -8,6 +8,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// List of reserved workds in kuzu:
+val reservedWords: List<String> = listOf(
+    "COLUMN", "CREATE", "DBTYPE", "DEFAULT", "GROUP", "HEADERS", "INSTALL", "MACRO", "OPTIONAL",
+    "PROFILE", "UNION", "UNWIND", "WITH", "LIMIT", "ONLY", "ORDER", "WHERE", "ALL", "CASE", "CAST",
+    "ELSE", "END", "ENDS", "EXISTS", "GLOB", "SHORTEST", "THEN", "WHEN", "NULL", "FALSE", "TRUE",
+    "ASC", "ASCENDING", "DESC", "DESCENDING", "ON", "AND","DISTINCT", "IN", "IS", "NOT", "OR",
+    "STARTS", "XOR", "FROM", "PRIMARY", "TABLE", "TO"
+)
+
 class TerminalViewModel {
     private val dbService = KuzuDBService()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
@@ -38,6 +47,10 @@ class TerminalViewModel {
             _dbMetaData.value = dbService.getDBMetaData()
             showSchema()
         }
+    }
+
+    private fun String.withBackticks(): String {
+        return if (reservedWords.contains(this.uppercase())) "`$this`" else this
     }
 
     fun executeQuery() {
@@ -126,7 +139,7 @@ class TerminalViewModel {
             val nodes = mutableListOf<DisplayItem>()
             _schema.value?.nodeTables?.forEach { table ->
                 val pk = dbService.getPrimaryKey(table.name) ?: "_id"
-                val q = "MATCH (n:${table.name}) RETURN n._id, n.$pk"
+                val q = "MATCH (n:${table.name.withBackticks()}) RETURN n._id, n.${pk.withBackticks()}"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
@@ -143,7 +156,7 @@ class TerminalViewModel {
             val rels = mutableListOf<DisplayItem>()
             _schema.value?.relTables?.forEach { table ->
                 val pk = dbService.getPrimaryKey(table.name) ?: "_id"
-                val q = "MATCH ()-[r:${table.name}]->() RETURN r._id, r.$pk"
+                val q = "MATCH ()-[r:${table.name.withBackticks()}]->() RETURN r._id, r.${pk.withBackticks()}"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
@@ -167,7 +180,7 @@ class TerminalViewModel {
     fun selectItem(item: DisplayItem) {
         viewModelScope.launch {
             val pk = dbService.getPrimaryKey(item.label) ?: "_id"
-            val q = "MATCH (n:${item.label}) WHERE n.$pk = '${item.primaryKey}' RETURN n"
+            val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pk.withBackticks()} = '${item.primaryKey}' RETURN n"
             val result = dbService.executeQuery(q)
             if (result is ExecutionResult.Success) {
                 result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
@@ -193,7 +206,7 @@ class TerminalViewModel {
     private suspend fun deleteNode(item: DisplayItem) {
         // 2. Generate Query
         val pk = dbService.getPrimaryKey(item.label) ?: return
-        val q = "MATCH (n:${item.label}) WHERE n.$pk = '${item.primaryKey}' DETACH DELETE n"
+        val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pk.withBackticks()} = '${item.primaryKey}' DETACH DELETE n"
         val result = dbService.executeQuery(q)
         if (result is ExecutionResult.Success) {
             // 3. Update Node list
@@ -204,7 +217,7 @@ class TerminalViewModel {
     private suspend fun deleteRel(item: DisplayItem) {
         // 2. Generate Query
         val pk = dbService.getPrimaryKey(item.label) ?: return
-        val q = "MATCH ()-[r:${item.label}]->() WHERE r.$pk = '${item.primaryKey}' DELETE r"
+        val q = "MATCH ()-[r:${item.label.withBackticks()}]->() WHERE r.${pk.withBackticks()} = '${item.primaryKey}' DELETE r"
         val result = dbService.executeQuery(q)
         if (result is ExecutionResult.Success) {
             // 3. Update Rel list
