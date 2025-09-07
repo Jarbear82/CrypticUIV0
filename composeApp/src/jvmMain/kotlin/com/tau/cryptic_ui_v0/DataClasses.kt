@@ -10,6 +10,16 @@ data class DisplayItem(
     val properties: Map<String, Any?> = emptyMap()
 )
 
+data class RelDisplayItem(
+    val id: String,
+    val label: String,
+    val src: String,
+    val dst: String,
+    val srcLabel: String,
+    val dstLabel: String,
+    val properties: Map<String, Any?> = emptyMap()
+)
+
 //  --- Data classes for Actual Nodes and Relationships ---
 data class NodeTable(
     val id: BigInteger,

@@ -16,6 +16,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val metaData by viewModel.dbMetaData.collectAsState()
     var query by remember { mutableStateOf(TextFieldValue("")) }
 
+    // Collect the state for the MetadataView
+    val nodes by viewModel.nodeList.collectAsState()
+    val relationships by viewModel.relationshipList.collectAsState()
+    val selectedItem by viewModel.selectedItem.collectAsState()
+
     LaunchedEffect(viewModel.query.value) {
         query = query.copy(text = viewModel.query.value)
     }
@@ -66,7 +71,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
                 var tabIndex by remember { mutableStateOf(0) }
-                val tabs = listOf("Metadata", "Schema")
+                val tabs = listOf("Metadata", "Schema", "Selected Item")
 
                 TabRow(selectedTabIndex = tabIndex) {
                     tabs.forEachIndexed { index, title ->
@@ -80,9 +85,21 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                when (tabIndex) {
-                    0 -> MetadataView(viewModel)
-                    1 -> SchemaView(schema)
+                when (tabs[tabIndex]) {
+                    "Metadata" -> MetadataView(
+                        dbMetaData = metaData,
+                        nodes = nodes,
+                        relationships = relationships,
+                        onNodeClick = { viewModel.selectItem(it) },
+                        onRelationshipClick = { viewModel.selectItem(it) },
+                        onDeleteNodeClick = { viewModel.deleteItem(it) },
+                        onDeleteRelClick = { viewModel.deleteItem(it) }
+                    )
+                    "Schema" -> SchemaView(schema)
+                    "Selected Item" -> SelectedItemView(
+                        selectedItem = selectedItem,
+                        onClearSelection = { viewModel.clearSelectedItem() }
+                    )
                 }
             }
         }

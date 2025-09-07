@@ -33,11 +33,11 @@ class TerminalViewModel {
     private val _nodeList = MutableStateFlow<List<DisplayItem>>(emptyList())
     val nodeList: StateFlow<List<DisplayItem>> = _nodeList
 
-    private val _relationshipList = MutableStateFlow<List<DisplayItem>>(emptyList())
-    val relationshipList: StateFlow<List<DisplayItem>> = _relationshipList
+    private val _relationshipList = MutableStateFlow<List<RelDisplayItem>>(emptyList())
+    val relationshipList: StateFlow<List<RelDisplayItem>> = _relationshipList
 
-    private val _selectedItem = MutableStateFlow<DisplayItem?>(null)
-    val selectedItem: StateFlow<DisplayItem?> = _selectedItem
+    private val _selectedItem = MutableStateFlow<Any?>(null)
+    val selectedItem: StateFlow<Any?> = _selectedItem
 
     val query = mutableStateOf("")
 
@@ -63,7 +63,7 @@ class TerminalViewModel {
                 }
 
                 val newNodes = mutableMapOf<String, DisplayItem>()
-                val newRels = mutableMapOf<String, DisplayItem>()
+                val newRels = mutableMapOf<String, RelDisplayItem>()
 
                 suspend fun processValue(value: Any?) {
                     when (value) {
@@ -85,9 +85,20 @@ class TerminalViewModel {
                                 val id = properties["_id"]?.toString()
                                 val label = properties["_label"]?.toString()
                                 if (id != null && label != null) {
-                                    val pkName = dbService.getPrimaryKey(label) ?: "_id"
-                                    val pkValue = properties[pkName]?.toString() ?: id
-                                    newRels[id] = DisplayItem(id = id, label = label, primaryKey = pkValue, properties = properties)
+                                    val srcId = properties["_src"].toString()
+                                    val dstId = properties["_dst"].toString()
+                                    val relSchema = _schema.value?.relTables?.find { it.name == label }
+                                    if (relSchema != null) {
+                                        newRels[id] = RelDisplayItem(
+                                            id = id,
+                                            label = label,
+                                            src = srcId,
+                                            dst = dstId,
+                                            srcLabel = relSchema.src,
+                                            dstLabel = relSchema.dst,
+                                            properties = properties
+                                        )
+                                    }
                                 }
                             } else if (properties.containsKey("_label")) { // NODE
                                 val id = properties["_id"]?.toString()
@@ -138,7 +149,7 @@ class TerminalViewModel {
         viewModelScope.launch {
             val nodes = mutableListOf<DisplayItem>()
             _schema.value?.nodeTables?.forEach { table ->
-                val pk = dbService.getPrimaryKey(table.name) ?: "_id"
+                val pk = dbService.getPrimaryKey(table.name) ?: return@forEach
                 val q = "MATCH (n:${table.name.withBackticks()}) RETURN n._id, n.${pk.withBackticks()}"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
@@ -153,14 +164,26 @@ class TerminalViewModel {
 
     fun listEdges() {
         viewModelScope.launch {
-            val rels = mutableListOf<DisplayItem>()
+            val rels = mutableListOf<RelDisplayItem>()
             _schema.value?.relTables?.forEach { table ->
-                val pk = dbService.getPrimaryKey(table.name) ?: "_id"
-                val q = "MATCH ()-[r:${table.name.withBackticks()}]->() RETURN r._id, r.${pk.withBackticks()}"
+                val q = "MATCH (a)-[r:${table.name.withBackticks()}]->(b) RETURN a, r, b"
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
-                        rels.add(DisplayItem(id = row[0].toString(), label = table.name, primaryKey = row[1].toString()))
+                        val srcNode = row[0] as Map<String, Any?>
+                        val rel = row[1] as Map<String, Any?>
+                        val dstNode = row[2] as Map<String, Any?>
+                        rels.add(
+                            RelDisplayItem(
+                                id = rel["_id"].toString(),
+                                label = rel["_label"].toString(),
+                                src = srcNode["_id"].toString(),
+                                dst = dstNode["_id"].toString(),
+                                srcLabel = srcNode["_label"].toString(),
+                                dstLabel = dstNode["_label"].toString(),
+                                properties = rel
+                            )
+                        )
                     }
                 }
             }
@@ -177,50 +200,56 @@ class TerminalViewModel {
         _queryResult.value = null
     }
 
-    fun selectItem(item: DisplayItem) {
+    fun selectItem(item: Any) {
         viewModelScope.launch {
-            val pk = dbService.getPrimaryKey(item.label) ?: "_id"
-            val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pk.withBackticks()} = '${item.primaryKey}' RETURN n"
-            val result = dbService.executeQuery(q)
-            if (result is ExecutionResult.Success) {
-                result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
-                    val properties = row[0] as? Map<String, Any?>
-                    _selectedItem.value = item.copy(properties = properties ?: emptyMap())
+            when (item) {
+                is DisplayItem -> {
+                    val pk = dbService.getPrimaryKey(item.label) ?: return@launch
+                    val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pk.withBackticks()} = '${item.primaryKey}' RETURN n"
+                    val result = dbService.executeQuery(q)
+                    if (result is ExecutionResult.Success) {
+                        result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
+                            val properties = row[0] as? Map<String, Any?>
+                            _selectedItem.value = item.copy(properties = properties ?: emptyMap())
+                        }
+                    }
+                }
+                is RelDisplayItem -> {
+                    val q = "MATCH ()-[r:${item.label.withBackticks()}]->() WHERE r._id = '${item.id}' RETURN r"
+                    val result = dbService.executeQuery(q)
+                    if (result is ExecutionResult.Success) {
+                        result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
+                            val properties = row[0] as? Map<String, Any?>
+                            _selectedItem.value = item.copy(properties = properties ?: emptyMap())
+                        }
+                    }
                 }
             }
         }
     }
 
-    fun deleteItem(item: DisplayItem) {
+    fun deleteItem(item: Any) {
         viewModelScope.launch {
-            // 1. Get Schema for label
-            val isNode = _schema.value?.nodeTables?.any { it.name == item.label } == true
-            if (isNode) {
-                deleteNode(item)
-            } else {
-                deleteRel(item)
+            when (item) {
+                is DisplayItem -> deleteNode(item)
+                is RelDisplayItem -> deleteRel(item)
             }
         }
     }
 
     private suspend fun deleteNode(item: DisplayItem) {
-        // 2. Generate Query
         val pk = dbService.getPrimaryKey(item.label) ?: return
         val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pk.withBackticks()} = '${item.primaryKey}' DETACH DELETE n"
         val result = dbService.executeQuery(q)
         if (result is ExecutionResult.Success) {
-            // 3. Update Node list
             _nodeList.update { list -> list.filterNot { it.id == item.id } }
         }
     }
 
-    private suspend fun deleteRel(item: DisplayItem) {
-        // 2. Generate Query
-        val pk = dbService.getPrimaryKey(item.label) ?: return
-        val q = "MATCH ()-[r:${item.label.withBackticks()}]->() WHERE r.${pk.withBackticks()} = '${item.primaryKey}' DELETE r"
+    private suspend fun deleteRel(item: RelDisplayItem) {
+        val q = "MATCH ()-[r:${item.label.withBackticks()}]->() WHERE r._id = '${item.id}' DELETE r"
         val result = dbService.executeQuery(q)
         if (result is ExecutionResult.Success) {
-            // 3. Update Rel list
             _relationshipList.update { list -> list.filterNot { it.id == item.id } }
         }
     }

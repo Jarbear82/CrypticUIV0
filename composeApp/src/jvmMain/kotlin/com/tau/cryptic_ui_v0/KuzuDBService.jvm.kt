@@ -55,7 +55,7 @@ class KuzuDBService {
     fun getDBMetaData(): DBMetaData {
         val name = if (storagePath != null) Paths.get(storagePath).fileName.toString() else "In-Memory"
         val version = KuzuVersion.getVersion()
-        val storage = storagePath ?: "In-Memory"
+        val storage = storagePath ?: "RAM"
         return DBMetaData(name, version, storage)
     }
 
