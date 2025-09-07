@@ -1,6 +1,6 @@
 package com.tau.cryptic_ui_v0
 
-import com.kuzudb.DataType
+import com.kuzudb.DataType as KuzuDataType
 import java.math.BigInteger
 
 data class DisplayItem(
