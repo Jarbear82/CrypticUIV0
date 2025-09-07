@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class TerminalViewModel {
@@ -43,8 +44,73 @@ class TerminalViewModel {
         viewModelScope.launch {
             val result = dbService.executeQuery(query.value)
             _queryResult.value = result
-            if (result is ExecutionResult.Success && result.isSchemaChanged) {
-                showSchema()
+            if (result is ExecutionResult.Success) {
+                if (result.isSchemaChanged) {
+                    showSchema()
+                }
+
+                val newNodes = mutableMapOf<String, DisplayItem>()
+                val newRels = mutableMapOf<String, DisplayItem>()
+
+                suspend fun processValue(value: Any?) {
+                    when (value) {
+                        is Map<*, *> -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val properties = value as Map<String, Any?>
+                            if (properties.containsKey("_nodes") && properties.containsKey("_rels")) { // RECURSIVE_REL
+                                (properties["_nodes"] as? List<*>)?.let { nodes ->
+                                    for (node in nodes) {
+                                        processValue(node)
+                                    }
+                                }
+                                (properties["_rels"] as? List<*>)?.let { rels ->
+                                    for (rel in rels) {
+                                        processValue(rel)
+                                    }
+                                }
+                            } else if (properties.containsKey("_src") && properties.containsKey("_dst")) { // REL
+                                val id = properties["_id"]?.toString()
+                                val label = properties["_label"]?.toString()
+                                if (id != null && label != null) {
+                                    val pkName = dbService.getPrimaryKey(label) ?: "_id"
+                                    val pkValue = properties[pkName]?.toString() ?: id
+                                    newRels[id] = DisplayItem(id = id, label = label, primaryKey = pkValue, properties = properties)
+                                }
+                            } else if (properties.containsKey("_label")) { // NODE
+                                val id = properties["_id"]?.toString()
+                                val label = properties["_label"]?.toString()
+                                if (id != null && label != null) {
+                                    val pkName = dbService.getPrimaryKey(label) ?: "_id"
+                                    val pkValue = properties[pkName]?.toString() ?: id
+                                    newNodes[id] = DisplayItem(id = id, label = label, primaryKey = pkValue, properties = properties)
+                                }
+                            }
+                        }
+                        is List<*> -> {
+                            for (item in value) {
+                                processValue(item)
+                            }
+                        }
+                    }
+                }
+
+                for (formattedResult in result.results) {
+                    for (row in formattedResult.rows) {
+                        for (cell in row) {
+                            processValue(cell)
+                        }
+                    }
+                }
+
+                if (newNodes.isNotEmpty()) {
+                    val allNodes = _nodeList.value + newNodes.values
+                    _nodeList.value = allNodes.distinctBy { it.id }
+                }
+
+                if (newRels.isNotEmpty()) {
+                    val allRels = _relationshipList.value + newRels.values
+                    _relationshipList.value = allRels.distinctBy { it.id }
+                }
             }
         }
     }
@@ -100,7 +166,8 @@ class TerminalViewModel {
 
     fun selectItem(item: DisplayItem) {
         viewModelScope.launch {
-            val q = "MATCH (n) WHERE n._id = '${item.id}' RETURN n"
+            val pk = dbService.getPrimaryKey(item.label) ?: "_id"
+            val q = "MATCH (n:${item.label}) WHERE n.$pk = '${item.primaryKey}' RETURN n"
             val result = dbService.executeQuery(q)
             if (result is ExecutionResult.Success) {
                 result.results.firstOrNull()?.rows?.firstOrNull()?.let { row ->
@@ -108,6 +175,40 @@ class TerminalViewModel {
                     _selectedItem.value = item.copy(properties = properties ?: emptyMap())
                 }
             }
+        }
+    }
+
+    fun deleteItem(item: DisplayItem) {
+        viewModelScope.launch {
+            // 1. Get Schema for label
+            val isNode = _schema.value?.nodeTables?.any { it.name == item.label } == true
+            if (isNode) {
+                deleteNode(item)
+            } else {
+                deleteRel(item)
+            }
+        }
+    }
+
+    private suspend fun deleteNode(item: DisplayItem) {
+        // 2. Generate Query
+        val pk = dbService.getPrimaryKey(item.label) ?: return
+        val q = "MATCH (n:${item.label}) WHERE n.$pk = '${item.primaryKey}' DETACH DELETE n"
+        val result = dbService.executeQuery(q)
+        if (result is ExecutionResult.Success) {
+            // 3. Update Node list
+            _nodeList.update { list -> list.filterNot { it.id == item.id } }
+        }
+    }
+
+    private suspend fun deleteRel(item: DisplayItem) {
+        // 2. Generate Query
+        val pk = dbService.getPrimaryKey(item.label) ?: return
+        val q = "MATCH ()-[r:${item.label}]->() WHERE r.$pk = '${item.primaryKey}' DELETE r"
+        val result = dbService.executeQuery(q)
+        if (result is ExecutionResult.Success) {
+            // 3. Update Rel list
+            _relationshipList.update { list -> list.filterNot { it.id == item.id } }
         }
     }
 

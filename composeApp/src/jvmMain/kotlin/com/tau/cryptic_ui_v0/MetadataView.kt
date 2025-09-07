@@ -68,6 +68,11 @@ fun MetadataView(viewModel: TerminalViewModel) {
                             headlineContent = { Text("${item.label} : ${item.primaryKey}") },
                             modifier = Modifier.clickable {
                                 viewModel.selectItem(item)
+                            },
+                            trailingContent = {
+                                IconButton(onClick = { viewModel.deleteItem(item) }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Delete")
+                                }
                             }
                         )
                     }
@@ -80,6 +85,11 @@ fun MetadataView(viewModel: TerminalViewModel) {
                             headlineContent = { Text("${item.label} : ${item.primaryKey}") },
                             modifier = Modifier.clickable {
                                 viewModel.selectItem(item)
+                            },
+                            trailingContent = {
+                                IconButton(onClick = { viewModel.deleteItem(item) }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Delete")
+                                }
                             }
                         )
                     }

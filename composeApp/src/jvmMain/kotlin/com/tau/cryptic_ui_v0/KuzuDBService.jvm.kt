@@ -73,6 +73,8 @@ class KuzuDBService {
     fun isInitialized(): Boolean = db != null && conn != null
 
     suspend fun executeQuery(query: String): ExecutionResult {
+        println("\n\n Executing: $query")
+
         if (!isInitialized()) return ExecutionResult.Error("Database not initialized.")
         return withContext(Dispatchers.IO) {
             try {
@@ -91,6 +93,8 @@ class KuzuDBService {
                 if (schemaChanged) {
                     currentSchemaSignature = newSchemaSignature
                 }
+
+                println("Result: $results\n\n")
 
                 ExecutionResult.Success(results, schemaChanged)
             } catch (e: Exception) {
