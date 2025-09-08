@@ -1,60 +1,79 @@
 package com.tau.cryptic_ui_v0
 
 import com.kuzudb.DataType as KuzuDataType
+import com.kuzudb.DataTypeID as KuzuDataTypeID
 import java.math.BigInteger
 
-data class DisplayItem(
-    val id: String,
+data class NodeDisplayItem(
     val label: String,
-    val primaryKey: String,
-    val properties: Map<String, Any?> = emptyMap()
+    val primarykeyProperty: DisplayItemProperty,
 )
 
 data class RelDisplayItem(
-    val id: String,
     val label: String,
-    val src: String,
-    val dst: String,
-    val srcLabel: String,
-    val dstLabel: String,
-    val properties: Map<String, Any?> = emptyMap()
+    val src: NodeDisplayItem,
+    val dst: NodeDisplayItem,
+)
+
+data class DisplayItemProperty(
+    val key: String,
+    val value: Any?
 )
 
 //  --- Data classes for Actual Nodes and Relationships ---
 data class NodeTable(
-    val id: BigInteger,
     val label: String,
-    val nodeProperties: List<Pair<String, Any>>
+    val properties: List<TableProperty>,
+    val labelChanged: Boolean,
+    val propertiesChanged: Boolean
 )
 
 data class RelTable(
-    // TODO: ADD src and dest
-    val id: BigInteger,
     val label: String,
-    val nodeProperties: List<Pair<String, Any>>
+    val src: NodeDisplayItem,
+    val dst: NodeDisplayItem,
+    val properties: List<TableProperty>?,
+    val labelChanged: Boolean,
+    val srcChanged: Boolean,
+    val dstChanged: Boolean,
+    val propertiesChanged: Boolean
 )
 
-data class RecursiveRelTable(
-    // TODO: implement similar to java api recursive_rel
-    val id: BigInteger,
-    val label: String,
-    val nodeProperties: List<Pair<String, Any>>
+data class TableProperty(
+    val key: String,
+    val value: Any?,
+    val isPrimaryKey: Boolean,
+    val valueChanged: Boolean
 )
 
 // --- Data classes for Schema Representation ---
 
 data class NodeTableSchema(
-    val id: BigInteger,
-    val name: String,
-    val properties: List<Pair<String, Any>>
+    val label: String,
+    val properties: List<SchemaProperty>,
+    val labelChanged: Boolean = false,
+    val propertiesChanged: Boolean = false
 )
 data class RelTableSchema(
-    val id: BigInteger,
-    val name: String,
-    val src: String,
-    val dst: String,
-    val properties: List<Pair<String, Any>>
+    val label: String,
+    val srcLabel: String,
+    val dstLabel: String,
+    val properties: List<SchemaProperty>,
+    val labelChanged: Boolean = false,
+    val srcLabelChanged: Boolean = false,
+    val dstLabelChanged: Boolean = false,
+    val propertiesChanged: Boolean = false,
 )
+
+data class SchemaProperty(
+    val key: String,
+    val valueDataType: KuzuDataType,
+    val isPrimaryKey: Boolean,
+    val keyChanged: Boolean = false,
+    val valueDataTypeChanged: Boolean = false,
+    val isPkChanged: Boolean = false
+)
+
 data class Schema(
     val nodeTables: List<NodeTableSchema>,
     val relTables: List<RelTableSchema>

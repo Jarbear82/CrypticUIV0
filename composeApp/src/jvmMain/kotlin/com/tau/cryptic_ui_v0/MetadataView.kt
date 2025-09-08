@@ -15,11 +15,11 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MetadataView(
     dbMetaData: DBMetaData?,
-    nodes: List<DisplayItem>,
+    nodes: List<NodeDisplayItem>,
     relationships: List<RelDisplayItem>,
-    onNodeClick: (DisplayItem) -> Unit,
+    onNodeClick: (NodeDisplayItem) -> Unit,
     onRelationshipClick: (RelDisplayItem) -> Unit,
-    onDeleteNodeClick: (DisplayItem) -> Unit,
+    onDeleteNodeClick: (NodeDisplayItem) -> Unit,
     onDeleteRelClick: (RelDisplayItem) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -37,8 +37,8 @@ fun MetadataView(
                 LazyColumn {
                     items(nodes) { node ->
                         ListItem(
-                            headlineContent = { Text("${node.label} : ${node.primaryKey}") },
-                            supportingContent = { Text(node.id) },
+                            headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}") },
+                            // supportingContent = { Text(node.id) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onNodeClick(node) },
@@ -58,8 +58,8 @@ fun MetadataView(
                 LazyColumn {
                     items(relationships) { rel ->
                         ListItem(
-                            headlineContent = { Text("(${rel.srcLabel})-[${rel.label}]->(${rel.dstLabel})")},
-                            supportingContent = { Text(rel.id) },
+                            headlineContent = { Text("(${rel.src.label} : ${rel.src.primarykeyProperty.value})-[${rel.label}]->(${rel.dst.label} : ${rel.dst.primarykeyProperty.value})")},
+                            // supportingContent = { Text(rel.) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onRelationshipClick(rel) },

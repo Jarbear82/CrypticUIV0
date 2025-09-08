@@ -92,8 +92,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         relationships = relationships,
                         onNodeClick = { viewModel.selectItem(it) },
                         onRelationshipClick = { viewModel.selectItem(it) },
-                        onDeleteNodeClick = { viewModel.deleteItem(it) },
-                        onDeleteRelClick = { viewModel.deleteItem(it) }
+                        onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
+                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) }
                     )
                     "Schema" -> SchemaView(schema)
                     "Selected Item" -> SelectedItemView(

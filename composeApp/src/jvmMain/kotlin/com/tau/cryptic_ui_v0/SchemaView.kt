@@ -23,9 +23,9 @@ fun SchemaView(schema: Schema?) {
         }
         items(schema.nodeTables) { table ->
             Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                Text("- ${table.name}", style = MaterialTheme.typography.titleMedium)
+                Text("- ${table.label}", style = MaterialTheme.typography.titleMedium)
                 table.properties.forEach { prop ->
-                    Text("  - ${prop.first}: ${prop.second}", style = MaterialTheme.typography.bodySmall)
+                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -35,9 +35,9 @@ fun SchemaView(schema: Schema?) {
         }
         items(schema.relTables) { table ->
             Column(modifier = Modifier.padding(bottom = 8.dp)) {
-                Text("- ${table.name} (${table.src} -> ${table.dst})", style = MaterialTheme.typography.titleMedium)
+                Text("- ${table.label} (${table.srcLabel} -> ${table.dstLabel})", style = MaterialTheme.typography.titleMedium)
                 table.properties.forEach { prop ->
-                    Text("  - ${prop.first}: ${prop.second}", style = MaterialTheme.typography.bodySmall)
+                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

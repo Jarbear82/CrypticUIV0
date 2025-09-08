@@ -111,39 +111,36 @@ class KuzuDBService {
                 val relTables = mutableListOf<RelTableSchema>()
 
                 val tablesResult = conn!!.query("CALL SHOW_TABLES() RETURN *;")
-                println("\n---\n $tablesResult\n---\n")
                 while (tablesResult.hasNext()) {
                     val row = tablesResult.next
-                    println("Row $row")
-                    // 2. Changed how values are retrieved to prevent casting errors
-                    val tableId = row.getValue(0).getValue<BigInteger>()
                     val tableName = row.getValue(1).getValue<Any>().toString()
                     val tableType = row.getValue(2).getValue<Any>().toString()
 
                     if (tableType == "NODE") {
-                        val properties = mutableListOf<Pair<String, Any>>()
-                        // 1. Added "RETURN *"
+                        val properties = mutableListOf<SchemaProperty>()
                         val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
                         while (propertiesResult.hasNext()) {
                             val propRow = propertiesResult.next
-                            // 2. Changed value retrieval
                             val propName = propRow.getValue(1).getValue<Any>().toString()
-                            val propType = propRow.getValue(2).getValue<Any>()
+                            val propType = propRow.getValue(2).dataType
                             val isPrimary = propRow.getValue(4).getValue<Boolean>()
-                            properties.add(propName to (if (isPrimary) "$propType (PK)" else propType))
+                            properties.add(SchemaProperty(propName, propType, isPrimary))
                         }
-                        nodeTables.add(NodeTableSchema(tableId, tableName, properties))
+                        nodeTables.add(NodeTableSchema(tableName, properties))
                     } else if (tableType == "REL") {
-                        val properties = mutableListOf<Pair<String, Any>>()
+                        val properties = mutableListOf<SchemaProperty>()
                         val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
                         while (propertiesResult.hasNext()) {
                             val propRow = propertiesResult.next
                             val propName = propRow.getValue(1).getValue<Any>().toString()
-                            if (propName !in listOf("_src", "_dst")) {
-                                val propType = propRow.getValue(2).getValue<Any>()
-                                properties.add(propName to propType)
+                            // Exclude internal properties from the schema list
+                            if (propName !in listOf("_src", "_dst", "_id")) {
+                                val propType = propRow.getValue(2).dataType
+                                // Relationship properties cannot be primary keys
+                                properties.add(SchemaProperty(key = propName, valueDataType = propType, isPrimaryKey = false))
                             }
                         }
+
                         val connResult = conn!!.query("CALL SHOW_CONNECTION('$tableName') RETURN *;")
                         var from = ""
                         var to = ""
@@ -152,7 +149,7 @@ class KuzuDBService {
                             from = connRow.getValue(0).getValue<Any>().toString()
                             to = connRow.getValue(1).getValue<Any>().toString()
                         }
-                        relTables.add(RelTableSchema(tableId,tableName, from, to, properties))
+                        relTables.add(RelTableSchema(label = tableName, srcLabel = from, dstLabel = to, properties = properties))
                     }
                 }
                 Schema(nodeTables, relTables)
