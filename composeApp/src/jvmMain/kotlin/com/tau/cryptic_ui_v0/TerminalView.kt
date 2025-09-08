@@ -1,3 +1,4 @@
+// CrypticUIV0/composeApp/src/jvmMain/kotlin/com/tau/cryptic_ui_v0/TerminalView.kt
 package com.tau.cryptic_ui_v0
 
 import androidx.compose.foundation.layout.*
@@ -7,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
@@ -14,6 +16,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val queryResult by viewModel.queryResult.collectAsState()
     val metaData by viewModel.dbMetaData.collectAsState()
     val query by viewModel.query
+    val scope = rememberCoroutineScope() // Get a coroutine scope
 
     // Collect the state for the MetadataView
     val nodes by viewModel.nodeList.collectAsState()
@@ -29,7 +32,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
             LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.showSchema() }) {
+                        Button(onClick = {
+                            scope.launch { // Launch a coroutine to call the suspend function
+                                viewModel.showSchema()
+                            }
+                        }) {
                             Text("Show Schema")
                         }
                         Button(onClick = { viewModel.listNodes() }) {

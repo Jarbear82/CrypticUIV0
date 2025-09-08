@@ -1,3 +1,4 @@
+// CrypticUIV0/composeApp/src/jvmMain/kotlin/com/tau/cryptic_ui_v0/TerminalViewModel.kt
 package com.tau.cryptic_ui_v0
 
 import androidx.compose.runtime.State
@@ -145,10 +146,8 @@ class TerminalViewModel {
         }
     }
 
-    fun showSchema() {
-        viewModelScope.launch {
-            _schema.value = dbService.getSchema()
-        }
+    suspend fun showSchema() {
+        _schema.value = dbService.getSchema()
     }
 
     fun listNodes() {
