@@ -90,7 +90,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         dbMetaData = metaData,
                         nodes = nodes,
                         relationships = relationships,
-                        onNodeClick = { viewModel.selectItem(it) },
+                        onNodeClick = { viewModel.selectItem(it); println("Item: $it is being selected") },
                         onRelationshipClick = { viewModel.selectItem(it) },
                         onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
                         onDeleteRelClick = { viewModel.deleteDisplayItem(it) }

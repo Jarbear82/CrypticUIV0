@@ -21,6 +21,25 @@ data class DisplayItemProperty(
 )
 
 //  --- Data classes for Actual Nodes and Relationships ---
+data class NodeValue(
+    val id: String,
+    val label: String,
+    val properties: Map<String, Any?>
+)
+
+data class RelValue(
+    val id: String,
+    val label: String,
+    val src: String,
+    val dst: String,
+    val properties: Map<String, Any?>
+)
+
+data class RecursiveRelValue(
+    val nodes: List<NodeValue>,
+    val rels: List<RelValue>
+)
+
 data class NodeTable(
     val label: String,
     val properties: List<TableProperty>,

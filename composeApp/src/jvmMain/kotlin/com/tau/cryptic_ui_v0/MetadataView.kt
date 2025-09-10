@@ -37,11 +37,12 @@ fun MetadataView(
                 LazyColumn {
                     items(nodes) { node ->
                         ListItem(
+                            // TODO: Add onClick for the ListITem to select it
                             headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             // supportingContent = { Text(node.id) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onNodeClick(node) },
+                                .clickable { onNodeClick(node); println("${node.label} clicked!") },
                             trailingContent = {
                                 IconButton(onClick = { onDeleteNodeClick(node) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Node")

@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 // List of reserved words in kuzu:
 val reservedWords: List<String> = listOf(
@@ -73,77 +75,82 @@ class TerminalViewModel {
             if (result !is ExecutionResult.Success) return@launch
 
             if (result.isSchemaChanged) {
+                println("Schema Changed. Updating Schema")
                 showSchema()
             }
 
-            // --- Pass 1: Gather all raw node and relationship maps from the result ---
-            val rawNodeMaps = mutableListOf<Map<String, Any?>>()
-            val rawRelMaps = mutableListOf<Map<String, Any?>>()
+            val tempNodeMap: Map<String, NodeDisplayItem>
 
-            fun findRawData(value: Any?) {
+            // First Pass: Collect all unique NodeValues from the result
+            println("First Pass: Find all nodes")
+            val nodeValues = mutableSetOf<NodeValue>()
+            fun findNodeValues(value: Any?) {
                 when (value) {
-                    is Map<*, *> -> {
-                        @Suppress("UNCHECKED_CAST")
-                        val properties = value as Map<String, Any?>
-                        when {
-                            properties.containsKey("_nodes") && properties.containsKey("_rels") -> { // Path/Recursive Rel
-                                (properties["_nodes"] as? List<*>)?.forEach(::findRawData)
-                                (properties["_rels"] as? List<*>)?.forEach(::findRawData)
-                            }
-                            properties.containsKey("_src") && properties.containsKey("_dst") -> rawRelMaps.add(properties) // Rel
-                            properties.containsKey("_label") -> rawNodeMaps.add(properties) // Node
-                        }
-                    }
-                    is List<*> -> value.forEach(::findRawData)
+                    is NodeValue -> nodeValues.add(value)
+                    is RecursiveRelValue -> value.nodes.forEach(::findNodeValues)
+                    is List<*> -> value.forEach(::findNodeValues)
                 }
             }
+            result.results.forEach { formattedResult ->
+                formattedResult.rows.forEach { row ->
+                    row.forEach(::findNodeValues)
+                }
+            }
+
+            // Process all nodes concurrently and wait for them to finish
+            println("Processing ${nodeValues.size} nodes...")
+            val nodeItems = async {
+                nodeValues.map { nodeValue ->
+                    async {
+                        val pkName = dbService.getPrimaryKey(nodeValue.label) ?: "_id"
+                        val pkValue = nodeValue.properties[pkName]
+                        val nodeItem = NodeDisplayItem(
+                            label = nodeValue.label,
+                            primarykeyProperty = DisplayItemProperty(key = pkName, value = pkValue)
+                        )
+                        // Return a pair of the node's ID and the created item
+                        nodeValue.id to nodeItem
+                    }
+                }.awaitAll()
+            }.await()
+            // Create the map after all nodes have been processed
+            tempNodeMap = nodeItems.toMap()
+            val newNodes = tempNodeMap.values.toSet()
+
+            // Second Pass: Now that tempNodeMap is populated, find all relationships
+            println("Second Pass: Find all relationships")
+
+            val newRels = mutableSetOf<RelDisplayItem>()
+            fun findRelData(value: Any?) {
+                when (value) {
+                    is RelValue -> {
+                        val srcNode = tempNodeMap[value.src]
+                        val dstNode = tempNodeMap[value.dst]
+                        if (srcNode != null && dstNode != null) {
+                            newRels.add(RelDisplayItem(label = value.label, src = srcNode, dst = dstNode))
+                        }
+                    }
+                    is RecursiveRelValue -> value.rels.forEach(::findRelData)
+                    is List<*> -> value.forEach(::findRelData)
+                }
+            }
+
+            // TODO: If no nodes were returned and rels were, retrieve their acompanying nodes
 
             result.results.forEach { formattedResult ->
                 formattedResult.rows.forEach { row ->
-                    row.forEach(::findRawData)
+                    row.forEach(::findRelData)
                 }
             }
 
-            // --- Pass 2: Process raw node maps into NodeDisplayItems ---
-            // A temporary map from internal Kuzu ID to our new NodeDisplayItem is needed to link relationships.
-            val tempNodeMap = mutableMapOf<String, NodeDisplayItem>()
-            rawNodeMaps.forEach { properties ->
-                val id = properties["_id"]?.toString()
-                val label = properties["_label"]?.toString()
-                if (id != null && label != null) {
-                    val pkName = dbService.getPrimaryKey(label) ?: "_id"
-                    val pkValue = properties[pkName]
-                    tempNodeMap[id] = NodeDisplayItem(
-                        label = label,
-                        primarykeyProperty = DisplayItemProperty(key = pkName, value = pkValue)
-                    )
-                }
-            }
-
-            // --- Pass 3: Process raw relationship maps into RelDisplayItems ---
-            val newRels = mutableListOf<RelDisplayItem>()
-            rawRelMaps.forEach { properties ->
-                val label = properties["_label"]?.toString()
-                val srcId = properties["_src"]?.toString()
-                val dstId = properties["_dst"]?.toString()
-
-                val srcNode = tempNodeMap[srcId]
-                val dstNode = tempNodeMap[dstId]
-
-                if (label != null && srcNode != null && dstNode != null) {
-                    newRels.add(RelDisplayItem(
-                        label = label,
-                        src = srcNode,
-                        dst = dstNode
-                    ))
-                }
-            }
-
-            // --- Final Step: Add new items to the UI state, ensuring no duplicates ---
-            if (tempNodeMap.isNotEmpty()) {
-                _nodeList.update { (it + tempNodeMap.values).distinct() }
+            // Final Step: Update the UI state
+            println("--- Final Step: Add new items to the UI state ---")
+            if (newNodes.isNotEmpty()) {
+                println("Updating Nodes")
+                _nodeList.update { (it + newNodes).distinct() }
             }
             if (newRels.isNotEmpty()) {
+                println("Updating Rels")
                 _relationshipList.update { (it + newRels).distinct() }
             }
         }
@@ -218,59 +225,75 @@ class TerminalViewModel {
         _queryResult.value = null
     }
 
+    private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
+        val pkKey = item.primarykeyProperty.key
+        val pkValue = item.primarykeyProperty.value
+        val formattedPkValue = formatPkValue(pkValue)
+
+        val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
+        val result = dbService.executeQuery(q)
+
+        if (result is ExecutionResult.Success) {
+            val nodeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? NodeValue
+            if (nodeValue != null) {
+                val properties = nodeValue.properties.map { (key, value) ->
+                    TableProperty(
+                        key = key,
+                        value = value,
+                        isPrimaryKey = (key == pkKey),
+                        valueChanged = false
+                    )
+                }
+                return NodeTable(
+                    label = item.label,
+                    properties = properties,
+                    labelChanged = false,
+                    propertiesChanged = false
+                )
+            }
+        }
+        return null
+    }
+
+    private suspend fun getRel(item: RelDisplayItem): RelTable? {
+        val srcPk = item.src.primarykeyProperty
+        val dstPk = item.dst.primarykeyProperty
+        val formattedSrcPkValue = formatPkValue(srcPk.value)
+        val formattedDstPkValue = formatPkValue(dstPk.value)
+
+        val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
+                "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
+                "RETURN r LIMIT 1"
+        val result = dbService.executeQuery(q)
+
+        if (result is ExecutionResult.Success) {
+            val relValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? RelValue
+            if (relValue != null) {
+                val properties = relValue.properties.mapNotNull { (key, value) ->
+                    if (key.startsWith("_")) return@mapNotNull null
+                    TableProperty(key = key, value = value, isPrimaryKey = false, valueChanged = false)
+                }
+                return RelTable(
+                    label = item.label,
+                    src = item.src,
+                    dst = item.dst,
+                    properties = properties,
+                    labelChanged = false,
+                    srcChanged = false,
+                    dstChanged = false,
+                    propertiesChanged = false
+                )
+            }
+        }
+        return null
+    }
+
     fun selectItem(item: Any) {
         viewModelScope.launch {
-            when (item) {
-                is NodeTable -> {
-                    val pkProperty = item.properties.find { it.isPrimaryKey } ?: return@launch
-                    val pkKey = pkProperty.key
-                    val pkValue = pkProperty.value
-                    val formattedPkValue = formatPkValue(pkValue)
-
-                    val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
-                    val result = dbService.executeQuery(q)
-
-                    if (result is ExecutionResult.Success) {
-                        result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0)?.let { nodeData ->
-                            val propertiesMap = nodeData as? Map<String, Any?>
-                            if (propertiesMap != null) {
-                                val newProperties = propertiesMap.map { (key, value) ->
-                                    TableProperty(
-                                        key = key,
-                                        value = value,
-                                        isPrimaryKey = (key == pkKey),
-                                        valueChanged = false
-                                    )
-                                }
-                                _selectedItem.value = item.copy(properties = newProperties)
-                            }
-                        }
-                    }
-                }
-                is RelTable -> {
-                    val srcPk = item.src.primarykeyProperty
-                    val dstPk = item.dst.primarykeyProperty
-                    val formattedSrcPkValue = formatPkValue(srcPk.value)
-                    val formattedDstPkValue = formatPkValue(dstPk.value)
-
-                    val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
-                            "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
-                            "RETURN r LIMIT 1"
-                    val result = dbService.executeQuery(q)
-
-                    if (result is ExecutionResult.Success) {
-                        result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0)?.let { relData ->
-                            val propertiesMap = relData as? Map<String, Any?>
-                            if (propertiesMap != null) {
-                                val newProperties = propertiesMap.mapNotNull { (key, value) ->
-                                    if (key.startsWith("_")) return@mapNotNull null
-                                    TableProperty(key = key, value = value, isPrimaryKey = false, valueChanged = false)
-                                }
-                                _selectedItem.value = item.copy(properties = newProperties)
-                            }
-                        }
-                    }
-                }
+            _selectedItem.value = when (item) {
+                is NodeDisplayItem -> getNode(item)
+                is RelDisplayItem -> getRel(item)
+                else -> null
             }
         }
     }

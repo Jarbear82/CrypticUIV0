@@ -179,40 +179,47 @@ class KuzuDBService {
             KuzuDataTypeID.INTERNAL_ID, KuzuDataTypeID.BLOB, KuzuDataTypeID.UUID -> v.toString()
 
             KuzuDataTypeID.NODE -> {
-                val nodeProperties = mutableMapOf<String, Any?>()
-                nodeProperties["_id"] = ValueNodeUtil.getID(v).toString()
-                nodeProperties["_label"] = ValueNodeUtil.getLabelName(v)
+                val properties = mutableMapOf<String, Any?>()
                 for (i in 0 until ValueNodeUtil.getPropertySize(v)) {
                     val propName = ValueNodeUtil.getPropertyNameAt(v, i)
                     ValueNodeUtil.getPropertyValueAt(v, i).use { propValue ->
-                        nodeProperties[propName] = getFormattedValue(propValue.clone())
+                        properties[propName] = getFormattedValue(propValue.clone())
                     }
                 }
-                nodeProperties
+                val node = NodeValue(
+                    id = ValueNodeUtil.getID(v).toString(),
+                    label = ValueNodeUtil.getLabelName(v),
+                    properties = properties
+                )
+                println("Created: $node")
+                return node
             }
             KuzuDataTypeID.REL -> {
-                val relProperties = mutableMapOf<String, Any?>()
-                relProperties["_id"] = ValueRelUtil.getID(v).toString()
-                relProperties["_label"] = ValueRelUtil.getLabelName(v)
-                relProperties["_src"] = ValueRelUtil.getSrcID(v).toString()
-                relProperties["_dst"] = ValueRelUtil.getDstID(v).toString()
+                val properties = mutableMapOf<String, Any?>()
                 for (i in 0 until ValueRelUtil.getPropertySize(v)) {
                     val propName = ValueRelUtil.getPropertyNameAt(v, i)
                     ValueRelUtil.getPropertyValueAt(v, i).use { propValue ->
-                        relProperties[propName] = getFormattedValue(propValue.clone())
+                        properties[propName] = getFormattedValue(propValue.clone())
                     }
                 }
-                relProperties
+                val rel = RelValue(
+                    id = ValueRelUtil.getID(v).toString(),
+                    label = ValueRelUtil.getLabelName(v),
+                    src = ValueRelUtil.getSrcID(v).toString(),
+                    dst = ValueRelUtil.getDstID(v).toString(),
+                    properties = properties
+                )
+                println("Created: $rel")
+                return rel
             }
             KuzuDataTypeID.RECURSIVE_REL -> {
-                val recursiveRel = mutableMapOf<String, Any?>()
-                ValueRecursiveRelUtil.getNodeList(v).clone().use { nodesValue ->
-                    recursiveRel["_nodes"] = getFormattedValue(nodesValue)
+                val nodesList = ValueRecursiveRelUtil.getNodeList(v).clone().use { nodesValue ->
+                    getFormattedValue(nodesValue) as? List<NodeValue>
                 }
-                ValueRecursiveRelUtil.getRelList(v).clone().use { relsValue ->
-                    recursiveRel["_rels"] = getFormattedValue(relsValue)
+                val relsList = ValueRecursiveRelUtil.getRelList(v).clone().use { relsValue ->
+                    getFormattedValue(relsValue) as? List<RelValue>
                 }
-                recursiveRel
+                RecursiveRelValue(nodes = nodesList ?: emptyList(), rels = relsList ?: emptyList())
             }
             KuzuDataTypeID.LIST, KuzuDataTypeID.ARRAY -> {
                 KuzuList(v).use { list ->
