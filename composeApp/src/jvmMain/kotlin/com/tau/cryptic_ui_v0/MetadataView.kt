@@ -37,7 +37,6 @@ fun MetadataView(
                 LazyColumn {
                     items(nodes) { node ->
                         ListItem(
-                            // TODO: Add onClick for the ListITem to select it
                             headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             // supportingContent = { Text(node.id) },
                             modifier = Modifier
