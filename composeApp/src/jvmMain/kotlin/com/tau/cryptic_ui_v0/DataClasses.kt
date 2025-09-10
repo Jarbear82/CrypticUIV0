@@ -1,8 +1,6 @@
 package com.tau.cryptic_ui_v0
 
 import com.kuzudb.DataType as KuzuDataType
-import com.kuzudb.DataTypeID as KuzuDataTypeID
-import java.math.BigInteger
 
 data class NodeDisplayItem(
     val label: String,
@@ -67,13 +65,13 @@ data class TableProperty(
 
 // --- Data classes for Schema Representation ---
 
-data class NodeTableSchema(
+data class SchemaNode(
     val label: String,
     val properties: List<SchemaProperty>,
     val labelChanged: Boolean = false,
     val propertiesChanged: Boolean = false
 )
-data class RelTableSchema(
+data class SchemaRel(
     val label: String,
     val srcLabel: String,
     val dstLabel: String,
@@ -86,7 +84,7 @@ data class RelTableSchema(
 
 data class SchemaProperty(
     val key: String,
-    val valueDataType: KuzuDataType,
+    val valueDataType: String,
     val isPrimaryKey: Boolean,
     val keyChanged: Boolean = false,
     val valueDataTypeChanged: Boolean = false,
@@ -94,8 +92,8 @@ data class SchemaProperty(
 )
 
 data class Schema(
-    val nodeTables: List<NodeTableSchema>,
-    val relTables: List<RelTableSchema>
+    val nodeTables: List<SchemaNode>,
+    val relTables: List<SchemaRel>
 )
 
 

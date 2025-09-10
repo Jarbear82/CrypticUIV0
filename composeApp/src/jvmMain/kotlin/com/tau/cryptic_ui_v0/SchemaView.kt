@@ -20,31 +20,39 @@ fun SchemaView(schema: Schema?) {
 
     LazyColumn {
         item {
-            Text("Node Tables", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+            Text("Node Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
         }
         items(schema.nodeTables) { table ->
             ListItem(
-                headlineContent = { Text("- ${table.label}", style = MaterialTheme.typography.titleMedium) },
+                headlineContent = { Text(table.label, style = MaterialTheme.typography.titleMedium) },
                 modifier = Modifier.padding(bottom = 8.dp),
                 supportingContent = {
-                    table.properties.forEach { prop ->
-                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
-                    }
+                    Text(
+                        text = table.properties.joinToString(separator = "\n") { prop ->
+                            if (prop.isPrimaryKey){
+                                "  - ${prop.key}: ${prop.valueDataType}: PK"
+                            } else {
+                                "  - ${prop.key}: ${prop.valueDataType}"
+                            }
+
+                        },
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             )
         }
 
         item {
-            Text("Relationship Tables", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+            Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
         }
         items(schema.relTables) { table ->
             ListItem(
                 headlineContent = { Text("- ${table.label} (${table.srcLabel} -> ${table.dstLabel})", style = MaterialTheme.typography.titleMedium) },
                 modifier = Modifier.padding(bottom = 8.dp),
-                supportingContent = { table.properties.forEach { prop ->
-                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+//                supportingContent = { table.properties.forEach { prop ->
+//                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
+//                    }
+//                }
             )
     }
 }
