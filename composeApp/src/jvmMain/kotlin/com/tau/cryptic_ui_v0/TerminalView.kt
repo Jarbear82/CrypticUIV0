@@ -3,6 +3,7 @@ package com.tau.cryptic_ui_v0
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,22 +39,33 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            scope.launch { // Launch a coroutine to call the suspend function
-                                viewModel.showSchema()
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        item {
+                            Button(onClick = {
+                                scope.launch { // Launch a coroutine to call the suspend function
+                                    viewModel.showSchema()
+                                }
+                            }) {
+                                Text("Show Schema")
                             }
-                        }) {
-                            Text("Show Schema")
                         }
-                        Button(onClick = { viewModel.listNodes() }) {
-                            Text("List Nodes")
+
+                        item {
+                            Button(onClick = { viewModel.listNodes() }) {
+                                Text("List Nodes")
+                            }
                         }
-                        Button(onClick = { viewModel.listEdges() }) {
-                            Text("List Rels")
+
+                        item {
+                            Button(onClick = { viewModel.listEdges() }) {
+                                Text("List Rels")
+                            }
                         }
-                        Button(onClick = { viewModel.listAll() }) {
-                            Text("List All")
+
+                        item {
+                            Button(onClick = { viewModel.listAll() }) {
+                                Text("List All")
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
