@@ -23,6 +23,13 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val relationships by viewModel.relationshipList.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
 
+    // Tabs
+    var selectedTab by remember { mutableStateOf(TerminalViewTabs.METADATA) }
+
+    fun selectMetadata() { selectedTab = TerminalViewTabs.METADATA }
+    fun selectSchema() { selectedTab = TerminalViewTabs.SCHEMA }
+    fun selectSelected() { selectedTab = TerminalViewTabs.SELECTED }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -70,35 +77,34 @@ fun TerminalView(viewModel: TerminalViewModel) {
             // --------------- Right panel for Schema and Metadata tabs ------------------------------
 
             Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
-                var tabIndex by remember { mutableStateOf(0) }
-                val tabs = listOf("Metadata", "Schema", "Selected Item")
 
-                TabRow(selectedTabIndex = tabIndex) {
-                    tabs.forEachIndexed { index, title ->
+
+                TabRow(selectedTabIndex = selectedTab.value) {
+                    TerminalViewTabs.entries.forEach { tab ->
                         Tab(
-                            text = { Text(title) },
-                            selected = tabIndex == index,
-                            onClick = { tabIndex = index }
+                            text = { Text(tab.name) },
+                            selected = selectedTab.value == tab.value,
+                            onClick = { selectedTab = tab }
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                when (tabs[tabIndex]) {
-                    "Metadata" -> MetadataView(
+                when (selectedTab) {
+                    TerminalViewTabs.METADATA -> MetadataView(
                         dbMetaData = metaData,
                         nodes = nodes,
                         relationships = relationships,
-                        onNodeClick = { viewModel.selectItem(it); println("Item: $it is being selected") },
-                        onRelationshipClick = { viewModel.selectItem(it) },
+                        onNodeClick = { viewModel.selectItem(it); println("Item: $it is being selected"); selectSelected() },
+                        onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
                         onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
                         onDeleteRelClick = { viewModel.deleteDisplayItem(it) }
                     )
-                    "Schema" -> SchemaView(schema)
-                    "Selected Item" -> SelectedItemView(
+                    TerminalViewTabs.SCHEMA -> SchemaView(schema)
+                    TerminalViewTabs.SELECTED -> SelectedItemView(
                         selectedItem = selectedItem,
-                        onClearSelection = { viewModel.clearSelectedItem() }
+                        onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() }
                     )
                 }
             }
@@ -115,3 +121,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
         }
     }
 }
+
+
+
+enum class TerminalViewTabs(val value: Int) {
+    METADATA(0),
+    SCHEMA(1),
+    SELECTED(2)
+}
+
