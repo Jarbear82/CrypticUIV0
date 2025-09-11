@@ -36,6 +36,7 @@ fun SchemaView(schema: Schema?) {
                             }
 
                         },
+
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

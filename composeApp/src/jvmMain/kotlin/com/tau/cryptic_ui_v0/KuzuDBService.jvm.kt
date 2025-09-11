@@ -120,7 +120,7 @@ class KuzuDBService {
                         while (propertiesResult.hasNext()) {
                             val propRow = propertiesResult.next
                             val propName = propRow.getValue(1).getValue<Any>().toString()
-                            val propType = propRow.getValue(2).toString()
+                            val propType = propRow.getValue(2)
                             val isPrimary = propRow.getValue(4).getValue<Boolean>()
                             properties.add(SchemaProperty(propName, propType, isPrimary))
                         }
@@ -133,7 +133,7 @@ class KuzuDBService {
                             val propName = propRow.getValue(1).getValue<Any>().toString()
                             // Exclude internal properties from the schema list
                             if (propName !in listOf("_src", "_dst", "_id")) {
-                                val propType = propRow.getValue(2).toString()
+                                val propType = propRow.getValue(2)
                                 // Relationship properties cannot be primary keys
                                 properties.add(SchemaProperty(key = propName, valueDataType = propType, isPrimaryKey = false))
                             }

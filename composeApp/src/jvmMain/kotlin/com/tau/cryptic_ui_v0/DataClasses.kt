@@ -1,6 +1,7 @@
 package com.tau.cryptic_ui_v0
 
 import com.kuzudb.DataType as KuzuDataType
+import com.kuzudb.Value as KuzuValue
 
 data class NodeDisplayItem(
     val label: String,
@@ -84,7 +85,7 @@ data class SchemaRel(
 
 data class SchemaProperty(
     val key: String,
-    val valueDataType: String,
+    val valueDataType: KuzuValue,
     val isPrimaryKey: Boolean,
     val keyChanged: Boolean = false,
     val valueDataTypeChanged: Boolean = false,
