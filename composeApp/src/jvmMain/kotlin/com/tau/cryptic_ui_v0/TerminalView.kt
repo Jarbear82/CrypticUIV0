@@ -1,9 +1,9 @@
-// CrypticUIV0/composeApp/src/jvmMain/kotlin/com/tau/cryptic_ui_v0/TerminalView.kt
 package com.tau.cryptic_ui_v0
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,8 +39,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
                 item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        item {
+
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                             Button(onClick = {
                                 scope.launch { // Launch a coroutine to call the suspend function
                                     viewModel.showSchema()
@@ -48,26 +51,20 @@ fun TerminalView(viewModel: TerminalViewModel) {
                             }) {
                                 Text("Show Schema")
                             }
-                        }
 
-                        item {
                             Button(onClick = { viewModel.listNodes() }) {
                                 Text("List Nodes")
                             }
-                        }
 
-                        item {
                             Button(onClick = { viewModel.listEdges() }) {
                                 Text("List Rels")
                             }
-                        }
 
-                        item {
                             Button(onClick = { viewModel.listAll() }) {
                                 Text("List All")
                             }
-                        }
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = query,
@@ -113,7 +110,13 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
                         onDeleteRelClick = { viewModel.deleteDisplayItem(it) }
                     )
-                    TerminalViewTabs.SCHEMA -> SchemaView(schema)
+                    TerminalViewTabs.SCHEMA -> SchemaView(
+                        schema = schema,
+                        onNodeClick = { viewModel.selectItem(it); selectSelected() },
+                        onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
+                        onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
+                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) }
+                    )
                     TerminalViewTabs.SELECTED -> SelectedItemView(
                         selectedItem = selectedItem,
                         onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() }
@@ -141,4 +144,3 @@ enum class TerminalViewTabs(val value: Int) {
     SCHEMA(1),
     SELECTED(2)
 }
-

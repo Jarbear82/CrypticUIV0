@@ -1,11 +1,20 @@
 package com.tau.cryptic_ui_v0
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DatasetLinked
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Schema
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,16 +33,28 @@ fun MetadataView(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         dbMetaData?.let {
-            Text("Database Info", style = MaterialTheme.typography.headlineSmall)
-            Text("Name: ${it.name}")
-            Text("Kuzu Version: ${it.version}")
-            Text("Storage: ${it.storage}")
+            ListItem(
+                leadingContent = { Icon(imageVector = Icons.Default.Storage, "Database") },
+                headlineContent = { Text("Database Info", style = MaterialTheme.typography.headlineSmall) },
+                supportingContent = {
+                    Text("Name: ${it.name}\n" +
+                            "Kuzu Version: ${it.version}\n" +
+                            "Storage: ${it.storage}"
+                    )
+                }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
         }
         Column(modifier = Modifier.fillMaxSize()) {
             // Nodes List
             Column(modifier = Modifier.weight(1f).padding(8.dp)) {
-                Text("Nodes", style = MaterialTheme.typography.headlineSmall)
+                ListItem(
+                    leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
+                    headlineContent = { Text("Nodes:", style = MaterialTheme.typography.headlineSmall) } ,
+                    trailingContent = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                )
+                HorizontalDivider(color = Color.Black)
                 LazyColumn {
                     items(nodes) { node ->
                         ListItem(
@@ -54,7 +75,12 @@ fun MetadataView(
 
             // Relationships List
             Column(modifier = Modifier.weight(1f).padding(8.dp)) {
-                Text("Relationships", style = MaterialTheme.typography.headlineSmall)
+                ListItem(
+                    leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
+                    headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
+                    trailingContent = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                )
+                HorizontalDivider(color = Color.Black)
                 LazyColumn {
                     items(relationships) { rel ->
                         ListItem(

@@ -70,6 +70,48 @@ fun SelectedItemView(
                     }
                 }
             }
+            is SchemaNode -> {
+                Text("Selected Node Schema", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                LazyColumn {
+                    items(selectedItem.properties) { property ->
+                        Row {
+                            Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                            Text(property.valueDataType.toString())
+                            if (property.isPrimaryKey) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("⭐", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
+            is SchemaRel -> {
+                Text("Selected Relationship Schema", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                Text("Source: ${selectedItem.srcLabel}")
+                Text("Destination: ${selectedItem.dstLabel}")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Properties are nullable for relationships, so check before displaying
+                selectedItem.properties.let { properties ->
+                    if (properties.isNotEmpty()) {
+                        Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                        LazyColumn {
+                            items(properties) { property ->
+                                Row {
+                                    Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                                    Text(property.valueDataType.toString())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onClearSelection) {

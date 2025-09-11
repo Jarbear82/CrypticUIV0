@@ -1,4 +1,3 @@
-// CrypticUIV0/composeApp/src/jvmMain/kotlin/com/tau/cryptic_ui_v0/TerminalViewModel.kt
 package com.tau.cryptic_ui_v0
 
 import androidx.compose.runtime.State
@@ -293,6 +292,8 @@ class TerminalViewModel {
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is RelDisplayItem -> getRel(item)
+                is SchemaNode -> item
+                is SchemaRel -> item
                 else -> null
             }
         }
@@ -303,7 +304,27 @@ class TerminalViewModel {
             when (item) {
                 is NodeDisplayItem -> deleteNode(item)
                 is RelDisplayItem -> deleteRel(item)
+                is SchemaNode -> deleteSchemaNode(item)
+                is SchemaRel -> deleteSchemaRel(item)
             }
+        }
+    }
+
+    private suspend fun deleteSchemaNode(item: SchemaNode) {
+        // TODO: Create an alert to ask if they want to delete a schema.
+        //  Warn them if it deletes other schemas
+        val q = "DROP TABLE ${item.label.withBackticks()}"
+        val result = dbService.executeQuery(q)
+        if (result is ExecutionResult.Success) {
+            showSchema()
+        }
+    }
+
+    private suspend fun deleteSchemaRel(item: SchemaRel) {
+        val q = "DROP TABLE ${item.label.withBackticks()}"
+        val result = dbService.executeQuery(q)
+        if (result is ExecutionResult.Success) {
+            showSchema()
         }
     }
 
