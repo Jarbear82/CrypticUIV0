@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DataObject
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DatasetLinked
 import androidx.compose.material.icons.filled.Edit
@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +53,7 @@ fun MetadataView(
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
                     headlineContent = { Text("Nodes:", style = MaterialTheme.typography.headlineSmall) } ,
-                    trailingContent = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                    trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
@@ -78,13 +79,17 @@ fun MetadataView(
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
                     headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
-                    trailingContent = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                    trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Edge") }
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
                     items(relationships) { rel ->
                         ListItem(
-                            headlineContent = { Text("(${rel.src.label} : ${rel.src.primarykeyProperty.value})-[${rel.label}]->(${rel.dst.label} : ${rel.dst.primarykeyProperty.value})")},
+                            headlineContent = { Column {
+                                Text("Src: (${rel.src.label} : ${rel.src.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
+                                Text("[${rel.label}]", style=MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                                Text("Dst: (${rel.dst.label} : ${rel.dst.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
+                            }},
                             // supportingContent = { Text(rel.) },
                             modifier = Modifier
                                 .fillMaxWidth()

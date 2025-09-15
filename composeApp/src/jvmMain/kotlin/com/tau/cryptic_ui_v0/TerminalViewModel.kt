@@ -224,6 +224,27 @@ class TerminalViewModel {
         _queryResult.value = null
     }
 
+    /**
+     * Create Node
+     *
+     * Requires a prepared statement to be generated using the template of the node.
+     * Then executes the prepared statement passing the statement and parameters (as a map of key, values)
+     * to the connection.
+     *
+     * @param node The generated node to be added to the database
+     */
+    private suspend fun createNode(node: NodeTable) {
+        val propertyMap = mutableMapOf<String, Any?>()
+        node.properties.forEach { property -> propertyMap.put(property.key, property.value) }
+        // Build the following string { PROP1: $Prop1, PROP2: $Prop2, ... }
+        var propertyString: String = ""
+        // node.properties.forEach { property -> property.joinToString() }
+        // Prepare query
+        val preparedStatement = dbService?.prepare("CREATE (n:${node.label} $propertyString")
+        // Execute preparedStatement
+        val result = dbService?.executePreparedStatement(preparedStatement, propertyMap)
+    }
+
     private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
         val pkKey = item.primarykeyProperty.key
         val pkValue = item.primarykeyProperty.value

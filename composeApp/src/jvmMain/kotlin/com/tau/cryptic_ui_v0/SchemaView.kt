@@ -7,7 +7,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,7 +39,12 @@ fun SchemaView(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
-            Text("Node Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+            ListItem(
+                leadingContent = { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Node Schema")},
+                headlineContent = { Text("Node Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp)) } ,
+                trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
+            )
+
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.nodeTables) { table ->
@@ -68,17 +78,18 @@ fun SchemaView(
 
 
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
-            Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+            ListItem(
+                leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Node")},
+                headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
+                trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
+            )
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.relTables) { table ->
                     ListItem(
-                        headlineContent = { Text("- ${table.label} (${table.srcLabel} -> ${table.dstLabel})", style = MaterialTheme.typography.titleMedium) },
+                        headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier.padding(bottom = 8.dp).clickable { onRelationshipClick(table) },
-//                supportingContent = { table.properties.forEach { prop ->
-//                    Text("  - ${prop.key}: ${prop.valueDataType}", style = MaterialTheme.typography.bodySmall)
-//                    }
-//                }
+                        supportingContent = { Text("(${table.srcLabel} -> ${table.dstLabel})")},
                         trailingContent = {
                             IconButton(onClick = { onDeleteRelClick(table) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Relationship Schema")
