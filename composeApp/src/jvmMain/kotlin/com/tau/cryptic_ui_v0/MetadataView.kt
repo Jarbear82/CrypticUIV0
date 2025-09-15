@@ -30,7 +30,8 @@ fun MetadataView(
     onNodeClick: (NodeDisplayItem) -> Unit,
     onRelationshipClick: (RelDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
-    onDeleteRelClick: (RelDisplayItem) -> Unit
+    onDeleteRelClick: (RelDisplayItem) -> Unit,
+    onAddNodeClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         dbMetaData?.let {
@@ -53,7 +54,11 @@ fun MetadataView(
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
                     headlineContent = { Text("Nodes:", style = MaterialTheme.typography.headlineSmall) } ,
-                    trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
+                    trailingContent = {
+                        IconButton(onClick = onAddNodeClick) {
+                            Icon(Icons.Default.Add, contentDescription = "New Node")
+                        }
+                    }
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {

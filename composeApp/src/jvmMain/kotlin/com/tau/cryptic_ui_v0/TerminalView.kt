@@ -23,6 +23,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val nodes by viewModel.nodeList.collectAsState()
     val relationships by viewModel.relationshipList.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
+    val nodeCreationState by viewModel.nodeCreationState.collectAsState()
+
 
     // Tabs
     var selectedTab by remember { mutableStateOf(TerminalViewTabs.METADATA) }
@@ -44,25 +46,25 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                            Button(onClick = {
-                                scope.launch { // Launch a coroutine to call the suspend function
-                                    viewModel.showSchema()
-                                }
-                            }) {
-                                Text("Show Schema")
+                        Button(onClick = {
+                            scope.launch { // Launch a coroutine to call the suspend function
+                                viewModel.showSchema()
                             }
+                        }) {
+                            Text("Show Schema")
+                        }
 
-                            Button(onClick = { viewModel.listNodes() }) {
-                                Text("List Nodes")
-                            }
+                        Button(onClick = { viewModel.listNodes() }) {
+                            Text("List Nodes")
+                        }
 
-                            Button(onClick = { viewModel.listEdges() }) {
-                                Text("List Rels")
-                            }
+                        Button(onClick = { viewModel.listEdges() }) {
+                            Text("List Rels")
+                        }
 
-                            Button(onClick = { viewModel.listAll() }) {
-                                Text("List All")
-                            }
+                        Button(onClick = { viewModel.listAll() }) {
+                            Text("List All")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -108,7 +110,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onNodeClick = { viewModel.selectItem(it); println("Item: $it is being selected"); selectSelected() },
                         onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
                         onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
-                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) }
+                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) },
+                        onAddNodeClick = { viewModel.initiateNodeCreation(); selectSelected() }
                     )
                     TerminalViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -119,7 +122,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     )
                     TerminalViewTabs.SELECTED -> SelectedItemView(
                         selectedItem = selectedItem,
-                        onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() }
+                        nodeCreationState = nodeCreationState,
+                        onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() },
+                        onNodeCreationSchemaSelected = { viewModel.updateNodeCreationSchema(it) },
+                        onNodeCreationPropertyChanged = { key, value -> viewModel.updateNodeCreationProperty(key, value) },
+                        onNodeCreationCreateClick = { viewModel.createNodeFromState(); selectMetadata() },
+                        onNodeCreationCancelClick = { viewModel.cancelNodeCreation(); selectMetadata() }
                     )
                 }
             }

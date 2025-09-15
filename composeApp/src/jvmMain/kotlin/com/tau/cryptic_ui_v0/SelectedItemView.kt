@@ -19,103 +19,115 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SelectedItemView(
     selectedItem: Any?,
-    onClearSelection: () -> Unit
+    nodeCreationState: NodeCreationState?,
+    onClearSelection: () -> Unit,
+    onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
+    onNodeCreationPropertyChanged: (String, String) -> Unit,
+    onNodeCreationCreateClick: () -> Unit,
+    onNodeCreationCancelClick: () -> Unit
 ) {
-    if (selectedItem == null) {
+    if (nodeCreationState != null) {
+        CreateNodeView(
+            nodeCreationState = nodeCreationState,
+            onSchemaSelected = onNodeCreationSchemaSelected,
+            onPropertyChanged = onNodeCreationPropertyChanged,
+            onCreateClick = onNodeCreationCreateClick,
+            onCancelClick = onNodeCreationCancelClick
+        )
+    } else if (selectedItem == null) {
         Text("No item selected.")
-        return
-    }
-
-    Column(modifier = Modifier.padding(8.dp)) {
-        when (selectedItem) {
-            is NodeTable -> {
-                Text("Selected Node", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn {
-                    items(selectedItem.properties) { property ->
-                        Row {
-                            Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                            Text(property.value.toString())
-                            if (property.isPrimaryKey) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("⭐", style = MaterialTheme.typography.bodySmall)
+    } else {
+        Column(modifier = Modifier.padding(8.dp)) {
+            when (selectedItem) {
+                is NodeTable -> {
+                    Text("Selected Node", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                    LazyColumn {
+                        items(selectedItem.properties) { property ->
+                            Row {
+                                Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                                Text(property.value.toString())
+                                if (property.isPrimaryKey) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("⭐", style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     }
                 }
-            }
-            is RelTable -> {
-                Text("Selected Relationship", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                Text("Source: ${selectedItem.src.label} (${selectedItem.src.primarykeyProperty.value})")
-                Text("Destination: ${selectedItem.dst.label} (${selectedItem.dst.primarykeyProperty.value})")
-                Spacer(modifier = Modifier.height(8.dp))
+                is RelTable -> {
+                    Text("Selected Relationship", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Source: ${selectedItem.src.label} (${selectedItem.src.primarykeyProperty.value})")
+                    Text("Destination: ${selectedItem.dst.label} (${selectedItem.dst.primarykeyProperty.value})")
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // Properties are nullable for relationships, so check before displaying
-                selectedItem.properties?.let { properties ->
-                    if (properties.isNotEmpty()) {
-                        Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn {
-                            items(properties) { property ->
-                                Row {
-                                    Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                    Text(property.value.toString())
+                    // Properties are nullable for relationships, so check before displaying
+                    selectedItem.properties?.let { properties ->
+                        if (properties.isNotEmpty()) {
+                            Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                            LazyColumn {
+                                items(properties) { property ->
+                                    Row {
+                                        Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                                        Text(property.value.toString())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                is SchemaNode -> {
+                    Text("Selected Node Schema", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                    LazyColumn {
+                        items(selectedItem.properties) { property ->
+                            Row {
+                                Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                                Text(property.valueDataType.toString())
+                                if (property.isPrimaryKey) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("⭐", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+                is SchemaRel -> {
+                    Text("Selected Relationship Schema", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Source: ${selectedItem.srcLabel}")
+                    Text("Destination: ${selectedItem.dstLabel}")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Properties are nullable for relationships, so check before displaying
+                    selectedItem.properties.let { properties ->
+                        if (properties.isNotEmpty()) {
+                            Text("Properties:", style = MaterialTheme.typography.titleMedium)
+                            LazyColumn {
+                                items(properties) { property ->
+                                    Row {
+                                        Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
+                                        Text(property.valueDataType.toString())
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            is SchemaNode -> {
-                Text("Selected Node Schema", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn {
-                    items(selectedItem.properties) { property ->
-                        Row {
-                            Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                            Text(property.valueDataType.toString())
-                            if (property.isPrimaryKey) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("⭐", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onClearSelection) {
+                Text("Clear Selection")
             }
-            is SchemaRel -> {
-                Text("Selected Relationship Schema", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                Text("Source: ${selectedItem.srcLabel}")
-                Text("Destination: ${selectedItem.dstLabel}")
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Properties are nullable for relationships, so check before displaying
-                selectedItem.properties.let { properties ->
-                    if (properties.isNotEmpty()) {
-                        Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn {
-                            items(properties) { property ->
-                                Row {
-                                    Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                    Text(property.valueDataType.toString())
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onClearSelection) {
-            Text("Clear Selection")
         }
     }
 }

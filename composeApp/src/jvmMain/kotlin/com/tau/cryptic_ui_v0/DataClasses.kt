@@ -119,3 +119,10 @@ data class DBMetaData(
     val version: String,
     val storage: String
 )
+
+// --- Data class for Node Creation ---
+data class NodeCreationState(
+    val schemas: List<SchemaNode>,
+    val selectedSchema: SchemaNode? = null,
+    val properties: Map<String, String> = emptyMap()
+)

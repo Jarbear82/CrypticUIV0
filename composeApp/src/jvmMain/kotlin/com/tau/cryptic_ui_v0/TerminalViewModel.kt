@@ -45,6 +45,9 @@ class TerminalViewModel {
     private val _query = mutableStateOf("")
     val query: State<String> = _query
 
+    private val _nodeCreationState = MutableStateFlow<NodeCreationState?>(null)
+    val nodeCreationState: StateFlow<NodeCreationState?> = _nodeCreationState
+
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
     }
@@ -224,25 +227,62 @@ class TerminalViewModel {
         _queryResult.value = null
     }
 
-    /**
-     * Create Node
-     *
-     * Requires a prepared statement to be generated using the template of the node.
-     * Then executes the prepared statement passing the statement and parameters (as a map of key, values)
-     * to the connection.
-     *
-     * @param node The generated node to be added to the database
-     */
-    private suspend fun createNode(node: NodeTable) {
-        val propertyMap = mutableMapOf<String, Any?>()
-        node.properties.forEach { property -> propertyMap.put(property.key, property.value) }
-        // Build the following string { PROP1: $Prop1, PROP2: $Prop2, ... }
-        var propertyString: String = ""
-        // node.properties.forEach { property -> property.joinToString() }
-        // Prepare query
-        val preparedStatement = dbService?.prepare("CREATE (n:${node.label} $propertyString")
-        // Execute preparedStatement
-        val result = dbService?.executePreparedStatement(preparedStatement, propertyMap)
+    fun initiateNodeCreation() {
+        viewModelScope.launch {
+            val schema = _schema.value ?: dbService.getSchema().also { _schema.value = it }
+            if (schema != null) {
+                _selectedItem.value = null // Clear any selected item
+                _nodeCreationState.value = NodeCreationState(schemas = schema.nodeTables)
+            }
+        }
+    }
+
+    fun cancelNodeCreation() {
+        _nodeCreationState.value = null
+    }
+
+    fun updateNodeCreationSchema(schemaNode: SchemaNode) {
+        _nodeCreationState.update {
+            it?.copy(
+                selectedSchema = schemaNode,
+                properties = emptyMap() // Reset properties when schema changes
+            )
+        }
+    }
+
+    fun updateNodeCreationProperty(key: String, value: String) {
+        _nodeCreationState.update { currentState ->
+            currentState?.copy(
+                properties = currentState.properties.toMutableMap().apply {
+                    this[key] = value
+                }
+            )
+        }
+    }
+
+    fun createNodeFromState() {
+        viewModelScope.launch {
+            _nodeCreationState.value?.let { state ->
+                if (state.selectedSchema != null) {
+                    val label = state.selectedSchema!!.label
+                    // This is a simplification, we might need type conversion based on schema
+                    val properties = state.properties.mapValues { entry ->
+                        entry.value.toLongOrNull() ?: entry.value
+                    }
+                    createNode(label, properties)
+                    _nodeCreationState.value = null // Exit creation mode
+                    listNodes() // Refresh the node list
+                }
+            }
+        }
+    }
+
+    private suspend fun createNode(label: String, properties: Map<String, Any?>) {
+        val propertiesString = properties.entries.joinToString(", ") {
+            "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
+        }
+        val q = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
+        dbService.executeQuery(q)
     }
 
     private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
@@ -310,6 +350,7 @@ class TerminalViewModel {
 
     fun selectItem(item: Any) {
         viewModelScope.launch {
+            _nodeCreationState.value = null // Exit node creation mode if active
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is RelDisplayItem -> getRel(item)
