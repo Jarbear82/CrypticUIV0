@@ -137,3 +137,13 @@ data class NodeCreationState(
     val selectedSchema: SchemaNode? = null,
     val properties: Map<String, String> = emptyMap()
 )
+
+// --- Data class for Rel Creation ---
+data class RelCreationState(
+    val schemas: List<SchemaRel>,
+    val availableNodes: List<NodeDisplayItem>,
+    val selectedSchema: SchemaRel? = null,
+    val src: NodeDisplayItem? = null,
+    val dst: NodeDisplayItem? = null,
+    val properties: Map<String, String> = emptyMap()
+)

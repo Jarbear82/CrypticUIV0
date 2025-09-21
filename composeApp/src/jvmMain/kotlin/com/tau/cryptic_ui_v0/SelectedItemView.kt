@@ -20,11 +20,18 @@ import androidx.compose.ui.unit.dp
 fun SelectedItemView(
     selectedItem: Any?,
     nodeCreationState: NodeCreationState?,
+    relCreationState: RelCreationState?,
     onClearSelection: () -> Unit,
     onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
     onNodeCreationCreateClick: () -> Unit,
-    onNodeCreationCancelClick: () -> Unit
+    onNodeCreationCancelClick: () -> Unit,
+    onRelCreationSchemaSelected: (SchemaRel) -> Unit,
+    onRelCreationSrcSelected: (NodeDisplayItem) -> Unit,
+    onRelCreationDstSelected: (NodeDisplayItem) -> Unit,
+    onRelCreationPropertyChanged: (String, String) -> Unit,
+    onRelCreationCreateClick: () -> Unit,
+    onRelCreationCancelClick: () -> Unit
 ) {
     if (nodeCreationState != null) {
         CreateNodeView(
@@ -33,6 +40,16 @@ fun SelectedItemView(
             onPropertyChanged = onNodeCreationPropertyChanged,
             onCreateClick = onNodeCreationCreateClick,
             onCancelClick = onNodeCreationCancelClick
+        )
+    } else if (relCreationState != null) {
+        CreateRelView(
+            relCreationState = relCreationState,
+            onSchemaSelected = onRelCreationSchemaSelected,
+            onSrcSelected = onRelCreationSrcSelected,
+            onDstSelected = onRelCreationDstSelected,
+            onPropertyChanged = onRelCreationPropertyChanged,
+            onCreateClick = onRelCreationCreateClick,
+            onCancelClick = onRelCreationCancelClick
         )
     } else if (selectedItem == null) {
         Text("No item selected.")

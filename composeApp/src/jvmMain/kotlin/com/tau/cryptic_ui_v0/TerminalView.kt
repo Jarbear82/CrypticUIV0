@@ -24,6 +24,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val relationships by viewModel.relationshipList.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
     val nodeCreationState by viewModel.nodeCreationState.collectAsState()
+    val relCreationState by viewModel.relCreationState.collectAsState()
 
 
     // Tabs
@@ -111,7 +112,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
                         onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
                         onDeleteRelClick = { viewModel.deleteDisplayItem(it) },
-                        onAddNodeClick = { viewModel.initiateNodeCreation(); selectSelected() }
+                        onAddNodeClick = { viewModel.initiateNodeCreation(); selectSelected() },
+                        onAddRelClick = { viewModel.initiateRelCreation(); selectSelected() }
                     )
                     TerminalViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -123,11 +125,18 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     TerminalViewTabs.SELECTED -> SelectedItemView(
                         selectedItem = selectedItem,
                         nodeCreationState = nodeCreationState,
+                        relCreationState = relCreationState,
                         onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() },
                         onNodeCreationSchemaSelected = { viewModel.updateNodeCreationSchema(it) },
                         onNodeCreationPropertyChanged = { key, value -> viewModel.updateNodeCreationProperty(key, value) },
                         onNodeCreationCreateClick = { viewModel.createNodeFromState(); selectMetadata() },
-                        onNodeCreationCancelClick = { viewModel.cancelNodeCreation(); selectMetadata() }
+                        onNodeCreationCancelClick = { viewModel.cancelNodeCreation(); selectMetadata() },
+                        onRelCreationSchemaSelected = { viewModel.updateRelCreationSchema(it) },
+                        onRelCreationSrcSelected = { viewModel.updateRelCreationSrc(it) },
+                        onRelCreationDstSelected = { viewModel.updateRelCreationDst(it) },
+                        onRelCreationPropertyChanged = { key, value -> viewModel.updateRelCreationProperty(key, value) },
+                        onRelCreationCreateClick = { viewModel.createRelFromState(); selectMetadata() },
+                        onRelCreationCancelClick = { viewModel.cancelRelCreation(); selectMetadata() }
                     )
                 }
             }

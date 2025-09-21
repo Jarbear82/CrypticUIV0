@@ -31,7 +31,8 @@ fun MetadataView(
     onRelationshipClick: (RelDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
     onDeleteRelClick: (RelDisplayItem) -> Unit,
-    onAddNodeClick: () -> Unit
+    onAddNodeClick: () -> Unit,
+    onAddRelClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         dbMetaData?.let {
@@ -84,7 +85,11 @@ fun MetadataView(
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
                     headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
-                    trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Edge") }
+                    trailingContent = {
+                        IconButton(onClick = onAddRelClick) {
+                            Icon(Icons.Default.Add, contentDescription = "New Edge")
+                        }
+                    }
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {

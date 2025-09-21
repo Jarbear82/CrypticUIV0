@@ -48,6 +48,9 @@ class TerminalViewModel {
     private val _nodeCreationState = MutableStateFlow<NodeCreationState?>(null)
     val nodeCreationState: StateFlow<NodeCreationState?> = _nodeCreationState
 
+    private val _relCreationState = MutableStateFlow<RelCreationState?>(null)
+    val relCreationState: StateFlow<RelCreationState?> = _relCreationState
+
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
     }
@@ -316,10 +319,28 @@ class TerminalViewModel {
             }
         }
     }
-
+    fun initiateRelCreation() {
+        viewModelScope.launch {
+            val schema = _schema.value ?: dbService.getSchema().also { _schema.value = it }
+            if (schema != null) {
+                if (_nodeList.value.isEmpty()) {
+                    listNodes()
+                }
+                _selectedItem.value = null // Clear any selected item
+                _relCreationState.value = RelCreationState(
+                    schemas = schema.relTables,
+                    availableNodes = _nodeList.value
+                )
+            }
+        }
+    }
     fun cancelNodeCreation() {
         _nodeCreationState.value = null
     }
+    fun cancelRelCreation() {
+        _relCreationState.value = null
+    }
+
 
     fun updateNodeCreationSchema(schemaNode: SchemaNode) {
         _nodeCreationState.update {
@@ -431,6 +452,7 @@ class TerminalViewModel {
     fun selectItem(item: Any) {
         viewModelScope.launch {
             _nodeCreationState.value = null // Exit node creation mode if active
+            _relCreationState.value = null // Exit rel creation mode if active
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is RelDisplayItem -> getRel(item)
@@ -439,6 +461,70 @@ class TerminalViewModel {
                 else -> null
             }
         }
+    }
+    fun updateRelCreationSchema(schemaRel: SchemaRel) {
+        _relCreationState.update {
+            it?.copy(
+                selectedSchema = schemaRel,
+                src = null,
+                dst = null,
+                properties = emptyMap()
+            )
+        }
+    }
+
+    fun updateRelCreationSrc(node: NodeDisplayItem) {
+        _relCreationState.update { it?.copy(src = node) }
+    }
+
+    fun updateRelCreationDst(node: NodeDisplayItem) {
+        _relCreationState.update { it?.copy(dst = node) }
+    }
+
+    fun updateRelCreationProperty(key: String, value: String) {
+        _relCreationState.update { currentState ->
+            currentState?.copy(
+                properties = currentState.properties.toMutableMap().apply {
+                    this[key] = value
+                }
+            )
+        }
+    }
+    fun createRelFromState() {
+        viewModelScope.launch {
+            _relCreationState.value?.let { state ->
+                if (state.selectedSchema != null && state.src != null && state.dst != null) {
+                    val label = state.selectedSchema.label
+                    val src = state.src
+                    val dst = state.dst
+                    val properties = state.properties.mapValues { entry ->
+                        entry.value.toLongOrNull() ?: entry.value
+                    }
+                    createRel(label, src, dst, properties)
+                    _relCreationState.value = null // Exit creation mode
+                    listEdges() // Refresh the edge list
+                }
+            }
+        }
+    }
+    private suspend fun createRel(label: String, src: NodeDisplayItem, dst: NodeDisplayItem, properties: Map<String, Any?>) {
+        val srcPk = src.primarykeyProperty
+        val dstPk = dst.primarykeyProperty
+        val formattedSrcPkValue = formatPkValue(srcPk.value)
+        val formattedDstPkValue = formatPkValue(dstPk.value)
+
+        val propertiesString = if (properties.isNotEmpty()) {
+            "{${properties.entries.joinToString(", ") { "${it.key.withBackticks()}: ${formatPkValue(it.value)}" }}}"
+        } else {
+            ""
+        }
+
+        val q = """
+        MATCH (a:${src.label.withBackticks()}), (b:${dst.label.withBackticks()})
+        WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
+        CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
+    """.trimIndent()
+        dbService.executeQuery(q)
     }
 
     fun deleteDisplayItem(item: Any) {
