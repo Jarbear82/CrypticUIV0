@@ -51,6 +51,9 @@ class TerminalViewModel {
     private val _relCreationState = MutableStateFlow<RelCreationState?>(null)
     val relCreationState: StateFlow<RelCreationState?> = _relCreationState
 
+    private val _nodeSchemaCreationState = MutableStateFlow<NodeSchemaCreationState?>(null)
+    val nodeSchemaCreationState: StateFlow<NodeSchemaCreationState?> = _nodeSchemaCreationState
+
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
     }
@@ -334,6 +337,11 @@ class TerminalViewModel {
             }
         }
     }
+    fun initiateNodeSchemaCreation() {
+        _selectedItem.value = null
+        _nodeSchemaCreationState.value = NodeSchemaCreationState()
+    }
+
     fun cancelNodeCreation() {
         _nodeCreationState.value = null
     }
@@ -341,6 +349,9 @@ class TerminalViewModel {
         _relCreationState.value = null
     }
 
+    fun cancelNodeSchemaCreation() {
+        _nodeSchemaCreationState.value = null
+    }
 
     fun updateNodeCreationSchema(schemaNode: SchemaNode) {
         _nodeCreationState.update {
@@ -525,6 +536,19 @@ class TerminalViewModel {
         CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
     """.trimIndent()
         dbService.executeQuery(q)
+    }
+
+    fun createNodeSchemaFromState(state: NodeSchemaCreationState) {
+        viewModelScope.launch {
+            val pk = state.properties.first { it.isPrimaryKey }
+            val properties = state.properties.joinToString(", ") {
+                "${it.name.withBackticks()} ${it.type}"
+            }
+            val q = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
+            dbService.executeQuery(q)
+            _nodeSchemaCreationState.value = null
+            showSchema()
+        }
     }
 
     fun deleteDisplayItem(item: Any) {

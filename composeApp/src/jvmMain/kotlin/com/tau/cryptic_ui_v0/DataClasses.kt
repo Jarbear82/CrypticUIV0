@@ -147,3 +147,15 @@ data class RelCreationState(
     val dst: NodeDisplayItem? = null,
     val properties: Map<String, String> = emptyMap()
 )
+
+// --- Data class for Node Schema Creation ---
+data class NodeSchemaCreationState(
+    val tableName: String = "",
+    val properties: List<Property> = listOf(Property(isPrimaryKey = true))
+)
+
+data class Property(
+    val name: String = "",
+    val type: String = "STRING",
+    val isPrimaryKey: Boolean = false
+)

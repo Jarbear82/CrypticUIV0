@@ -30,7 +30,8 @@ fun SchemaView(
     onNodeClick: (SchemaNode) -> Unit,
     onRelationshipClick: (SchemaRel) -> Unit,
     onDeleteNodeClick: (SchemaNode) -> Unit,
-    onDeleteRelClick: (SchemaRel) -> Unit
+    onDeleteRelClick: (SchemaRel) -> Unit,
+    onAddNodeSchemaClick: () -> Unit
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -42,7 +43,11 @@ fun SchemaView(
             ListItem(
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Node Schema")},
                 headlineContent = { Text("Node Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp)) } ,
-                trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
+                trailingContent = {
+                    IconButton(onClick = onAddNodeSchemaClick) {
+                        Icon(Icons.Default.Add, contentDescription = "New Node Schema")
+                    }
+                }
             )
 
             HorizontalDivider(color = Color.Black)
