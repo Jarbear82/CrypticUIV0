@@ -85,7 +85,7 @@ data class SchemaRel(
 
 data class SchemaProperty(
     val key: String,
-    val valueDataType: KuzuValue,
+    val valueDataType: String,
     val isPrimaryKey: Boolean,
     val keyChanged: Boolean = false,
     val valueDataTypeChanged: Boolean = false,
@@ -99,14 +99,25 @@ data class Schema(
 
 
 // --- Data classes for Query Results ---
-
 data class FormattedResult(
     val headers: List<String>,
     val rows: List<List<Any?>>,
     val dataTypes: Map<String, KuzuDataType>,
     val summary: String,
     val rowCount: Long
-)
+) {
+    override fun toString(): String {
+        val rowListStr = rows.joinToString(separator = ",\n        ", prefix = "[\n        ", postfix = "\n    ]") { it.toString() }
+
+        return "Formatted Result(\n" +
+                "    headers = $headers\n" +
+                "    rows = $rowListStr\n" +
+                "    dataTypes = $dataTypes\n" +
+                "    summary = $summary\n" +
+                "    rowCount = $rowCount\n" +
+                ")"
+    }
+}
 
 sealed class ExecutionResult {
     data class Success(val results: List<FormattedResult>, val isSchemaChanged: Boolean) : ExecutionResult()

@@ -159,7 +159,87 @@ class TerminalViewModel {
     }
 
     suspend fun showSchema() {
-        _schema.value = dbService.getSchema()
+        println("\n\nShowing Schema...")
+
+        // Call show tables
+        val execResult = dbService.executeQuery("CALL SHOW_TABLES() RETURN *;")
+        if (execResult !is ExecutionResult.Success) {
+            return // Handle error case
+        }
+
+        val nodeSchemaList = mutableListOf<SchemaNode>()
+        val relSchemaList = mutableListOf<SchemaRel>()
+        val allTables = execResult.results.first().rows.map { it[1] as String to it[2] as String }
+
+        // List Schema Tables
+        for ((tableName, tableType) in allTables) {
+            // For each table, create schema
+            when (tableType) {
+                "NODE" -> {
+                    // FOR NODE
+                    val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                    if (tableInfoResult is ExecutionResult.Success) {
+                        val properties = tableInfoResult.results.first().rows.map { row ->
+                            // Add Each Property name and type
+                            val propName = row[1].toString()
+                            val propType = row[2].toString()
+                            val isPrimaryKey = row[4] as Boolean
+                            SchemaProperty(propName, propType, isPrimaryKey)
+                        }
+                        // Create Node Schema and add to Node Schema List
+                        nodeSchemaList.add(SchemaNode(tableName, properties))
+                    }
+                }
+                "REL" -> {
+                    // FOR EDGE
+                    val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                    val properties = if (tableInfoResult is ExecutionResult.Success) {
+                        // Add Properties (if any)
+                        tableInfoResult.results.first().rows.map { row ->
+                            val propName = row[1].toString()
+                            val propType = row[2].toString()
+                            val isPrimaryKey = row[4] as Boolean
+                            SchemaProperty(propName, propType, isPrimaryKey)
+                        }
+                    } else {
+                        emptyList()
+                    }
+
+                    // Call Show Connection
+                    val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
+                    if (showConnectionResult is ExecutionResult.Success) {
+                        // Add TO and FROM (src and dst)
+                        val connectionRows = showConnectionResult.results.first().rows
+                        for (row in connectionRows) {
+                            val srcLabel = row[0] as String
+                            val dstLabel = row[1] as String
+                            // Create Rel Schema and add to Rel Schema List
+                            relSchemaList.add(SchemaRel(tableName, srcLabel, dstLabel, properties))
+                        }
+                    }
+                }
+                "RECURSIVE_REL" -> {
+                    // Recursive relationships are internally represented as STRUCT{LIST [NODE], LIST [REL]},
+                    // but for schema representation, they can be treated as RELs for now.
+                    // Call Show Connection
+                    val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
+                    if (showConnectionResult is ExecutionResult.Success) {
+                        val connectionRows = showConnectionResult.results.first().rows
+                        for (row in connectionRows) {
+                            val srcLabel = row[0] as String
+                            val dstLabel = row[1] as String
+                            // Create Rel Schema and add to Rel Schema List
+                            // Note: Recursive relationships do not have properties according to the provided context.
+                            // You can add logic to get properties if they become available in the future.
+                            relSchemaList.add(SchemaRel(tableName, srcLabel, dstLabel, emptyList()))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Create Schema containing Node and Rel tables
+        _schema.value = Schema(nodeTables = nodeSchemaList, relTables = relSchemaList)
     }
 
     fun listNodes() {

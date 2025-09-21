@@ -102,6 +102,7 @@ class KuzuDBService {
     }
 
     suspend fun getSchema(): Schema? {
+        println("Fetching Schema")
         if (!isInitialized()) return null
         return withContext(Dispatchers.IO) {
             try {
@@ -109,6 +110,8 @@ class KuzuDBService {
                 val relTables = mutableListOf<SchemaRel>()
 
                 val tablesResult = conn!!.query("CALL SHOW_TABLES() RETURN *;")
+                println("Query Result:\n---\n${tablesResult}\n---\n")
+
                 while (tablesResult.hasNext()) {
                     val row = tablesResult.next
                     val tableName = row.getValue(1).getValue<Any>().toString()
@@ -122,7 +125,7 @@ class KuzuDBService {
                             val propName = propRow.getValue(1).getValue<Any>().toString()
                             val propType = propRow.getValue(2)
                             val isPrimary = propRow.getValue(4).getValue<Boolean>()
-                            properties.add(SchemaProperty(propName, propType, isPrimary))
+                            properties.add(SchemaProperty(propName, propType.toString(), isPrimary))
                         }
                         nodeTables.add(SchemaNode(tableName, properties))
                     } else if (tableType == "REL") {
@@ -135,7 +138,7 @@ class KuzuDBService {
                             if (propName !in listOf("_src", "_dst", "_id")) {
                                 val propType = propRow.getValue(2)
                                 // Relationship properties cannot be primary keys
-                                properties.add(SchemaProperty(key = propName, valueDataType = propType, isPrimaryKey = false))
+                                properties.add(SchemaProperty(key = propName, valueDataType = propType.toString(), isPrimaryKey = false))
                             }
                         }
 

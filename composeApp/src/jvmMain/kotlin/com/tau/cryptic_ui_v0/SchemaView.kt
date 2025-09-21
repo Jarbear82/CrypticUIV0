@@ -55,13 +55,11 @@ fun SchemaView(
                             Text(
                                 text = table.properties.joinToString(separator = "\n") { prop ->
                                     if (prop.isPrimaryKey){
-                                        "  - ${prop.key}: ${prop.valueDataType}: PK"
+                                        "  - ${prop.key}: ${prop.valueDataType.toString()}: PK"
                                     } else {
-                                        "  - ${prop.key}: ${prop.valueDataType}"
+                                        "  - ${prop.key}: ${prop.valueDataType.toString()}"
                                     }
-
                                 },
-
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
