@@ -31,7 +31,8 @@ fun SchemaView(
     onRelationshipClick: (SchemaRel) -> Unit,
     onDeleteNodeClick: (SchemaNode) -> Unit,
     onDeleteRelClick: (SchemaRel) -> Unit,
-    onAddNodeSchemaClick: () -> Unit
+    onAddNodeSchemaClick: () -> Unit,
+    onAddRelSchemaClick: () -> Unit
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -84,7 +85,11 @@ fun SchemaView(
             ListItem(
                 leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Node")},
                 headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
-                trailingContent = { Icon(Icons.Default.Add, contentDescription = "New Node") }
+                trailingContent = {
+                    IconButton(onClick = onAddRelSchemaClick) {
+                        Icon(Icons.Default.Add, contentDescription = "New Rel Schema")
+                    }
+                }
             )
             HorizontalDivider(color = Color.Black)
             LazyColumn {

@@ -22,6 +22,7 @@ fun SelectedItemView(
     nodeCreationState: NodeCreationState?,
     relCreationState: RelCreationState?,
     nodeSchemaCreationState: NodeSchemaCreationState?,
+    relSchemaCreationState: RelSchemaCreationState?,
     onClearSelection: () -> Unit,
     onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
@@ -34,7 +35,9 @@ fun SelectedItemView(
     onRelCreationCreateClick: () -> Unit,
     onRelCreationCancelClick: () -> Unit,
     onNodeSchemaCreationCreateClick: (NodeSchemaCreationState) -> Unit,
-    onNodeSchemaCreationCancelClick: () -> Unit
+    onNodeSchemaCreationCancelClick: () -> Unit,
+    onRelSchemaCreationCreateClick: (RelSchemaCreationState) -> Unit,
+    onRelSchemaCreationCancelClick: () -> Unit
 ) {
     if (nodeCreationState != null) {
         CreateNodeView(
@@ -58,6 +61,12 @@ fun SelectedItemView(
         CreateNodeSchemaView(
             onCreate = onNodeSchemaCreationCreateClick,
             onCancel = onNodeSchemaCreationCancelClick
+        )
+    } else if (relSchemaCreationState != null) {
+        CreateRelSchemaView(
+            schemas = relSchemaCreationState.allNodeSchemas,
+            onCreate = onRelSchemaCreationCreateClick,
+            onCancel = onRelSchemaCreationCancelClick
         )
     } else if (selectedItem == null) {
         Text("No item selected.")

@@ -54,6 +54,10 @@ class TerminalViewModel {
     private val _nodeSchemaCreationState = MutableStateFlow<NodeSchemaCreationState?>(null)
     val nodeSchemaCreationState: StateFlow<NodeSchemaCreationState?> = _nodeSchemaCreationState
 
+    private val _relSchemaCreationState = MutableStateFlow<RelSchemaCreationState?>(null)
+    val relSchemaCreationState: StateFlow<RelSchemaCreationState?> = _relSchemaCreationState
+
+
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
     }
@@ -204,8 +208,9 @@ class TerminalViewModel {
                         tableInfoResult.results.first().rows.map { row ->
                             val propName = row[1].toString()
                             val propType = row[2].toString()
-                            val isPrimaryKey = row[4] as Boolean
-                            SchemaProperty(propName, propType, isPrimaryKey)
+                            // For REL tables, the 5th column is `storage_direction`, not a boolean, so we can't cast it.
+                            // We can assume `isPrimaryKey` is always false for relationship properties.
+                            SchemaProperty(propName, propType, isPrimaryKey = false)
                         }
                     } else {
                         emptyList()
@@ -342,6 +347,12 @@ class TerminalViewModel {
         _nodeSchemaCreationState.value = NodeSchemaCreationState()
     }
 
+    fun initiateRelSchemaCreation() {
+        _selectedItem.value = null
+        _relSchemaCreationState.value = RelSchemaCreationState(allNodeSchemas = _schema.value?.nodeTables ?: emptyList())
+    }
+
+
     fun cancelNodeCreation() {
         _nodeCreationState.value = null
     }
@@ -352,6 +363,11 @@ class TerminalViewModel {
     fun cancelNodeSchemaCreation() {
         _nodeSchemaCreationState.value = null
     }
+
+    fun cancelRelSchemaCreation() {
+        _relSchemaCreationState.value = null
+    }
+
 
     fun updateNodeCreationSchema(schemaNode: SchemaNode) {
         _nodeCreationState.update {
@@ -376,7 +392,7 @@ class TerminalViewModel {
         viewModelScope.launch {
             _nodeCreationState.value?.let { state ->
                 if (state.selectedSchema != null) {
-                    val label = state.selectedSchema!!.label
+                    val label = state.selectedSchema.label
                     // This is a simplification, we might need type conversion based on schema
                     val properties = state.properties.mapValues { entry ->
                         entry.value.toLongOrNull() ?: entry.value
@@ -464,6 +480,8 @@ class TerminalViewModel {
         viewModelScope.launch {
             _nodeCreationState.value = null // Exit node creation mode if active
             _relCreationState.value = null // Exit rel creation mode if active
+            _nodeSchemaCreationState.value = null
+            _relSchemaCreationState.value = null
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is RelDisplayItem -> getRel(item)
@@ -547,6 +565,22 @@ class TerminalViewModel {
             val q = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
             dbService.executeQuery(q)
             _nodeSchemaCreationState.value = null
+            showSchema()
+        }
+    }
+
+    fun createRelSchemaFromState(state: RelSchemaCreationState) {
+        viewModelScope.launch {
+            val properties = if (state.properties.isNotEmpty()) {
+                ", " + state.properties.joinToString(", ") {
+                    "${it.name.withBackticks()} ${it.type}"
+                }
+            } else {
+                ""
+            }
+            val q = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
+            dbService.executeQuery(q)
+            _relSchemaCreationState.value = null
             showSchema()
         }
     }
