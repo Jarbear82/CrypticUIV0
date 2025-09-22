@@ -3,7 +3,6 @@ package com.tau.cryptic_ui_v0
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import com.tau.cryptic_ui_v0.views.TerminalView
-import com.tau.cryptic_ui_v0.views.TerminalViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable

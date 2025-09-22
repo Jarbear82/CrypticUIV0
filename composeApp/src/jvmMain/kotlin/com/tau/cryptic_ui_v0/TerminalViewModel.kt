@@ -1,27 +1,7 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
-import com.tau.cryptic_ui_v0.DBMetaData
-import com.tau.cryptic_ui_v0.DisplayItemProperty
-import com.tau.cryptic_ui_v0.ExecutionResult
-import com.tau.cryptic_ui_v0.KuzuDBService
-import com.tau.cryptic_ui_v0.NodeCreationState
-import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.NodeSchemaCreationState
-import com.tau.cryptic_ui_v0.NodeTable
-import com.tau.cryptic_ui_v0.NodeValue
-import com.tau.cryptic_ui_v0.RecursiveRelValue
-import com.tau.cryptic_ui_v0.RelCreationState
-import com.tau.cryptic_ui_v0.RelDisplayItem
-import com.tau.cryptic_ui_v0.RelSchemaCreationState
-import com.tau.cryptic_ui_v0.RelTable
-import com.tau.cryptic_ui_v0.RelValue
-import com.tau.cryptic_ui_v0.Schema
-import com.tau.cryptic_ui_v0.SchemaNode
-import com.tau.cryptic_ui_v0.SchemaProperty
-import com.tau.cryptic_ui_v0.SchemaRel
-import com.tau.cryptic_ui_v0.TableProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -194,17 +174,19 @@ class TerminalViewModel {
         }
     }
 
-    suspend fun showSchema() {
-        println("\n\nShowing Schema...")
+    suspend fun getSchema() : Schema {
+        val nodeSchemaList = mutableListOf<SchemaNode>()
+        val relSchemaList = mutableListOf<SchemaRel>()
 
         // Call show tables
         val execResult = dbService.executeQuery("CALL SHOW_TABLES() RETURN *;")
         if (execResult !is ExecutionResult.Success) {
-            return // Handle error case
+            println("Failed to fetch schema")
+            // Handle error case
+            return Schema(nodeSchemaList, relSchemaList)
         }
 
-        val nodeSchemaList = mutableListOf<SchemaNode>()
-        val relSchemaList = mutableListOf<SchemaRel>()
+
         val allTables = execResult.results.first().rows.map { it[1] as String to it[2] as String }
 
         // List Schema Tables
@@ -274,9 +256,13 @@ class TerminalViewModel {
                 }
             }
         }
-
         // Create Schema containing Node and Rel tables
-        _schema.value = Schema(nodeTables = nodeSchemaList, relTables = relSchemaList)
+        return Schema(nodeTables = nodeSchemaList, relTables = relSchemaList)
+    }
+
+    suspend fun showSchema() {
+        println("\n\nShowing Schema...")
+        _schema.value = getSchema()
     }
 
     fun listNodes() {
