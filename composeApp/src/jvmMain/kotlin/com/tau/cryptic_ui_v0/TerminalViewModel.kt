@@ -340,7 +340,7 @@ class TerminalViewModel {
 
     fun initiateNodeCreation() {
         viewModelScope.launch {
-            val schema = _schema.value ?: dbService.getSchema().also { _schema.value = it }
+            val schema = _schema.value ?: getSchema().also { _schema.value = it }
             if (schema != null) {
                 _selectedItem.value = null // Clear any selected item
                 _nodeCreationState.value = NodeCreationState(schemas = schema.nodeTables)
@@ -349,7 +349,7 @@ class TerminalViewModel {
     }
     fun initiateRelCreation() {
         viewModelScope.launch {
-            val schema = _schema.value ?: dbService.getSchema().also { _schema.value = it }
+            val schema = _schema.value ?: getSchema().also { _schema.value = it }
             if (schema != null) {
                 if (_nodeList.value.isEmpty()) {
                     listNodes()

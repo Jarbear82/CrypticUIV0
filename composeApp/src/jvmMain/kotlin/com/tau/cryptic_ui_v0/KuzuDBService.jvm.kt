@@ -101,66 +101,6 @@ class KuzuDBService {
         }
     }
 
-    suspend fun getSchema(): Schema? {
-        println("Fetching Schema")
-        if (!isInitialized()) return null
-        return withContext(Dispatchers.IO) {
-            try {
-                val nodeTables = mutableListOf<SchemaNode>()
-                val relTables = mutableListOf<SchemaRel>()
-
-                val tablesResult = conn!!.query("CALL SHOW_TABLES() RETURN *;")
-                println("Query Result:\n---\n${tablesResult}\n---\n")
-
-                while (tablesResult.hasNext()) {
-                    val row = tablesResult.next
-                    val tableName = row.getValue(1).getValue<Any>().toString()
-                    val tableType = row.getValue(2).getValue<Any>().toString()
-
-                    if (tableType == "NODE") {
-                        val properties = mutableListOf<SchemaProperty>()
-                        val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
-                        while (propertiesResult.hasNext()) {
-                            val propRow = propertiesResult.next
-                            val propName = propRow.getValue(1).getValue<Any>().toString()
-                            val propType = propRow.getValue(2)
-                            val isPrimary = propRow.getValue(4).getValue<Boolean>()
-                            properties.add(SchemaProperty(propName, propType.toString(), isPrimary))
-                        }
-                        nodeTables.add(SchemaNode(tableName, properties))
-                    } else if (tableType == "REL") {
-                        val properties = mutableListOf<SchemaProperty>()
-                        val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
-                        while (propertiesResult.hasNext()) {
-                            val propRow = propertiesResult.next
-                            val propName = propRow.getValue(1).getValue<Any>().toString()
-                            // Exclude internal properties from the schema list
-                            if (propName !in listOf("_src", "_dst", "_id")) {
-                                val propType = propRow.getValue(2)
-                                // Relationship properties cannot be primary keys
-                                properties.add(SchemaProperty(key = propName, valueDataType = propType.toString(), isPrimaryKey = false))
-                            }
-                        }
-
-                        val connResult = conn!!.query("CALL SHOW_CONNECTION('$tableName') RETURN *;")
-                        var from = ""
-                        var to = ""
-                        if (connResult.hasNext()) {
-                            val connRow = connResult.next
-                            from = connRow.getValue(0).getValue<Any>().toString()
-                            to = connRow.getValue(1).getValue<Any>().toString()
-                        }
-                        relTables.add(SchemaRel(label = tableName, srcLabel = from, dstLabel = to, properties = properties))
-                    }
-                }
-                Schema(nodeTables, relTables)
-            } catch (e: Exception) {
-                println("Error fetching schema: ${e.message}")
-                null
-            }
-        }
-    }
-
     private fun fetchSchemaSignature(): String {
         return try {
             conn?.query("CALL SHOW_TABLES() RETURN *;")?.toString() ?: ""
