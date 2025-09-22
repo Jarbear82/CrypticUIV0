@@ -155,7 +155,17 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onNodeSchemaCreationCreateClick = { viewModel.createNodeSchemaFromState(it); selectSchema() },
                         onNodeSchemaCreationCancelClick = { viewModel.cancelNodeSchemaCreation(); selectSchema() },
                         onRelSchemaCreationCreateClick = { viewModel.createRelSchemaFromState(it); selectSchema() },
-                        onRelSchemaCreationCancelClick = { viewModel.cancelRelSchemaCreation(); selectSchema() }
+                        onRelSchemaCreationCancelClick = { viewModel.cancelRelSchemaCreation(); selectSchema() },
+                        onNodeSchemaTableNameChange = { viewModel.onNodeSchemaTableNameChange(it) },
+                        onNodeSchemaPropertyChange = { index, property -> viewModel.onNodeSchemaPropertyChange(index, property) },
+                        onAddNodeSchemaProperty = { viewModel.onAddNodeSchemaProperty() },
+                        onRemoveNodeSchemaProperty = { viewModel.onRemoveNodeSchemaProperty(it) },
+                        onRelSchemaTableNameChange = { viewModel.onRelSchemaTableNameChange(it) },
+                        onRelSchemaSrcTableChange = { viewModel.onRelSchemaSrcTableChange(it) },
+                        onRelSchemaDstTableChange = { viewModel.onRelSchemaDstTableChange(it) },
+                        onRelSchemaPropertyChange = { index, property -> viewModel.onRelSchemaPropertyChange(index, property) },
+                        onAddRelSchemaProperty = { viewModel.onAddRelSchemaProperty() },
+                        onRemoveRelSchemaProperty = { viewModel.onRemoveRelSchemaProperty(it) }
                     )
                 }
             }

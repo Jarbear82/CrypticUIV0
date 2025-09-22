@@ -13,15 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.NodeSchemaCreationState
 import com.tau.cryptic_ui_v0.Property
-import kotlin.collections.plus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNodeSchemaView(
+    state: NodeSchemaCreationState,
+    onTableNameChange: (String) -> Unit,
+    onPropertyChange: (Int, Property) -> Unit,
+    onAddProperty: () -> Unit,
+    onRemoveProperty: (Int) -> Unit,
     onCancel: () -> Unit,
     onCreate: (NodeSchemaCreationState) -> Unit
 ) {
-    var state by remember { mutableStateOf(NodeSchemaCreationState()) }
     val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID", "SERIAL")
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -30,7 +33,7 @@ fun CreateNodeSchemaView(
 
         OutlinedTextField(
             value = state.tableName,
-            onValueChange = { state = state.copy(tableName = it) },
+            onValueChange = onTableNameChange,
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -44,9 +47,7 @@ fun CreateNodeSchemaView(
                     OutlinedTextField(
                         value = property.name,
                         onValueChange = {
-                            val newProperties = state.properties.toMutableList()
-                            newProperties[index] = property.copy(name = it)
-                            state = state.copy(properties = newProperties)
+                            onPropertyChange(index, property.copy(name = it))
                         },
                         label = { Text("Property Name") },
                         modifier = Modifier.weight(1f)
@@ -71,9 +72,7 @@ fun CreateNodeSchemaView(
                                 DropdownMenuItem(
                                     text = { Text(type) },
                                     onClick = {
-                                        val newProperties = state.properties.toMutableList()
-                                        newProperties[index] = property.copy(type = type)
-                                        state = state.copy(properties = newProperties)
+                                        onPropertyChange(index, property.copy(type = type))
                                         expanded = false
                                     }
                                 )
@@ -83,26 +82,18 @@ fun CreateNodeSchemaView(
                     Checkbox(
                         checked = property.isPrimaryKey,
                         onCheckedChange = {
-                            val newProperties = state.properties.toMutableList()
-                            newProperties[index] = property.copy(isPrimaryKey = it)
-                            state = state.copy(properties = newProperties)
+                            onPropertyChange(index, property.copy(isPrimaryKey = it))
                         }
                     )
                     Text("PK")
-                    IconButton(onClick = {
-                        val newProperties = state.properties.toMutableList()
-                        newProperties.removeAt(index)
-                        state = state.copy(properties = newProperties)
-                    }) {
+                    IconButton(onClick = { onRemoveProperty(index) }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete Property")
                     }
                 }
             }
         }
 
-        Button(onClick = {
-            state = state.copy(properties = state.properties + Property())
-        }) {
+        Button(onClick = onAddProperty) {
             Icon(Icons.Default.Add, contentDescription = "Add Property")
             Spacer(modifier = Modifier.width(4.dp))
             Text("Add Property")

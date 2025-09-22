@@ -20,8 +20,7 @@ val reservedWords: List<String> = listOf(
     "STARTS", "XOR", "FROM", "PRIMARY", "TABLE", "TO"
 )
 
-class TerminalViewModel {
-    private val dbService = KuzuDBService()
+class TerminalViewModel(private val repository: KuzuRepository) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
     private val _schema = MutableStateFlow<Schema?>(null)
@@ -51,11 +50,11 @@ class TerminalViewModel {
     private val _relCreationState = MutableStateFlow<RelCreationState?>(null)
     val relCreationState: StateFlow<RelCreationState?> = _relCreationState
 
-    private val _nodeSchemaCreationState = MutableStateFlow<NodeSchemaCreationState?>(null)
-    val nodeSchemaCreationState: StateFlow<NodeSchemaCreationState?> = _nodeSchemaCreationState
+    private val _nodeSchemaCreationState = MutableStateFlow(NodeSchemaCreationState())
+    val nodeSchemaCreationState: StateFlow<NodeSchemaCreationState> = _nodeSchemaCreationState
 
-    private val _relSchemaCreationState = MutableStateFlow<RelSchemaCreationState?>(null)
-    val relSchemaCreationState: StateFlow<RelSchemaCreationState?> = _relSchemaCreationState
+    private val _relSchemaCreationState = MutableStateFlow(RelSchemaCreationState())
+    val relSchemaCreationState: StateFlow<RelSchemaCreationState> = _relSchemaCreationState
 
 
     fun onQueryChange(newQuery: String) {
@@ -64,8 +63,8 @@ class TerminalViewModel {
 
     init {
         viewModelScope.launch {
-            dbService.initialize()
-            _dbMetaData.value = dbService.getDBMetaData()
+            repository.initialize()
+            _dbMetaData.value = repository.getDBMetaData()
             showSchema()
         }
     }
@@ -82,7 +81,7 @@ class TerminalViewModel {
         viewModelScope.launch {
             clearNodeList()
             clearEdgeList()
-            val result = dbService.executeQuery(query.value)
+            val result = repository.executeQuery(query.value)
             _queryResult.value = result
             if (result !is ExecutionResult.Success) return@launch
 
@@ -114,7 +113,7 @@ class TerminalViewModel {
             val nodeItems = async {
                 nodeValues.map { nodeValue ->
                     async {
-                        val pkName = dbService.getPrimaryKey(nodeValue.label) ?: "_id"
+                        val pkName = repository.getPrimaryKey(nodeValue.label) ?: "_id"
                         val pkValue = nodeValue.properties[pkName]
                         val nodeItem = NodeDisplayItem(
                             label = nodeValue.label,
@@ -179,7 +178,7 @@ class TerminalViewModel {
         val relSchemaList = mutableListOf<SchemaRel>()
 
         // Call show tables
-        val execResult = dbService.executeQuery("CALL SHOW_TABLES() RETURN *;")
+        val execResult = repository.executeQuery("CALL SHOW_TABLES() RETURN *;")
         if (execResult !is ExecutionResult.Success) {
             println("Failed to fetch schema")
             // Handle error case
@@ -195,7 +194,7 @@ class TerminalViewModel {
             when (tableType) {
                 "NODE" -> {
                     // FOR NODE
-                    val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                    val tableInfoResult = repository.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
                     if (tableInfoResult is ExecutionResult.Success) {
                         val properties = tableInfoResult.results.first().rows.map { row ->
                             // Add Each Property name and type
@@ -210,7 +209,7 @@ class TerminalViewModel {
                 }
                 "REL" -> {
                     // FOR EDGE
-                    val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                    val tableInfoResult = repository.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
                     val properties = if (tableInfoResult is ExecutionResult.Success) {
                         // Add Properties (if any)
                         tableInfoResult.results.first().rows.map { row ->
@@ -225,7 +224,7 @@ class TerminalViewModel {
                     }
 
                     // Call Show Connection
-                    val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
+                    val showConnectionResult = repository.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
                     if (showConnectionResult is ExecutionResult.Success) {
                         // Add TO and FROM (src and dst)
                         val connectionRows = showConnectionResult.results.first().rows
@@ -241,7 +240,7 @@ class TerminalViewModel {
                     // Recursive relationships are internally represented as STRUCT{LIST [NODE], LIST [REL]},
                     // but for schema representation, they can be treated as RELs for now.
                     // Call Show Connection
-                    val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
+                    val showConnectionResult = repository.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
                     if (showConnectionResult is ExecutionResult.Success) {
                         val connectionRows = showConnectionResult.results.first().rows
                         for (row in connectionRows) {
@@ -269,9 +268,9 @@ class TerminalViewModel {
         viewModelScope.launch {
             val nodes = mutableListOf<NodeDisplayItem>()
             _schema.value?.nodeTables?.forEach { table ->
-                val pk = dbService.getPrimaryKey(table.label) ?: return@forEach
+                val pk = repository.getPrimaryKey(table.label) ?: return@forEach
                 val q = "MATCH (n:${table.label.withBackticks()}) RETURN n.${pk.withBackticks()}"
-                val result = dbService.executeQuery(q)
+                val result = repository.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
                         nodes.add(
@@ -292,10 +291,10 @@ class TerminalViewModel {
             val rels = mutableListOf<RelDisplayItem>()
             val nodesFromRels = mutableSetOf<NodeDisplayItem>()
             _schema.value?.relTables?.forEach { table ->
-                val srcPkName = dbService.getPrimaryKey(table.srcLabel) ?: return@forEach
-                val dstPkName = dbService.getPrimaryKey(table.dstLabel) ?: return@forEach
+                val srcPkName = repository.getPrimaryKey(table.srcLabel) ?: return@forEach
+                val dstPkName = repository.getPrimaryKey(table.dstLabel) ?: return@forEach
                 val q = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
-                val result = dbService.executeQuery(q)
+                val result = repository.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
                         val srcPkValue = row[0]
@@ -363,12 +362,12 @@ class TerminalViewModel {
         }
     }
     fun initiateNodeSchemaCreation() {
-        _selectedItem.value = null
+        _selectedItem.value = "CreateNodeSchema"
         _nodeSchemaCreationState.value = NodeSchemaCreationState()
     }
 
     fun initiateRelSchemaCreation() {
-        _selectedItem.value = null
+        _selectedItem.value = "CreateRelSchema"
         _relSchemaCreationState.value =
             RelSchemaCreationState(allNodeSchemas = _schema.value?.nodeTables ?: emptyList())
     }
@@ -382,11 +381,11 @@ class TerminalViewModel {
     }
 
     fun cancelNodeSchemaCreation() {
-        _nodeSchemaCreationState.value = null
+        _selectedItem.value = null
     }
 
     fun cancelRelSchemaCreation() {
-        _relSchemaCreationState.value = null
+        _selectedItem.value = null
     }
 
 
@@ -431,7 +430,7 @@ class TerminalViewModel {
             "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
         }
         val q = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
-        dbService.executeQuery(q)
+        repository.executeQuery(q)
     }
 
     private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
@@ -440,7 +439,7 @@ class TerminalViewModel {
         val formattedPkValue = formatPkValue(pkValue)
 
         val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
 
         if (result is ExecutionResult.Success) {
             val nodeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? NodeValue
@@ -473,7 +472,7 @@ class TerminalViewModel {
         val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
                 "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
                 "RETURN r LIMIT 1"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
 
         if (result is ExecutionResult.Success) {
             val relValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? RelValue
@@ -506,8 +505,6 @@ class TerminalViewModel {
         viewModelScope.launch {
             _nodeCreationState.value = null // Exit node creation mode if active
             _relCreationState.value = null // Exit rel creation mode if active
-            _nodeSchemaCreationState.value = null
-            _relSchemaCreationState.value = null
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is RelDisplayItem -> getRel(item)
@@ -579,7 +576,7 @@ class TerminalViewModel {
         WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
         CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
     """.trimIndent()
-        dbService.executeQuery(q)
+        repository.executeQuery(q)
     }
 
     fun createNodeSchemaFromState(state: NodeSchemaCreationState) {
@@ -589,8 +586,8 @@ class TerminalViewModel {
                 "${it.name.withBackticks()} ${it.type}"
             }
             val q = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
-            dbService.executeQuery(q)
-            _nodeSchemaCreationState.value = null
+            repository.executeQuery(q)
+            _selectedItem.value = null
             showSchema()
         }
     }
@@ -605,8 +602,8 @@ class TerminalViewModel {
                 ""
             }
             val q = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
-            dbService.executeQuery(q)
-            _relSchemaCreationState.value = null
+            repository.executeQuery(q)
+            _selectedItem.value = null
             showSchema()
         }
     }
@@ -626,7 +623,7 @@ class TerminalViewModel {
         // TODO: Create an alert to ask if they want to delete a schema.
         //  Warn them if it deletes other schemas
         val q = "DROP TABLE ${item.label.withBackticks()}"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
             showSchema()
         }
@@ -634,7 +631,7 @@ class TerminalViewModel {
 
     private suspend fun deleteSchemaRel(item: SchemaRel) {
         val q = "DROP TABLE ${item.label.withBackticks()}"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
             showSchema()
         }
@@ -649,7 +646,7 @@ class TerminalViewModel {
         val pkValue = item.primarykeyProperty.value
         val formattedPkValue = formatPkValue(pkValue)
         val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue DETACH DELETE n"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
             _nodeList.update { list -> list.filterNot { it == item } }
             // Also remove any relationships connected to the deleted node
@@ -668,7 +665,7 @@ class TerminalViewModel {
         val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
                 "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
                 "DELETE r"
-        val result = dbService.executeQuery(q)
+        val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
             _relationshipList.update { list -> list.filterNot { it == item } }
         }
@@ -687,6 +684,66 @@ class TerminalViewModel {
     }
 
     fun onCleared() {
-        dbService.close()
+        repository.close()
+    }
+
+    fun onNodeSchemaTableNameChange(name: String) {
+        _nodeSchemaCreationState.update { it.copy(tableName = name) }
+    }
+
+    fun onNodeSchemaPropertyChange(index: Int, property: Property) {
+        _nodeSchemaCreationState.update {
+            val newProperties = it.properties.toMutableList()
+            newProperties[index] = property
+            it.copy(properties = newProperties)
+        }
+    }
+
+    fun onAddNodeSchemaProperty() {
+        _nodeSchemaCreationState.update {
+            it.copy(properties = it.properties + Property())
+        }
+    }
+
+    fun onRemoveNodeSchemaProperty(index: Int) {
+        _nodeSchemaCreationState.update {
+            val newProperties = it.properties.toMutableList()
+            newProperties.removeAt(index)
+            it.copy(properties = newProperties)
+        }
+    }
+
+    fun onRelSchemaTableNameChange(name: String) {
+        _relSchemaCreationState.update { it.copy(tableName = name) }
+    }
+
+    fun onRelSchemaSrcTableChange(table: String) {
+        _relSchemaCreationState.update { it.copy(srcTable = table) }
+    }
+
+    fun onRelSchemaDstTableChange(table: String) {
+        _relSchemaCreationState.update { it.copy(dstTable = table) }
+    }
+
+    fun onRelSchemaPropertyChange(index: Int, property: Property) {
+        _relSchemaCreationState.update {
+            val newProperties = it.properties.toMutableList()
+            newProperties[index] = property
+            it.copy(properties = newProperties)
+        }
+    }
+
+    fun onAddRelSchemaProperty() {
+        _relSchemaCreationState.update {
+            it.copy(properties = it.properties + Property(isPrimaryKey = false))
+        }
+    }
+
+    fun onRemoveRelSchemaProperty(index: Int) {
+        _relSchemaCreationState.update {
+            val newProperties = it.properties.toMutableList()
+            newProperties.removeAt(index)
+            it.copy(properties = newProperties)
+        }
     }
 }

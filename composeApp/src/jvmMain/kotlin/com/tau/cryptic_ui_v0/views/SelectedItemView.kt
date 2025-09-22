@@ -15,23 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.NodeCreationState
-import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.NodeSchemaCreationState
-import com.tau.cryptic_ui_v0.NodeTable
-import com.tau.cryptic_ui_v0.RelCreationState
-import com.tau.cryptic_ui_v0.RelSchemaCreationState
-import com.tau.cryptic_ui_v0.RelTable
-import com.tau.cryptic_ui_v0.SchemaNode
-import com.tau.cryptic_ui_v0.SchemaRel
+import com.tau.cryptic_ui_v0.*
 
 @Composable
 fun SelectedItemView(
     selectedItem: Any?,
     nodeCreationState: NodeCreationState?,
     relCreationState: RelCreationState?,
-    nodeSchemaCreationState: NodeSchemaCreationState?,
-    relSchemaCreationState: RelSchemaCreationState?,
+    nodeSchemaCreationState: NodeSchemaCreationState,
+    relSchemaCreationState: RelSchemaCreationState,
     onClearSelection: () -> Unit,
     onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
@@ -46,7 +38,17 @@ fun SelectedItemView(
     onNodeSchemaCreationCreateClick: (NodeSchemaCreationState) -> Unit,
     onNodeSchemaCreationCancelClick: () -> Unit,
     onRelSchemaCreationCreateClick: (RelSchemaCreationState) -> Unit,
-    onRelSchemaCreationCancelClick: () -> Unit
+    onRelSchemaCreationCancelClick: () -> Unit,
+    onNodeSchemaTableNameChange: (String) -> Unit,
+    onNodeSchemaPropertyChange: (Int, Property) -> Unit,
+    onAddNodeSchemaProperty: () -> Unit,
+    onRemoveNodeSchemaProperty: (Int) -> Unit,
+    onRelSchemaTableNameChange: (String) -> Unit,
+    onRelSchemaSrcTableChange: (String) -> Unit,
+    onRelSchemaDstTableChange: (String) -> Unit,
+    onRelSchemaPropertyChange: (Int, Property) -> Unit,
+    onAddRelSchemaProperty: () -> Unit,
+    onRemoveRelSchemaProperty: (Int) -> Unit
 ) {
     if (nodeCreationState != null) {
         CreateNodeView(
@@ -66,14 +68,25 @@ fun SelectedItemView(
             onCreateClick = onRelCreationCreateClick,
             onCancelClick = onRelCreationCancelClick
         )
-    } else if (nodeSchemaCreationState != null) {
+    } else if (selectedItem == "CreateNodeSchema") {
         CreateNodeSchemaView(
+            state = nodeSchemaCreationState,
+            onTableNameChange = onNodeSchemaTableNameChange,
+            onPropertyChange = onNodeSchemaPropertyChange,
+            onAddProperty = onAddNodeSchemaProperty,
+            onRemoveProperty = onRemoveNodeSchemaProperty,
             onCreate = onNodeSchemaCreationCreateClick,
             onCancel = onNodeSchemaCreationCancelClick
         )
-    } else if (relSchemaCreationState != null) {
+    } else if (selectedItem == "CreateRelSchema") {
         CreateRelSchemaView(
-            schemas = relSchemaCreationState.allNodeSchemas,
+            state = relSchemaCreationState,
+            onTableNameChange = onRelSchemaTableNameChange,
+            onSrcTableChange = onRelSchemaSrcTableChange,
+            onDstTableChange = onRelSchemaDstTableChange,
+            onPropertyChange = onRelSchemaPropertyChange,
+            onAddProperty = onAddRelSchemaProperty,
+            onRemoveProperty = onRemoveRelSchemaProperty,
             onCreate = onRelSchemaCreationCreateClick,
             onCancel = onRelSchemaCreationCancelClick
         )

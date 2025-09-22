@@ -14,16 +14,20 @@ import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.Property
 import com.tau.cryptic_ui_v0.RelSchemaCreationState
 import com.tau.cryptic_ui_v0.SchemaNode
-import kotlin.collections.plus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRelSchemaView(
-    schemas: List<SchemaNode>,
+    state: RelSchemaCreationState,
+    onTableNameChange: (String) -> Unit,
+    onSrcTableChange: (String) -> Unit,
+    onDstTableChange: (String) -> Unit,
+    onPropertyChange: (Int, Property) -> Unit,
+    onAddProperty: () -> Unit,
+    onRemoveProperty: (Int) -> Unit,
     onCreate: (RelSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
-    var state by remember { mutableStateOf(RelSchemaCreationState(allNodeSchemas = schemas)) }
     val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID")
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -32,7 +36,7 @@ fun CreateRelSchemaView(
 
         OutlinedTextField(
             value = state.tableName,
-            onValueChange = { state = state.copy(tableName = it) },
+            onValueChange = onTableNameChange,
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -55,11 +59,11 @@ fun CreateRelSchemaView(
                 expanded = srcExpanded,
                 onDismissRequest = { srcExpanded = false }
             ) {
-                schemas.forEach { schema ->
+                state.allNodeSchemas.forEach { schema ->
                     DropdownMenuItem(
                         text = { Text(schema.label) },
                         onClick = {
-                            state = state.copy(srcTable = schema.label)
+                            onSrcTableChange(schema.label)
                             srcExpanded = false
                         }
                     )
@@ -83,11 +87,11 @@ fun CreateRelSchemaView(
                 expanded = dstExpanded,
                 onDismissRequest = { dstExpanded = false }
             ) {
-                schemas.forEach { schema ->
+                state.allNodeSchemas.forEach { schema ->
                     DropdownMenuItem(
                         text = { Text(schema.label) },
                         onClick = {
-                            state = state.copy(dstTable = schema.label)
+                            onDstTableChange(schema.label)
                             dstExpanded = false
                         }
                     )
@@ -106,9 +110,7 @@ fun CreateRelSchemaView(
                     OutlinedTextField(
                         value = property.name,
                         onValueChange = {
-                            val newProperties = state.properties.toMutableList()
-                            newProperties[index] = property.copy(name = it)
-                            state = state.copy(properties = newProperties)
+                            onPropertyChange(index, property.copy(name = it))
                         },
                         label = { Text("Property Name") },
                         modifier = Modifier.weight(1f)
@@ -133,9 +135,7 @@ fun CreateRelSchemaView(
                                 DropdownMenuItem(
                                     text = { Text(type) },
                                     onClick = {
-                                        val newProperties = state.properties.toMutableList()
-                                        newProperties[index] = property.copy(type = type)
-                                        state = state.copy(properties = newProperties)
+                                        onPropertyChange(index, property.copy(type = type))
                                         expanded = false
                                     }
                                 )
@@ -143,9 +143,7 @@ fun CreateRelSchemaView(
                         }
                     }
                     IconButton(onClick = {
-                        val newProperties = state.properties.toMutableList()
-                        newProperties.removeAt(index)
-                        state = state.copy(properties = newProperties)
+                        onRemoveProperty(index)
                     }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete Property")
                     }
@@ -154,7 +152,7 @@ fun CreateRelSchemaView(
         }
 
         Button(onClick = {
-            state = state.copy(properties = state.properties + Property(isPrimaryKey = false))
+            onAddProperty()
         }) {
             Icon(Icons.Default.Add, contentDescription = "Add Property")
             Spacer(modifier = Modifier.width(4.dp))

@@ -9,7 +9,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Preview
 fun App() {
     MaterialTheme {
-        val viewModel = remember { TerminalViewModel() }
+        val viewModel = remember { TerminalViewModel(KuzuRepository()) }
         TerminalView(viewModel)
 
         DisposableEffect(Unit) {
