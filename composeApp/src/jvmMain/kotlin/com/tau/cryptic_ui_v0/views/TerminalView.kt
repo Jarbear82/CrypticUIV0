@@ -1,9 +1,7 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -134,13 +132,23 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         relSchemaCreationState = relSchemaCreationState,
                         onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() },
                         onNodeCreationSchemaSelected = { viewModel.updateNodeCreationSchema(it) },
-                        onNodeCreationPropertyChanged = { key, value -> viewModel.updateNodeCreationProperty(key, value) },
+                        onNodeCreationPropertyChanged = { key, value ->
+                            viewModel.updateNodeCreationProperty(
+                                key,
+                                value
+                            )
+                        },
                         onNodeCreationCreateClick = { viewModel.createNodeFromState(); selectMetadata() },
                         onNodeCreationCancelClick = { viewModel.cancelNodeCreation(); selectMetadata() },
                         onRelCreationSchemaSelected = { viewModel.updateRelCreationSchema(it) },
                         onRelCreationSrcSelected = { viewModel.updateRelCreationSrc(it) },
                         onRelCreationDstSelected = { viewModel.updateRelCreationDst(it) },
-                        onRelCreationPropertyChanged = { key, value -> viewModel.updateRelCreationProperty(key, value) },
+                        onRelCreationPropertyChanged = { key, value ->
+                            viewModel.updateRelCreationProperty(
+                                key,
+                                value
+                            )
+                        },
                         onRelCreationCreateClick = { viewModel.createRelFromState(); selectMetadata() },
                         onRelCreationCancelClick = { viewModel.cancelRelCreation(); selectMetadata() },
                         onNodeSchemaCreationCreateClick = { viewModel.createNodeSchemaFromState(it); selectSchema() },

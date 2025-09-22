@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,18 +11,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.Property
+import com.tau.cryptic_ui_v0.RelSchemaCreationState
+import com.tau.cryptic_ui_v0.SchemaNode
+import kotlin.collections.plus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateNodeSchemaView(
-    onCancel: () -> Unit,
-    onCreate: (NodeSchemaCreationState) -> Unit
+fun CreateRelSchemaView(
+    schemas: List<SchemaNode>,
+    onCreate: (RelSchemaCreationState) -> Unit,
+    onCancel: () -> Unit
 ) {
-    var state by remember { mutableStateOf(NodeSchemaCreationState()) }
-    val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID", "SERIAL")
+    var state by remember { mutableStateOf(RelSchemaCreationState(allNodeSchemas = schemas)) }
+    val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID")
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Create Node Schema", style = MaterialTheme.typography.headlineSmall)
+        Text("Create Relationship Schema", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
@@ -31,6 +36,66 @@ fun CreateNodeSchemaView(
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Dropdowns for Src and Dst
+        var srcExpanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = srcExpanded,
+            onExpandedChange = { srcExpanded = !srcExpanded }
+        ) {
+            OutlinedTextField(
+                value = state.srcTable ?: "Source Table",
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = srcExpanded,
+                onDismissRequest = { srcExpanded = false }
+            ) {
+                schemas.forEach { schema ->
+                    DropdownMenuItem(
+                        text = { Text(schema.label) },
+                        onClick = {
+                            state = state.copy(srcTable = schema.label)
+                            srcExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        var dstExpanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = dstExpanded,
+            onExpandedChange = { dstExpanded = !dstExpanded }
+        ) {
+            OutlinedTextField(
+                value = state.dstTable ?: "Destination Table",
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = dstExpanded,
+                onDismissRequest = { dstExpanded = false }
+            ) {
+                schemas.forEach { schema ->
+                    DropdownMenuItem(
+                        text = { Text(schema.label) },
+                        onClick = {
+                            state = state.copy(dstTable = schema.label)
+                            dstExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
@@ -77,15 +142,6 @@ fun CreateNodeSchemaView(
                             }
                         }
                     }
-                    Checkbox(
-                        checked = property.isPrimaryKey,
-                        onCheckedChange = {
-                            val newProperties = state.properties.toMutableList()
-                            newProperties[index] = property.copy(isPrimaryKey = it)
-                            state = state.copy(properties = newProperties)
-                        }
-                    )
-                    Text("PK")
                     IconButton(onClick = {
                         val newProperties = state.properties.toMutableList()
                         newProperties.removeAt(index)
@@ -98,7 +154,7 @@ fun CreateNodeSchemaView(
         }
 
         Button(onClick = {
-            state = state.copy(properties = state.properties + Property())
+            state = state.copy(properties = state.properties + Property(isPrimaryKey = false))
         }) {
             Icon(Icons.Default.Add, contentDescription = "Add Property")
             Spacer(modifier = Modifier.width(4.dp))
@@ -108,7 +164,7 @@ fun CreateNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row {
-            Button(onClick = { onCreate(state) }) {
+            Button(onClick = { onCreate(state) }, enabled = state.srcTable != null && state.dstTable != null && state.tableName.isNotBlank()) {
                 Text("Create")
             }
             Spacer(modifier = Modifier.width(8.dp))

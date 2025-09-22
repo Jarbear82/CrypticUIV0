@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.NodeCreationState
+import com.tau.cryptic_ui_v0.NodeDisplayItem
+import com.tau.cryptic_ui_v0.NodeSchemaCreationState
+import com.tau.cryptic_ui_v0.NodeTable
+import com.tau.cryptic_ui_v0.RelCreationState
+import com.tau.cryptic_ui_v0.RelSchemaCreationState
+import com.tau.cryptic_ui_v0.RelTable
+import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.SchemaRel
 
 @Composable
 fun SelectedItemView(

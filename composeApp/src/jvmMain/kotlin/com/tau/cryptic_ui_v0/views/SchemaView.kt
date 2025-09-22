@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -10,8 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,6 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import com.tau.cryptic_ui_v0.Schema
+import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.SchemaRel
 
 @Composable
 fun SchemaView(

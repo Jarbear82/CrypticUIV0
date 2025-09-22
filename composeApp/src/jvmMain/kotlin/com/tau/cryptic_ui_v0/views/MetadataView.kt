@@ -1,6 +1,5 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,17 +8,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DatasetLinked
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Schema
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.DBMetaData
+import com.tau.cryptic_ui_v0.NodeDisplayItem
+import com.tau.cryptic_ui_v0.RelDisplayItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

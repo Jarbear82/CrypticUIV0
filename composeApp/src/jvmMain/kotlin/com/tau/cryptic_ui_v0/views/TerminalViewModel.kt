@@ -1,7 +1,27 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.tau.cryptic_ui_v0.DBMetaData
+import com.tau.cryptic_ui_v0.DisplayItemProperty
+import com.tau.cryptic_ui_v0.ExecutionResult
+import com.tau.cryptic_ui_v0.KuzuDBService
+import com.tau.cryptic_ui_v0.NodeCreationState
+import com.tau.cryptic_ui_v0.NodeDisplayItem
+import com.tau.cryptic_ui_v0.NodeSchemaCreationState
+import com.tau.cryptic_ui_v0.NodeTable
+import com.tau.cryptic_ui_v0.NodeValue
+import com.tau.cryptic_ui_v0.RecursiveRelValue
+import com.tau.cryptic_ui_v0.RelCreationState
+import com.tau.cryptic_ui_v0.RelDisplayItem
+import com.tau.cryptic_ui_v0.RelSchemaCreationState
+import com.tau.cryptic_ui_v0.RelTable
+import com.tau.cryptic_ui_v0.RelValue
+import com.tau.cryptic_ui_v0.Schema
+import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.SchemaProperty
+import com.tau.cryptic_ui_v0.SchemaRel
+import com.tau.cryptic_ui_v0.TableProperty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -139,7 +159,13 @@ class TerminalViewModel {
                         val srcNode = tempNodeMap[value.src]
                         val dstNode = tempNodeMap[value.dst]
                         if (srcNode != null && dstNode != null) {
-                            newRels.add(RelDisplayItem(label = value.label, src = srcNode, dst = dstNode))
+                            newRels.add(
+                                RelDisplayItem(
+                                    label = value.label,
+                                    src = srcNode,
+                                    dst = dstNode
+                                )
+                            )
                         }
                     }
                     is RecursiveRelValue -> value.rels.forEach(::findRelData)
@@ -262,10 +288,12 @@ class TerminalViewModel {
                 val result = dbService.executeQuery(q)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
-                        nodes.add(NodeDisplayItem(
-                            label = table.label,
-                            primarykeyProperty = DisplayItemProperty(key = pk, value = row[0])
-                        ))
+                        nodes.add(
+                            NodeDisplayItem(
+                                label = table.label,
+                                primarykeyProperty = DisplayItemProperty(key = pk, value = row[0])
+                            )
+                        )
                     }
                 }
             }
@@ -289,11 +317,17 @@ class TerminalViewModel {
 
                         val srcNode = NodeDisplayItem(
                             label = table.srcLabel,
-                            primarykeyProperty = DisplayItemProperty(key = srcPkName, value = srcPkValue)
+                            primarykeyProperty = DisplayItemProperty(
+                                key = srcPkName,
+                                value = srcPkValue
+                            )
                         )
                         val dstNode = NodeDisplayItem(
                             label = table.dstLabel,
-                            primarykeyProperty = DisplayItemProperty(key = dstPkName, value = dstPkValue)
+                            primarykeyProperty = DisplayItemProperty(
+                                key = dstPkName,
+                                value = dstPkValue
+                            )
                         )
 
                         nodesFromRels.add(srcNode)
@@ -349,7 +383,8 @@ class TerminalViewModel {
 
     fun initiateRelSchemaCreation() {
         _selectedItem.value = null
-        _relSchemaCreationState.value = RelSchemaCreationState(allNodeSchemas = _schema.value?.nodeTables ?: emptyList())
+        _relSchemaCreationState.value =
+            RelSchemaCreationState(allNodeSchemas = _schema.value?.nodeTables ?: emptyList())
     }
 
 
@@ -459,7 +494,12 @@ class TerminalViewModel {
             if (relValue != null) {
                 val properties = relValue.properties.mapNotNull { (key, value) ->
                     if (key.startsWith("_")) return@mapNotNull null
-                    TableProperty(key = key, value = value, isPrimaryKey = false, valueChanged = false)
+                    TableProperty(
+                        key = key,
+                        value = value,
+                        isPrimaryKey = false,
+                        valueChanged = false
+                    )
                 }
                 return RelTable(
                     label = item.label,

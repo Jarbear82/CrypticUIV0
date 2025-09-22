@@ -1,10 +1,12 @@
-package com.tau.cryptic_ui_v0
+package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.NodeCreationState
+import com.tau.cryptic_ui_v0.SchemaNode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
