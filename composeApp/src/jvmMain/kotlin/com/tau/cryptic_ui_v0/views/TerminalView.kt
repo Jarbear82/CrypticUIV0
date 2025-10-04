@@ -7,33 +7,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.TerminalViewModel
+import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
+import com.tau.cryptic_ui_v0.viewmodels.TerminalViewTabs
 import kotlinx.coroutines.launch
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
-    val schema by viewModel.schema.collectAsState()
-    val queryResult by viewModel.queryResult.collectAsState()
-    val metaData by viewModel.dbMetaData.collectAsState()
-    val query by viewModel.query
+    val schema by viewModel.schemaViewModel.schema.collectAsState()
+    val queryResult by viewModel.queryViewModel.queryResult.collectAsState()
+    val metaData by viewModel.metadataViewModel.dbMetaData.collectAsState()
+    val query by viewModel.queryViewModel.query
     val scope = rememberCoroutineScope() // Get a coroutine scope
 
     // Collect the state for the MetadataView
-    val nodes by viewModel.nodeList.collectAsState()
-    val relationships by viewModel.relationshipList.collectAsState()
-    val selectedItem by viewModel.selectedItem.collectAsState()
-    val nodeCreationState by viewModel.nodeCreationState.collectAsState()
-    val relCreationState by viewModel.relCreationState.collectAsState()
-    val nodeSchemaCreationState by viewModel.nodeSchemaCreationState.collectAsState()
-    val relSchemaCreationState by viewModel.relSchemaCreationState.collectAsState()
+    val nodes by viewModel.metadataViewModel.nodeList.collectAsState()
+    val relationships by viewModel.metadataViewModel.relationshipList.collectAsState()
+    val selectedItem by viewModel.metadataViewModel.selectedItem.collectAsState()
+    val nodeCreationState by viewModel.metadataViewModel.nodeCreationState.collectAsState()
+    val relCreationState by viewModel.metadataViewModel.relCreationState.collectAsState()
+    val nodeSchemaCreationState by viewModel.schemaViewModel.nodeSchemaCreationState.collectAsState()
+    val relSchemaCreationState by viewModel.schemaViewModel.relSchemaCreationState.collectAsState()
 
 
     // Tabs
-    var selectedTab by remember { mutableStateOf(TerminalViewTabs.METADATA) }
-
-    fun selectMetadata() { selectedTab = TerminalViewTabs.METADATA }
-    fun selectSchema() { selectedTab = TerminalViewTabs.SCHEMA }
-    fun selectSelected() { selectedTab = TerminalViewTabs.SELECTED }
+    val selectedTab by viewModel.selectedTab.collectAsState()
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -50,21 +47,21 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     ) {
                         Button(onClick = {
                             scope.launch { // Launch a coroutine to call the suspend function
-                                viewModel.showSchema()
+                                viewModel.schemaViewModel.showSchema()
                             }
                         }) {
                             Text("Show Schema")
                         }
 
-                        Button(onClick = { viewModel.listNodes() }) {
+                        Button(onClick = { viewModel.metadataViewModel.listNodes() }) {
                             Text("List Nodes")
                         }
 
-                        Button(onClick = { viewModel.listEdges() }) {
+                        Button(onClick = { viewModel.metadataViewModel.listEdges() }) {
                             Text("List Rels")
                         }
 
-                        Button(onClick = { viewModel.listAll() }) {
+                        Button(onClick = { viewModel.metadataViewModel.listAll() }) {
                             Text("List All")
                         }
                     }
@@ -72,13 +69,13 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = query,
-                        onValueChange = { viewModel.onQueryChange(it) },
+                        onValueChange = { viewModel.queryViewModel.onQueryChange(it) },
                         label = { Text("Cypher Query") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { viewModel.executeQuery() },
+                        onClick = { viewModel.queryViewModel.executeQuery() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Execute")
@@ -97,7 +94,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         Tab(
                             text = { Text(tab.name) },
                             selected = selectedTab.value == tab.value,
-                            onClick = { selectedTab = tab }
+                            onClick = { viewModel.selectTab(tab) }
                         )
                     }
                 }
@@ -109,21 +106,21 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         dbMetaData = metaData,
                         nodes = nodes,
                         relationships = relationships,
-                        onNodeClick = { viewModel.selectItem(it); println("Item: $it is being selected"); selectSelected() },
-                        onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
-                        onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
-                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) },
-                        onAddNodeClick = { viewModel.initiateNodeCreation(); selectSelected() },
-                        onAddRelClick = { viewModel.initiateRelCreation(); selectSelected() }
+                        onNodeClick = { viewModel.metadataViewModel.selectItem(it); println("Item: $it is being selected"); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onRelationshipClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                        onDeleteRelClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                        onAddNodeClick = { viewModel.metadataViewModel.initiateNodeCreation(); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onAddRelClick = { viewModel.metadataViewModel.initiateRelCreation(); viewModel.selectTab(TerminalViewTabs.SELECTED) }
                     )
                     TerminalViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
-                        onNodeClick = { viewModel.selectItem(it); selectSelected() },
-                        onRelationshipClick = { viewModel.selectItem(it); selectSelected() },
-                        onDeleteNodeClick = { viewModel.deleteDisplayItem(it) },
-                        onDeleteRelClick = { viewModel.deleteDisplayItem(it) },
-                        onAddNodeSchemaClick = { viewModel.initiateNodeSchemaCreation(); selectSelected() },
-                        onAddRelSchemaClick = { viewModel.initiateRelSchemaCreation(); selectSelected() }
+                        onNodeClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onRelationshipClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchemaNode(it) },
+                        onDeleteRelClick = { viewModel.schemaViewModel.deleteSchemaRel(it) },
+                        onAddNodeSchemaClick = { viewModel.metadataViewModel.initiateNodeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.SELECTED) },
+                        onAddRelSchemaClick = { viewModel.metadataViewModel.initiateRelSchemaCreation(); viewModel.selectTab(TerminalViewTabs.SELECTED) }
                     )
                     TerminalViewTabs.SELECTED -> SelectedItemView(
                         selectedItem = selectedItem,
@@ -131,41 +128,41 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         relCreationState = relCreationState,
                         nodeSchemaCreationState = nodeSchemaCreationState,
                         relSchemaCreationState = relSchemaCreationState,
-                        onClearSelection = { viewModel.clearSelectedItem(); selectMetadata() },
-                        onNodeCreationSchemaSelected = { viewModel.updateNodeCreationSchema(it) },
+                        onClearSelection = { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onNodeCreationSchemaSelected = { viewModel.metadataViewModel.updateNodeCreationSchema(it) },
                         onNodeCreationPropertyChanged = { key, value ->
-                            viewModel.updateNodeCreationProperty(
+                            viewModel.metadataViewModel.updateNodeCreationProperty(
                                 key,
                                 value
                             )
                         },
-                        onNodeCreationCreateClick = { viewModel.createNodeFromState(); selectMetadata() },
-                        onNodeCreationCancelClick = { viewModel.cancelNodeCreation(); selectMetadata() },
-                        onRelCreationSchemaSelected = { viewModel.updateRelCreationSchema(it) },
-                        onRelCreationSrcSelected = { viewModel.updateRelCreationSrc(it) },
-                        onRelCreationDstSelected = { viewModel.updateRelCreationDst(it) },
+                        onNodeCreationCreateClick = { viewModel.metadataViewModel.createNodeFromState(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onNodeCreationCancelClick = { viewModel.metadataViewModel.cancelNodeCreation(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onRelCreationSchemaSelected = { viewModel.metadataViewModel.updateRelCreationSchema(it) },
+                        onRelCreationSrcSelected = { viewModel.metadataViewModel.updateRelCreationSrc(it) },
+                        onRelCreationDstSelected = { viewModel.metadataViewModel.updateRelCreationDst(it) },
                         onRelCreationPropertyChanged = { key, value ->
-                            viewModel.updateRelCreationProperty(
+                            viewModel.metadataViewModel.updateRelCreationProperty(
                                 key,
                                 value
                             )
                         },
-                        onRelCreationCreateClick = { viewModel.createRelFromState(); selectMetadata() },
-                        onRelCreationCancelClick = { viewModel.cancelRelCreation(); selectMetadata() },
-                        onNodeSchemaCreationCreateClick = { viewModel.createNodeSchemaFromState(it); selectSchema() },
-                        onNodeSchemaCreationCancelClick = { viewModel.cancelNodeSchemaCreation(); selectSchema() },
-                        onRelSchemaCreationCreateClick = { viewModel.createRelSchemaFromState(it); selectSchema() },
-                        onRelSchemaCreationCancelClick = { viewModel.cancelRelSchemaCreation(); selectSchema() },
-                        onNodeSchemaTableNameChange = { viewModel.onNodeSchemaTableNameChange(it) },
-                        onNodeSchemaPropertyChange = { index, property -> viewModel.onNodeSchemaPropertyChange(index, property) },
-                        onAddNodeSchemaProperty = { viewModel.onAddNodeSchemaProperty() },
-                        onRemoveNodeSchemaProperty = { viewModel.onRemoveNodeSchemaProperty(it) },
-                        onRelSchemaTableNameChange = { viewModel.onRelSchemaTableNameChange(it) },
-                        onRelSchemaSrcTableChange = { viewModel.onRelSchemaSrcTableChange(it) },
-                        onRelSchemaDstTableChange = { viewModel.onRelSchemaDstTableChange(it) },
-                        onRelSchemaPropertyChange = { index, property -> viewModel.onRelSchemaPropertyChange(index, property) },
-                        onAddRelSchemaProperty = { viewModel.onAddRelSchemaProperty() },
-                        onRemoveRelSchemaProperty = { viewModel.onRemoveRelSchemaProperty(it) }
+                        onRelCreationCreateClick = { viewModel.metadataViewModel.createRelFromState(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onRelCreationCancelClick = { viewModel.metadataViewModel.cancelRelCreation(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onNodeSchemaCreationCreateClick = { viewModel.schemaViewModel.createNodeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.SCHEMA)} },
+                        onNodeSchemaCreationCancelClick = { viewModel.metadataViewModel.cancelNodeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.SCHEMA) },
+                        onRelSchemaCreationCreateClick = { viewModel.schemaViewModel.createRelSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.SCHEMA)} },
+                        onRelSchemaCreationCancelClick = { viewModel.metadataViewModel.cancelRelSchemaCreation(); viewModel.selectTab(TerminalViewTabs.SCHEMA) },
+                        onNodeSchemaTableNameChange = { viewModel.schemaViewModel.onNodeSchemaTableNameChange(it) },
+                        onNodeSchemaPropertyChange = { index, property -> viewModel.schemaViewModel.onNodeSchemaPropertyChange(index, property) },
+                        onAddNodeSchemaProperty = { viewModel.schemaViewModel.onAddNodeSchemaProperty() },
+                        onRemoveNodeSchemaProperty = { viewModel.schemaViewModel.onRemoveNodeSchemaProperty(it) },
+                        onRelSchemaTableNameChange = { viewModel.schemaViewModel.onRelSchemaTableNameChange(it) },
+                        onRelSchemaSrcTableChange = { viewModel.schemaViewModel.onRelSchemaSrcTableChange(it) },
+                        onRelSchemaDstTableChange = { viewModel.schemaViewModel.onRelSchemaDstTableChange(it) },
+                        onRelSchemaPropertyChange = { index, property -> viewModel.schemaViewModel.onRelSchemaPropertyChange(index, property) },
+                        onAddRelSchemaProperty = { viewModel.schemaViewModel.onAddRelSchemaProperty() },
+                        onRemoveRelSchemaProperty = { viewModel.schemaViewModel.onRemoveRelSchemaProperty(it) }
                     )
                 }
             }
@@ -176,17 +173,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
             ) {
                 QueryView(it) {
-                    viewModel.clearQueryResult()
+                    viewModel.queryViewModel.clearQueryResult()
                 }
             }
         }
     }
-}
-
-
-
-enum class TerminalViewTabs(val value: Int) {
-    METADATA(0),
-    SCHEMA(1),
-    SELECTED(2)
 }
