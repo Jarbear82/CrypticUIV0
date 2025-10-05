@@ -144,6 +144,10 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         }
     }
 
+    fun onEdgeSchemaCreationInitiated(nodeSchemas: List<SchemaNode>) {
+        _edgeSchemaCreationState.update { it.copy(allNodeSchemas = nodeSchemas) }
+    }
+
     fun onEdgeSchemaTableNameChange(name: String) {
         _edgeSchemaCreationState.update { it.copy(tableName = name) }
     }

@@ -153,6 +153,8 @@ class MetadataViewModel(
     }
 
     fun initiateEdgeSchemaCreation() {
+        val nodeSchemas = schemaViewModel.schema.value?.nodeTables ?: emptyList()
+        schemaViewModel.onEdgeSchemaCreationInitiated(nodeSchemas)
         _selectedItem.value = "CreateEdgeSchema"
     }
 
