@@ -1,14 +1,13 @@
 package com.tau.cryptic_ui_v0
 
 import com.kuzudb.DataType as KuzuDataType
-import com.kuzudb.Value as KuzuValue
 
 data class NodeDisplayItem(
     val label: String,
     val primarykeyProperty: DisplayItemProperty,
 )
 
-data class RelDisplayItem(
+data class EdgeDisplayItem(
     val label: String,
     val src: NodeDisplayItem,
     val dst: NodeDisplayItem,
@@ -19,14 +18,14 @@ data class DisplayItemProperty(
     val value: Any?
 )
 
-//  --- Data classes for Actual Nodes and Relationships ---
+//  --- Data classes for Actual Nodes and Edges ---
 data class NodeValue(
     val id: String,
     val label: String,
     val properties: Map<String, Any?>
 )
 
-data class RelValue(
+data class EdgeValue(
     val id: String,
     val label: String,
     val src: String,
@@ -34,9 +33,9 @@ data class RelValue(
     val properties: Map<String, Any?>
 )
 
-data class RecursiveRelValue(
+data class RecursiveEdgeValue(
     val nodes: List<NodeValue>,
-    val rels: List<RelValue>
+    val edges: List<EdgeValue>
 )
 
 data class NodeTable(
@@ -46,7 +45,7 @@ data class NodeTable(
     val propertiesChanged: Boolean
 )
 
-data class RelTable(
+data class EdgeTable(
     val label: String,
     val src: NodeDisplayItem,
     val dst: NodeDisplayItem,
@@ -72,7 +71,7 @@ data class SchemaNode(
     val labelChanged: Boolean = false,
     val propertiesChanged: Boolean = false
 )
-data class SchemaRel(
+data class SchemaEdge(
     val label: String,
     val srcLabel: String,
     val dstLabel: String,
@@ -94,7 +93,7 @@ data class SchemaProperty(
 
 data class Schema(
     val nodeTables: List<SchemaNode>,
-    val relTables: List<SchemaRel>
+    val edgeTables: List<SchemaEdge>
 )
 
 
@@ -138,11 +137,11 @@ data class NodeCreationState(
     val properties: Map<String, String> = emptyMap()
 )
 
-// --- Data class for Rel Creation ---
-data class RelCreationState(
-    val schemas: List<SchemaRel>,
+// --- Data class for Edge Creation ---
+data class EdgeCreationState(
+    val schemas: List<SchemaEdge>,
     val availableNodes: List<NodeDisplayItem>,
-    val selectedSchema: SchemaRel? = null,
+    val selectedSchema: SchemaEdge? = null,
     val src: NodeDisplayItem? = null,
     val dst: NodeDisplayItem? = null,
     val properties: Map<String, String> = emptyMap()
@@ -154,8 +153,8 @@ data class NodeSchemaCreationState(
     val properties: List<Property> = listOf(Property(isPrimaryKey = true))
 )
 
-// --- Data class for Rel Schema Creation ---
-data class RelSchemaCreationState(
+// --- Data class for Edge Schema Creation ---
+data class EdgeSchemaCreationState(
     val tableName: String = "",
     val srcTable: String? = null,
     val dstTable: String? = null,

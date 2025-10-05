@@ -18,20 +18,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.DBMetaData
 import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.RelDisplayItem
+import com.tau.cryptic_ui_v0.EdgeDisplayItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetadataView(
     dbMetaData: DBMetaData?,
     nodes: List<NodeDisplayItem>,
-    relationships: List<RelDisplayItem>,
+    edges: List<EdgeDisplayItem>,
     onNodeClick: (NodeDisplayItem) -> Unit,
-    onRelationshipClick: (RelDisplayItem) -> Unit,
+    onEdgeClick: (EdgeDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
-    onDeleteRelClick: (RelDisplayItem) -> Unit,
+    onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
-    onAddRelClick: () -> Unit
+    onAddEdgeClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         dbMetaData?.let {
@@ -79,33 +79,33 @@ fun MetadataView(
                 }
             }
 
-            // Relationships List
+            // Edges List
             Column(modifier = Modifier.weight(1f).padding(8.dp)) {
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
                     headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
                     trailingContent = {
-                        IconButton(onClick = onAddRelClick) {
+                        IconButton(onClick = onAddEdgeClick) {
                             Icon(Icons.Default.Add, contentDescription = "New Edge")
                         }
                     }
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
-                    items(relationships) { rel ->
+                    items(edges) { edge ->
                         ListItem(
                             headlineContent = { Column {
-                                Text("Src: (${rel.src.label} : ${rel.src.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
-                                Text("[${rel.label}]", style=MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                                Text("Dst: (${rel.dst.label} : ${rel.dst.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
+                                Text("Src: (${edge.src.label} : ${edge.src.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
+                                Text("[${edge.label}]", style=MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                                Text("Dst: (${edge.dst.label} : ${edge.dst.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
                             }},
-                            // supportingContent = { Text(rel.) },
+                            // supportingContent = { Text(edge.) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onRelationshipClick(rel) },
+                                .clickable { onEdgeClick(edge) },
                             trailingContent = {
-                                IconButton(onClick = { onDeleteRelClick(rel) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete Relationship")
+                                IconButton(onClick = { onDeleteEdgeClick(edge) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Edge")
                                 }
                             }
                         )

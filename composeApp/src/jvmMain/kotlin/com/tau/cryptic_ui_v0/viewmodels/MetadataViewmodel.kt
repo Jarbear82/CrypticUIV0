@@ -18,8 +18,8 @@ class MetadataViewModel(
     private val _nodeList = MutableStateFlow<List<NodeDisplayItem>>(emptyList())
     val nodeList = _nodeList.asStateFlow()
 
-    private val _relationshipList = MutableStateFlow<List<RelDisplayItem>>(emptyList())
-    val relationshipList = _relationshipList.asStateFlow()
+    private val _edgeList = MutableStateFlow<List<EdgeDisplayItem>>(emptyList())
+    val edgeList = _edgeList.asStateFlow()
 
     private val _selectedItem = MutableStateFlow<Any?>(null)
     val selectedItem = _selectedItem.asStateFlow()
@@ -27,8 +27,8 @@ class MetadataViewModel(
     private val _nodeCreationState = MutableStateFlow<NodeCreationState?>(null)
     val nodeCreationState = _nodeCreationState.asStateFlow()
 
-    private val _relCreationState = MutableStateFlow<RelCreationState?>(null)
-    val relCreationState = _relCreationState.asStateFlow()
+    private val _edgeCreationState = MutableStateFlow<EdgeCreationState?>(null)
+    val edgeCreationState = _edgeCreationState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -52,10 +52,10 @@ class MetadataViewModel(
         }
     }
 
-    fun addRels(rels: Set<RelDisplayItem>) {
-        if (rels.isNotEmpty()) {
-            println("Updating Rels")
-            _relationshipList.update { (it + rels).distinct() }
+    fun addEdges(edges: Set<EdgeDisplayItem>) {
+        if (edges.isNotEmpty()) {
+            println("Updating Edges")
+            _edgeList.update { (it + edges).distinct() }
         }
     }
 
@@ -83,9 +83,9 @@ class MetadataViewModel(
 
     fun listEdges() {
         viewModelScope.launch {
-            val rels = mutableListOf<RelDisplayItem>()
-            val nodesFromRels = mutableSetOf<NodeDisplayItem>()
-            schemaViewModel.schema.value?.relTables?.forEach { table ->
+            val edges = mutableListOf<EdgeDisplayItem>()
+            val nodesFromEdges = mutableSetOf<NodeDisplayItem>()
+            schemaViewModel.schema.value?.edgeTables?.forEach { table ->
                 val srcPkName = repository.getPrimaryKey(table.srcLabel) ?: return@forEach
                 val dstPkName = repository.getPrimaryKey(table.dstLabel) ?: return@forEach
                 val q = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
@@ -110,14 +110,14 @@ class MetadataViewModel(
                             )
                         )
 
-                        nodesFromRels.add(srcNode)
-                        nodesFromRels.add(dstNode)
-                        rels.add(RelDisplayItem(label = table.label, src = srcNode, dst = dstNode))
+                        nodesFromEdges.add(srcNode)
+                        nodesFromEdges.add(dstNode)
+                        edges.add(EdgeDisplayItem(label = table.label, src = srcNode, dst = dstNode))
                     }
                 }
             }
-            _relationshipList.value = rels
-            _nodeList.update { (it + nodesFromRels).distinct() }
+            _edgeList.value = edges
+            _nodeList.update { (it + nodesFromEdges).distinct() }
         }
     }
 
@@ -135,15 +135,15 @@ class MetadataViewModel(
             _nodeCreationState.value = NodeCreationState(schemas = schema.nodeTables)
         }
     }
-    fun initiateRelCreation() {
+    fun initiateEdgeCreation() {
         viewModelScope.launch {
             val schema = schemaViewModel.schema.value ?: return@launch
             if (_nodeList.value.isEmpty()) {
                 listNodes()
             }
             _selectedItem.value = null // Clear any selected item
-            _relCreationState.value = RelCreationState(
-                schemas = schema.relTables,
+            _edgeCreationState.value = EdgeCreationState(
+                schemas = schema.edgeTables,
                 availableNodes = _nodeList.value
             )
         }
@@ -152,22 +152,22 @@ class MetadataViewModel(
         _selectedItem.value = "CreateNodeSchema"
     }
 
-    fun initiateRelSchemaCreation() {
-        _selectedItem.value = "CreateRelSchema"
+    fun initiateEdgeSchemaCreation() {
+        _selectedItem.value = "CreateEdgeSchema"
     }
 
     fun cancelNodeCreation() {
         _nodeCreationState.value = null
     }
-    fun cancelRelCreation() {
-        _relCreationState.value = null
+    fun cancelEdgeCreation() {
+        _edgeCreationState.value = null
     }
 
     fun cancelNodeSchemaCreation() {
         _selectedItem.value = null
     }
 
-    fun cancelRelSchemaCreation() {
+    fun cancelEdgeSchemaCreation() {
         _selectedItem.value = null
     }
 
@@ -218,19 +218,19 @@ class MetadataViewModel(
     fun selectItem(item: Any) {
         viewModelScope.launch {
             _nodeCreationState.value = null // Exit node creation mode if active
-            _relCreationState.value = null // Exit rel creation mode if active
+            _edgeCreationState.value = null // Exit edge creation mode if active
             _selectedItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
-                is RelDisplayItem -> getRel(item)
-                is SchemaNode, is SchemaRel -> item
+                is EdgeDisplayItem -> getEdge(item)
+                is SchemaNode, is SchemaEdge -> item
                 else -> null
             }
         }
     }
-    fun updateRelCreationSchema(schemaRel: SchemaRel) {
-        _relCreationState.update {
+    fun updateEdgeCreationSchema(schemaEdge: SchemaEdge) {
+        _edgeCreationState.update {
             it?.copy(
-                selectedSchema = schemaRel,
+                selectedSchema = schemaEdge,
                 src = null,
                 dst = null,
                 properties = emptyMap()
@@ -238,16 +238,16 @@ class MetadataViewModel(
         }
     }
 
-    fun updateRelCreationSrc(node: NodeDisplayItem) {
-        _relCreationState.update { it?.copy(src = node) }
+    fun updateEdgeCreationSrc(node: NodeDisplayItem) {
+        _edgeCreationState.update { it?.copy(src = node) }
     }
 
-    fun updateRelCreationDst(node: NodeDisplayItem) {
-        _relCreationState.update { it?.copy(dst = node) }
+    fun updateEdgeCreationDst(node: NodeDisplayItem) {
+        _edgeCreationState.update { it?.copy(dst = node) }
     }
 
-    fun updateRelCreationProperty(key: String, value: String) {
-        _relCreationState.update { currentState ->
+    fun updateEdgeCreationProperty(key: String, value: String) {
+        _edgeCreationState.update { currentState ->
             currentState?.copy(
                 properties = currentState.properties.toMutableMap().apply {
                     this[key] = value
@@ -255,9 +255,9 @@ class MetadataViewModel(
             )
         }
     }
-    fun createRelFromState() {
+    fun createEdgeFromState() {
         viewModelScope.launch {
-            _relCreationState.value?.let { state ->
+            _edgeCreationState.value?.let { state ->
                 if (state.selectedSchema != null && state.src != null && state.dst != null) {
                     val label = state.selectedSchema.label
                     val src = state.src
@@ -265,14 +265,14 @@ class MetadataViewModel(
                     val properties = state.properties.mapValues { entry ->
                         entry.value.toLongOrNull() ?: entry.value
                     }
-                    createRel(label, src, dst, properties)
-                    _relCreationState.value = null // Exit creation mode
+                    createEdge(label, src, dst, properties)
+                    _edgeCreationState.value = null // Exit creation mode
                     listEdges() // Refresh the edge list
                 }
             }
         }
     }
-    private suspend fun createRel(label: String, src: NodeDisplayItem, dst: NodeDisplayItem, properties: Map<String, Any?>) {
+    private suspend fun createEdge(label: String, src: NodeDisplayItem, dst: NodeDisplayItem, properties: Map<String, Any?>) {
         val srcPk = src.primarykeyProperty
         val dstPk = dst.primarykeyProperty
         val formattedSrcPkValue = formatPkValue(srcPk.value)
@@ -322,7 +322,7 @@ class MetadataViewModel(
         return null
     }
 
-    private suspend fun getRel(item: RelDisplayItem): RelTable? {
+    private suspend fun getEdge(item: EdgeDisplayItem): EdgeTable? {
         val srcPk = item.src.primarykeyProperty
         val dstPk = item.dst.primarykeyProperty
         val formattedSrcPkValue = formatPkValue(srcPk.value)
@@ -334,9 +334,9 @@ class MetadataViewModel(
         val result = repository.executeQuery(q)
 
         if (result is ExecutionResult.Success) {
-            val relValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? RelValue
-            if (relValue != null) {
-                val properties = relValue.properties.mapNotNull { (key, value) ->
+            val edgeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? EdgeValue
+            if (edgeValue != null) {
+                val properties = edgeValue.properties.mapNotNull { (key, value) ->
                     if (key.startsWith("_")) return@mapNotNull null
                     TableProperty(
                         key = key,
@@ -345,7 +345,7 @@ class MetadataViewModel(
                         valueChanged = false
                     )
                 }
-                return RelTable(
+                return EdgeTable(
                     label = item.label,
                     src = item.src,
                     dst = item.dst,
@@ -365,7 +365,7 @@ class MetadataViewModel(
         viewModelScope.launch {
             when (item) {
                 is NodeDisplayItem -> deleteNode(item)
-                is RelDisplayItem -> deleteRel(item)
+                is EdgeDisplayItem -> deleteEdge(item)
             }
         }
     }
@@ -378,25 +378,25 @@ class MetadataViewModel(
         val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
             _nodeList.update { list -> list.filterNot { it == item } }
-            // Also remove any relationships connected to the deleted node
-            _relationshipList.update { list -> list.filterNot { it.src == item || it.dst == item } }
+            // Also remove any edges connected to the deleted node
+            _edgeList.update { list -> list.filterNot { it.src == item || it.dst == item } }
         }
     }
 
-    private suspend fun deleteRel(item: RelDisplayItem) {
+    private suspend fun deleteEdge(item: EdgeDisplayItem) {
         val srcPk = item.src.primarykeyProperty
         val dstPk = item.dst.primarykeyProperty
         val formattedSrcPkValue = formatPkValue(srcPk.value)
         val formattedDstPkValue = formatPkValue(dstPk.value)
 
-        // This query deletes ALL relationships of this type between the two specific nodes.
-        // This is a limitation due to not storing a unique internal ID on the RelDisplayItem.
+        // This query deletes ALL edges of this type between the two specific nodes.
+        // This is a limitation due to not storing a unique internal ID on the EdgeDisplayItem.
         val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
                 "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
                 "DELETE r"
         val result = repository.executeQuery(q)
         if (result is ExecutionResult.Success) {
-            _relationshipList.update { list -> list.filterNot { it == item } }
+            _edgeList.update { list -> list.filterNot { it == item } }
         }
     }
 
@@ -406,7 +406,7 @@ class MetadataViewModel(
     }
 
     fun clearEdgeList() {
-        _relationshipList.value = emptyList()
+        _edgeList.value = emptyList()
     }
 
     fun clearSelectedItem() {

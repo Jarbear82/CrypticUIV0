@@ -41,7 +41,7 @@ class QueryViewModel(
             fun findNodeValues(value: Any?) {
                 when (value) {
                     is NodeValue -> nodeValues.add(value)
-                    is RecursiveRelValue -> value.nodes.forEach(::findNodeValues)
+                    is RecursiveEdgeValue -> value.nodes.forEach(::findNodeValues)
                     is List<*> -> value.forEach(::findNodeValues)
                 }
             }
@@ -71,18 +71,18 @@ class QueryViewModel(
             tempNodeMap = nodeItems.toMap()
             metadataViewModel.addNodes(tempNodeMap.values.toSet())
 
-            // Second Pass: Now that tempNodeMap is populated, find all relationships
-            println("Second Pass: Find all relationships")
+            // Second Pass: Now that tempNodeMap is populated, find all edges
+            println("Second Pass: Find all edges")
 
-            val newRels = mutableSetOf<RelDisplayItem>()
-            fun findRelData(value: Any?) {
+            val newEdges = mutableSetOf<EdgeDisplayItem>()
+            fun findEdgeData(value: Any?) {
                 when (value) {
-                    is RelValue -> {
+                    is EdgeValue -> {
                         val srcNode = tempNodeMap[value.src]
                         val dstNode = tempNodeMap[value.dst]
                         if (srcNode != null && dstNode != null) {
-                            newRels.add(
-                                RelDisplayItem(
+                            newEdges.add(
+                                EdgeDisplayItem(
                                     label = value.label,
                                     src = srcNode,
                                     dst = dstNode
@@ -90,20 +90,20 @@ class QueryViewModel(
                             )
                         }
                     }
-                    is RecursiveRelValue -> value.rels.forEach(::findRelData)
-                    is List<*> -> value.forEach(::findRelData)
+                    is RecursiveEdgeValue -> value.edges.forEach(::findEdgeData)
+                    is List<*> -> value.forEach(::findEdgeData)
                 }
             }
 
-            // TODO: If no nodes were returned and rels were, retrieve their acompanying nodes
+            // TODO: If no nodes were returned and edges were, retrieve their acompanying nodes
 
             result.results.forEach { formattedResult ->
                 formattedResult.rows.forEach { row ->
-                    row.forEach(::findRelData)
+                    row.forEach(::findEdgeData)
                 }
             }
 
-            metadataViewModel.addRels(newRels)
+            metadataViewModel.addEdges(newEdges)
         }
     }
 

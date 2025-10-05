@@ -143,24 +143,24 @@ class KuzuDBService {
                         properties[propName] = getFormattedValue(propValue.clone())
                     }
                 }
-                val rel = RelValue(
+                val edge = EdgeValue(
                     id = ValueRelUtil.getID(v).toString(),
                     label = ValueRelUtil.getLabelName(v),
                     src = ValueRelUtil.getSrcID(v).toString(),
                     dst = ValueRelUtil.getDstID(v).toString(),
                     properties = properties
                 )
-                println("Created: $rel")
-                return rel
+                println("Created: $edge")
+                return edge
             }
             KuzuDataTypeID.RECURSIVE_REL -> {
                 val nodesList = ValueRecursiveRelUtil.getNodeList(v).clone().use { nodesValue ->
                     getFormattedValue(nodesValue) as? List<NodeValue>
                 }
                 val relsList = ValueRecursiveRelUtil.getRelList(v).clone().use { relsValue ->
-                    getFormattedValue(relsValue) as? List<RelValue>
+                    getFormattedValue(relsValue) as? List<EdgeValue>
                 }
-                RecursiveRelValue(nodes = nodesList ?: emptyList(), rels = relsList ?: emptyList())
+                RecursiveEdgeValue(nodes = nodesList ?: emptyList(), edges = relsList ?: emptyList())
             }
             KuzuDataTypeID.LIST, KuzuDataTypeID.ARRAY -> {
                 KuzuList(v).use { list ->

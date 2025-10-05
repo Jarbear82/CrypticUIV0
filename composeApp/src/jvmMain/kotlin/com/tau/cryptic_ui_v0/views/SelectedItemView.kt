@@ -21,34 +21,34 @@ import com.tau.cryptic_ui_v0.*
 fun SelectedItemView(
     selectedItem: Any?,
     nodeCreationState: NodeCreationState?,
-    relCreationState: RelCreationState?,
+    edgeCreationState: EdgeCreationState?,
     nodeSchemaCreationState: NodeSchemaCreationState,
-    relSchemaCreationState: RelSchemaCreationState,
+    edgeSchemaCreationState: EdgeSchemaCreationState,
     onClearSelection: () -> Unit,
     onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
     onNodeCreationCreateClick: () -> Unit,
     onNodeCreationCancelClick: () -> Unit,
-    onRelCreationSchemaSelected: (SchemaRel) -> Unit,
-    onRelCreationSrcSelected: (NodeDisplayItem) -> Unit,
-    onRelCreationDstSelected: (NodeDisplayItem) -> Unit,
-    onRelCreationPropertyChanged: (String, String) -> Unit,
-    onRelCreationCreateClick: () -> Unit,
-    onRelCreationCancelClick: () -> Unit,
+    onEdgeCreationSchemaSelected: (SchemaEdge) -> Unit,
+    onEdgeCreationSrcSelected: (NodeDisplayItem) -> Unit,
+    onEdgeCreationDstSelected: (NodeDisplayItem) -> Unit,
+    onEdgeCreationPropertyChanged: (String, String) -> Unit,
+    onEdgeCreationCreateClick: () -> Unit,
+    onEdgeCreationCancelClick: () -> Unit,
     onNodeSchemaCreationCreateClick: (NodeSchemaCreationState) -> Unit,
     onNodeSchemaCreationCancelClick: () -> Unit,
-    onRelSchemaCreationCreateClick: (RelSchemaCreationState) -> Unit,
-    onRelSchemaCreationCancelClick: () -> Unit,
+    onEdgeSchemaCreationCreateClick: (EdgeSchemaCreationState) -> Unit,
+    onEdgeSchemaCreationCancelClick: () -> Unit,
     onNodeSchemaTableNameChange: (String) -> Unit,
     onNodeSchemaPropertyChange: (Int, Property) -> Unit,
     onAddNodeSchemaProperty: () -> Unit,
     onRemoveNodeSchemaProperty: (Int) -> Unit,
-    onRelSchemaTableNameChange: (String) -> Unit,
-    onRelSchemaSrcTableChange: (String) -> Unit,
-    onRelSchemaDstTableChange: (String) -> Unit,
-    onRelSchemaPropertyChange: (Int, Property) -> Unit,
-    onAddRelSchemaProperty: () -> Unit,
-    onRemoveRelSchemaProperty: (Int) -> Unit
+    onEdgeSchemaTableNameChange: (String) -> Unit,
+    onEdgeSchemaSrcTableChange: (String) -> Unit,
+    onEdgeSchemaDstTableChange: (String) -> Unit,
+    onEdgeSchemaPropertyChange: (Int, Property) -> Unit,
+    onAddEdgeSchemaProperty: () -> Unit,
+    onRemoveEdgeSchemaProperty: (Int) -> Unit
 ) {
     if (nodeCreationState != null) {
         CreateNodeView(
@@ -58,15 +58,15 @@ fun SelectedItemView(
             onCreateClick = onNodeCreationCreateClick,
             onCancelClick = onNodeCreationCancelClick
         )
-    } else if (relCreationState != null) {
-        CreateRelView(
-            relCreationState = relCreationState,
-            onSchemaSelected = onRelCreationSchemaSelected,
-            onSrcSelected = onRelCreationSrcSelected,
-            onDstSelected = onRelCreationDstSelected,
-            onPropertyChanged = onRelCreationPropertyChanged,
-            onCreateClick = onRelCreationCreateClick,
-            onCancelClick = onRelCreationCancelClick
+    } else if (edgeCreationState != null) {
+        CreateEdgeView(
+            edgeCreationState = edgeCreationState,
+            onSchemaSelected = onEdgeCreationSchemaSelected,
+            onSrcSelected = onEdgeCreationSrcSelected,
+            onDstSelected = onEdgeCreationDstSelected,
+            onPropertyChanged = onEdgeCreationPropertyChanged,
+            onCreateClick = onEdgeCreationCreateClick,
+            onCancelClick = onEdgeCreationCancelClick
         )
     } else if (selectedItem == "CreateNodeSchema") {
         CreateNodeSchemaView(
@@ -79,16 +79,16 @@ fun SelectedItemView(
             onCancel = onNodeSchemaCreationCancelClick
         )
     } else if (selectedItem == "CreateRelSchema") {
-        CreateRelSchemaView(
-            state = relSchemaCreationState,
-            onTableNameChange = onRelSchemaTableNameChange,
-            onSrcTableChange = onRelSchemaSrcTableChange,
-            onDstTableChange = onRelSchemaDstTableChange,
-            onPropertyChange = onRelSchemaPropertyChange,
-            onAddProperty = onAddRelSchemaProperty,
-            onRemoveProperty = onRemoveRelSchemaProperty,
-            onCreate = onRelSchemaCreationCreateClick,
-            onCancel = onRelSchemaCreationCancelClick
+        CreateEdgeSchemaView(
+            state = edgeSchemaCreationState,
+            onTableNameChange = onEdgeSchemaTableNameChange,
+            onSrcTableChange = onEdgeSchemaSrcTableChange,
+            onDstTableChange = onEdgeSchemaDstTableChange,
+            onPropertyChange = onEdgeSchemaPropertyChange,
+            onAddProperty = onAddEdgeSchemaProperty,
+            onRemoveProperty = onRemoveEdgeSchemaProperty,
+            onCreate = onEdgeSchemaCreationCreateClick,
+            onCancel = onEdgeSchemaCreationCancelClick
         )
     } else if (selectedItem == null) {
         Text("No item selected.")
@@ -114,7 +114,7 @@ fun SelectedItemView(
                         }
                     }
                 }
-                is RelTable -> {
+                is EdgeTable -> {
                     Text("Selected Relationship", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
@@ -156,7 +156,7 @@ fun SelectedItemView(
                         }
                     }
                 }
-                is SchemaRel -> {
+                is SchemaEdge -> {
                     Text("Selected Relationship Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)

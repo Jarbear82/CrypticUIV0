@@ -14,8 +14,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
     private val _nodeSchemaCreationState = MutableStateFlow(NodeSchemaCreationState())
     val nodeSchemaCreationState = _nodeSchemaCreationState.asStateFlow()
 
-    private val _relSchemaCreationState = MutableStateFlow(RelSchemaCreationState())
-    val relSchemaCreationState = _relSchemaCreationState.asStateFlow()
+    private val _edgeSchemaCreationState = MutableStateFlow(EdgeSchemaCreationState())
+    val edgeSchemaCreationState = _edgeSchemaCreationState.asStateFlow()
 
 
     init {
@@ -34,14 +34,14 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
 
     private suspend fun getSchema() : Schema {
         val nodeSchemaList = mutableListOf<SchemaNode>()
-        val relSchemaList = mutableListOf<SchemaRel>()
+        val edgeSchemaList = mutableListOf<SchemaEdge>()
 
         // Call show tables
         val execResult = repository.executeQuery("CALL SHOW_TABLES() RETURN *;")
         if (execResult !is ExecutionResult.Success) {
             println("Failed to fetch schema")
             // Handle error case
-            return Schema(nodeSchemaList, relSchemaList)
+            return Schema(nodeSchemaList, edgeSchemaList)
         }
 
 
@@ -90,8 +90,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
                         for (row in connectionRows) {
                             val srcLabel = row[0] as String
                             val dstLabel = row[1] as String
-                            // Create Rel Schema and add to Rel Schema List
-                            relSchemaList.add(SchemaRel(tableName, srcLabel, dstLabel, properties))
+                            // Create Edge Schema and add to Edge Schema List
+                            edgeSchemaList.add(SchemaEdge(tableName, srcLabel, dstLabel, properties))
                         }
                     }
                 }
@@ -108,14 +108,14 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
                             // Create Rel Schema and add to Rel Schema List
                             // Note: Recursive relationships do not have properties according to the provided context.
                             // You can add logic to get properties if they become available in the future.
-                            relSchemaList.add(SchemaRel(tableName, srcLabel, dstLabel, emptyList()))
+                            edgeSchemaList.add(SchemaEdge(tableName, srcLabel, dstLabel, emptyList()))
                         }
                     }
                 }
             }
         }
-        // Create Schema containing Node and Rel tables
-        return Schema(nodeTables = nodeSchemaList, relTables = relSchemaList)
+        // Create Schema containing Node and Edge tables
+        return Schema(nodeTables = nodeSchemaList, edgeTables = edgeSchemaList)
     }
 
     fun onNodeSchemaTableNameChange(name: String) {
@@ -144,34 +144,34 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         }
     }
 
-    fun onRelSchemaTableNameChange(name: String) {
-        _relSchemaCreationState.update { it.copy(tableName = name) }
+    fun onEdgeSchemaTableNameChange(name: String) {
+        _edgeSchemaCreationState.update { it.copy(tableName = name) }
     }
 
-    fun onRelSchemaSrcTableChange(table: String) {
-        _relSchemaCreationState.update { it.copy(srcTable = table) }
+    fun onEdgeSchemaSrcTableChange(table: String) {
+        _edgeSchemaCreationState.update { it.copy(srcTable = table) }
     }
 
-    fun onRelSchemaDstTableChange(table: String) {
-        _relSchemaCreationState.update { it.copy(dstTable = table) }
+    fun onEdgeSchemaDstTableChange(table: String) {
+        _edgeSchemaCreationState.update { it.copy(dstTable = table) }
     }
 
-    fun onRelSchemaPropertyChange(index: Int, property: Property) {
-        _relSchemaCreationState.update {
+    fun onEdgeSchemaPropertyChange(index: Int, property: Property) {
+        _edgeSchemaCreationState.update {
             val newProperties = it.properties.toMutableList()
             newProperties[index] = property
             it.copy(properties = newProperties)
         }
     }
 
-    fun onAddRelSchemaProperty() {
-        _relSchemaCreationState.update {
+    fun onAddEdgeSchemaProperty() {
+        _edgeSchemaCreationState.update {
             it.copy(properties = it.properties + Property(isPrimaryKey = false))
         }
     }
 
-    fun onRemoveRelSchemaProperty(index: Int) {
-        _relSchemaCreationState.update {
+    fun onRemoveEdgeSchemaProperty(index: Int) {
+        _edgeSchemaCreationState.update {
             val newProperties = it.properties.toMutableList()
             newProperties.removeAt(index)
             it.copy(properties = newProperties)
@@ -191,7 +191,7 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         }
     }
 
-    fun createRelSchemaFromState(state: RelSchemaCreationState, onFinished: () -> Unit) {
+    fun createEdgeSchemaFromState(state: EdgeSchemaCreationState, onFinished: () -> Unit) {
         viewModelScope.launch {
             val properties = if (state.properties.isNotEmpty()) {
                 ", " + state.properties.joinToString(", ") {
@@ -219,7 +219,7 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         }
     }
 
-    fun deleteSchemaRel(item: SchemaRel) {
+    fun deleteSchemaEdge(item: SchemaEdge) {
         viewModelScope.launch {
             val q = "DROP TABLE ${item.label.withBackticks()}"
             val result = repository.executeQuery(q)

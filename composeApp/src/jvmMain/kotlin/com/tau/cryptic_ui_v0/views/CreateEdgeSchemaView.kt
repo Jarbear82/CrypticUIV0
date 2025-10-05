@@ -12,26 +12,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.Property
-import com.tau.cryptic_ui_v0.RelSchemaCreationState
-import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.EdgeSchemaCreationState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateRelSchemaView(
-    state: RelSchemaCreationState,
+fun CreateEdgeSchemaView(
+    state: EdgeSchemaCreationState,
     onTableNameChange: (String) -> Unit,
     onSrcTableChange: (String) -> Unit,
     onDstTableChange: (String) -> Unit,
     onPropertyChange: (Int, Property) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
-    onCreate: (RelSchemaCreationState) -> Unit,
+    onCreate: (EdgeSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
     val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID")
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Create Relationship Schema", style = MaterialTheme.typography.headlineSmall)
+        Text("Create Edge Schema", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(

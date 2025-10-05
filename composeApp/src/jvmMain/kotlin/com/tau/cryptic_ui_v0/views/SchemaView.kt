@@ -23,17 +23,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import com.tau.cryptic_ui_v0.Schema
 import com.tau.cryptic_ui_v0.SchemaNode
-import com.tau.cryptic_ui_v0.SchemaRel
+import com.tau.cryptic_ui_v0.SchemaEdge
 
 @Composable
 fun SchemaView(
     schema: Schema?,
     onNodeClick: (SchemaNode) -> Unit,
-    onRelationshipClick: (SchemaRel) -> Unit,
+    onEdgeClick: (SchemaEdge) -> Unit,
     onDeleteNodeClick: (SchemaNode) -> Unit,
-    onDeleteRelClick: (SchemaRel) -> Unit,
+    onDeleteEdgeClick: (SchemaEdge) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
-    onAddRelSchemaClick: () -> Unit
+    onAddEdgeSchemaClick: () -> Unit
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -87,20 +87,20 @@ fun SchemaView(
                 leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Node")},
                 headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
                 trailingContent = {
-                    IconButton(onClick = onAddRelSchemaClick) {
+                    IconButton(onClick = onAddEdgeSchemaClick) {
                         Icon(Icons.Default.Add, contentDescription = "New Rel Schema")
                     }
                 }
             )
             HorizontalDivider(color = Color.Black)
             LazyColumn {
-                items(schema.relTables) { table ->
+                items(schema.edgeTables) { table ->
                     ListItem(
                         headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
-                        modifier = Modifier.padding(bottom = 8.dp).clickable { onRelationshipClick(table) },
+                        modifier = Modifier.padding(bottom = 8.dp).clickable { onEdgeClick(table) },
                         supportingContent = { Text("(${table.srcLabel} -> ${table.dstLabel})")},
                         trailingContent = {
-                            IconButton(onClick = { onDeleteRelClick(table) }) {
+                            IconButton(onClick = { onDeleteEdgeClick(table) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Relationship Schema")
                             }
                         }

@@ -6,14 +6,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.RelCreationState
-import com.tau.cryptic_ui_v0.SchemaRel
+import com.tau.cryptic_ui_v0.EdgeCreationState
+import com.tau.cryptic_ui_v0.SchemaEdge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateRelView(
-    relCreationState: RelCreationState,
-    onSchemaSelected: (SchemaRel) -> Unit,
+fun CreateEdgeView(
+    edgeCreationState: EdgeCreationState,
+    onSchemaSelected: (SchemaEdge) -> Unit,
     onSrcSelected: (NodeDisplayItem) -> Unit,
     onDstSelected: (NodeDisplayItem) -> Unit,
     onPropertyChanged: (String, String) -> Unit,
@@ -25,7 +25,7 @@ fun CreateRelView(
     var dstExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(8.dp)) {
-        Text("Create Relationship", style = MaterialTheme.typography.headlineSmall)
+        Text("Create Edge", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         // Schema Dropdown
@@ -34,7 +34,7 @@ fun CreateRelView(
             onExpandedChange = { schemaExpanded = !schemaExpanded }
         ) {
             OutlinedTextField(
-                value = relCreationState.selectedSchema?.label ?: "Select Schema",
+                value = edgeCreationState.selectedSchema?.label ?: "Select Schema",
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
@@ -44,7 +44,7 @@ fun CreateRelView(
                 expanded = schemaExpanded,
                 onDismissRequest = { schemaExpanded = false }
             ) {
-                relCreationState.schemas.forEach { schema ->
+                edgeCreationState.schemas.forEach { schema ->
                     DropdownMenuItem(
                         text = { Text(schema.label) },
                         onClick = {
@@ -56,14 +56,14 @@ fun CreateRelView(
             }
         }
 
-        relCreationState.selectedSchema?.let {
+        edgeCreationState.selectedSchema?.let {
             // Source Node Dropdown
             ExposedDropdownMenuBox(
                 expanded = srcExpanded,
                 onExpandedChange = { srcExpanded = !srcExpanded }
             ) {
                 OutlinedTextField(
-                    value = relCreationState.src?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Source Node",
+                    value = edgeCreationState.src?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Source Node",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
@@ -73,7 +73,7 @@ fun CreateRelView(
                     expanded = srcExpanded,
                     onDismissRequest = { srcExpanded = false }
                 ) {
-                    relCreationState.availableNodes.filter { it.label == relCreationState.selectedSchema.srcLabel }.forEach { node ->
+                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedSchema.srcLabel }.forEach { node ->
                         DropdownMenuItem(
                             text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             onClick = {
@@ -91,7 +91,7 @@ fun CreateRelView(
                 onExpandedChange = { dstExpanded = !dstExpanded }
             ) {
                 OutlinedTextField(
-                    value = relCreationState.dst?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Destination Node",
+                    value = edgeCreationState.dst?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Destination Node",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
@@ -101,7 +101,7 @@ fun CreateRelView(
                     expanded = dstExpanded,
                     onDismissRequest = { dstExpanded = false }
                 ) {
-                    relCreationState.availableNodes.filter { it.label == relCreationState.selectedSchema.dstLabel }.forEach { node ->
+                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedSchema.dstLabel }.forEach { node ->
                         DropdownMenuItem(
                             text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             onClick = {
@@ -116,7 +116,7 @@ fun CreateRelView(
             // Properties
             it.properties.forEach { property ->
                 OutlinedTextField(
-                    value = relCreationState.properties[property.key] ?: "",
+                    value = edgeCreationState.properties[property.key] ?: "",
                     onValueChange = { onPropertyChanged(property.key, it) },
                     label = { Text("${property.key}: ${property.valueDataType}") },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
@@ -127,7 +127,7 @@ fun CreateRelView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row {
-            Button(onClick = onCreateClick, enabled = relCreationState.src != null && relCreationState.dst != null) {
+            Button(onClick = onCreateClick, enabled = edgeCreationState.src != null && edgeCreationState.dst != null) {
                 Text("Create")
             }
             Spacer(modifier = Modifier.width(8.dp))
