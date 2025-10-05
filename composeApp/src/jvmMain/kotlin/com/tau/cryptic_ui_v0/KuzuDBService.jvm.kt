@@ -157,10 +157,10 @@ class KuzuDBService {
                 val nodesList = ValueRecursiveRelUtil.getNodeList(v).clone().use { nodesValue ->
                     getFormattedValue(nodesValue) as? List<NodeValue>
                 }
-                val relsList = ValueRecursiveRelUtil.getRelList(v).clone().use { relsValue ->
-                    getFormattedValue(relsValue) as? List<EdgeValue>
+                val edgesList = ValueRecursiveRelUtil.getRelList(v).clone().use { edgesValue ->
+                    getFormattedValue(edgesValue) as? List<EdgeValue>
                 }
-                RecursiveEdgeValue(nodes = nodesList ?: emptyList(), edges = relsList ?: emptyList())
+                RecursiveEdgeValue(nodes = nodesList ?: emptyList(), edges = edgesList ?: emptyList())
             }
             KuzuDataTypeID.LIST, KuzuDataTypeID.ARRAY -> {
                 KuzuList(v).use { list ->

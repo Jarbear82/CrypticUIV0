@@ -88,7 +88,7 @@ fun SchemaView(
                 headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
                 trailingContent = {
                     IconButton(onClick = onAddEdgeSchemaClick) {
-                        Icon(Icons.Default.Add, contentDescription = "New Rel Schema")
+                        Icon(Icons.Default.Add, contentDescription = "New Edge Schema")
                     }
                 }
             )
@@ -101,7 +101,7 @@ fun SchemaView(
                         supportingContent = { Text("(${table.srcLabel} -> ${table.dstLabel})")},
                         trailingContent = {
                             IconButton(onClick = { onDeleteEdgeClick(table) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Relationship Schema")
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Edge Schema")
                             }
                         }
                     )

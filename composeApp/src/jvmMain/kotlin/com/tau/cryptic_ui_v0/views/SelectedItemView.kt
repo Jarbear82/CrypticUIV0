@@ -78,7 +78,7 @@ fun SelectedItemView(
             onCreate = onNodeSchemaCreationCreateClick,
             onCancel = onNodeSchemaCreationCancelClick
         )
-    } else if (selectedItem == "CreateRelSchema") {
+    } else if (selectedItem == "CreateEdgeSchema") {
         CreateEdgeSchemaView(
             state = edgeSchemaCreationState,
             onTableNameChange = onEdgeSchemaTableNameChange,
@@ -115,14 +115,14 @@ fun SelectedItemView(
                     }
                 }
                 is EdgeTable -> {
-                    Text("Selected Relationship", style = MaterialTheme.typography.headlineSmall)
+                    Text("Selected Edge", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
                     Text("Source: ${selectedItem.src.label} (${selectedItem.src.primarykeyProperty.value})")
                     Text("Destination: ${selectedItem.dst.label} (${selectedItem.dst.primarykeyProperty.value})")
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Properties are nullable for relationships, so check before displaying
+                    // Properties are nullable for edges, so check before displaying
                     selectedItem.properties?.let { properties ->
                         if (properties.isNotEmpty()) {
                             Text("Properties:", style = MaterialTheme.typography.titleMedium)
@@ -157,14 +157,14 @@ fun SelectedItemView(
                     }
                 }
                 is SchemaEdge -> {
-                    Text("Selected Relationship Schema", style = MaterialTheme.typography.headlineSmall)
+                    Text("Selected Edge Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
                     Text("Source: ${selectedItem.srcLabel}")
                     Text("Destination: ${selectedItem.dstLabel}")
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Properties are nullable for relationships, so check before displaying
+                    // Properties are nullable for edges, so check before displaying
                     selectedItem.properties.let { properties ->
                         if (properties.isNotEmpty()) {
                             Text("Properties:", style = MaterialTheme.typography.titleMedium)

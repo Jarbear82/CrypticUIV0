@@ -75,7 +75,7 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
                             val propName = row[1].toString()
                             val propType = row[2].toString()
                             // For REL tables, the 5th column is `storage_direction`, not a boolean, so we can't cast it.
-                            // We can assume `isPrimaryKey` is always false for relationship properties.
+                            // We can assume `isPrimaryKey` is always false for edge properties.
                             SchemaProperty(propName, propType, isPrimaryKey = false)
                         }
                     } else {
@@ -96,8 +96,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
                     }
                 }
                 "RECURSIVE_REL" -> {
-                    // Recursive relationships are internally represented as STRUCT{LIST [NODE], LIST [REL]},
-                    // but for schema representation, they can be treated as RELs for now.
+                    // Recursive edges are internally represented as STRUCT{LIST [NODE], LIST [REL]},
+                    // but for schema representation, they can be treated as Edges for now.
                     // Call Show Connection
                     val showConnectionResult = repository.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
                     if (showConnectionResult is ExecutionResult.Success) {
@@ -105,8 +105,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
                         for (row in connectionRows) {
                             val srcLabel = row[0] as String
                             val dstLabel = row[1] as String
-                            // Create Rel Schema and add to Rel Schema List
-                            // Note: Recursive relationships do not have properties according to the provided context.
+                            // Create Edge Schema and add to Edge Schema List
+                            // Note: Recursive edges do not have properties according to the provided context.
                             // You can add logic to get properties if they become available in the future.
                             edgeSchemaList.add(SchemaEdge(tableName, srcLabel, dstLabel, emptyList()))
                         }
