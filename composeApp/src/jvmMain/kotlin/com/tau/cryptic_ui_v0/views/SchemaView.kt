@@ -47,6 +47,7 @@ fun SchemaView(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+            // --- Node Schemas ---
             ListItem(
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Node Schema")},
                 headlineContent = { Text("Node Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp)) } ,
@@ -94,8 +95,7 @@ fun SchemaView(
             }
         }
 
-
-
+        // --- Edge Schemas ---
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
             ListItem(
                 leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Node")},

@@ -172,7 +172,7 @@ class CreationViewModel(
 
     // --- Node Schema Creation ---
     fun initiateNodeSchemaCreation() {
-        metadataViewModel.selectItem("CreateNodeSchema")
+        metadataViewModel.setItemToEdit("CreateNodeSchema")
     }
 
     fun onNodeSchemaTableNameChange(name: String) {
@@ -223,7 +223,7 @@ class CreationViewModel(
     fun initiateEdgeSchemaCreation() {
         val nodeSchemas = schemaViewModel.schema.value?.nodeTables ?: emptyList()
         onEdgeSchemaCreationInitiated(nodeSchemas)
-        metadataViewModel.selectItem("CreateEdgeSchema")
+        metadataViewModel.setItemToEdit("CreateEdgeSchema")
     }
 
     private fun onEdgeSchemaCreationInitiated(nodeSchemas: List<SchemaNode>) {
