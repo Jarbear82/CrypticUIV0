@@ -21,8 +21,12 @@ class MetadataViewModel(
     private val _edgeList = MutableStateFlow<List<EdgeDisplayItem>>(emptyList())
     val edgeList = _edgeList.asStateFlow()
 
-    private val _editItem = MutableStateFlow<Any?>(null)
-    val editItem = _editItem.asStateFlow()
+    private val _itemToEdit = MutableStateFlow<Any?>(null)
+    val itemToEdit = _itemToEdit.asStateFlow()
+
+    private val _selectedItem = MutableStateFlow<Any?>(null)
+    val selectedItem = _selectedItem.asStateFlow()
+
 
     init {
         viewModelScope.launch {
@@ -122,9 +126,9 @@ class MetadataViewModel(
         }
     }
 
-    fun selectItem(item: Any) {
+    fun setItemToEdit(item: Any) {
         viewModelScope.launch {
-            _editItem.value = when (item) {
+            _itemToEdit.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is EdgeDisplayItem -> getEdge(item)
                 is SchemaNode, is SchemaEdge, is String -> item
@@ -132,6 +136,11 @@ class MetadataViewModel(
             }
         }
     }
+
+    fun selectItem(item: Any) {
+        _selectedItem.value = item
+    }
+
 
     private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
         val pkKey = item.primarykeyProperty.key
@@ -251,8 +260,10 @@ class MetadataViewModel(
     }
 
     fun clearSelectedItem() {
-        _editItem.value = null
+        _itemToEdit.value = null
+        _selectedItem.value = null
     }
+
 
     fun onCleared() {
         repository.close()

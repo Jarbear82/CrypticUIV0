@@ -91,12 +91,12 @@ fun EditItemView(
             onCancel = onEdgeSchemaCreationCancelClick
         )
     } else if (editItem == null) {
-        Text("No item selected.")
+        Text("No item selected to edit.")
     } else {
         Column(modifier = Modifier.padding(8.dp)) {
             when (editItem) {
                 is NodeTable -> {
-                    Text("Selected Node", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit Node", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -115,7 +115,7 @@ fun EditItemView(
                     }
                 }
                 is EdgeTable -> {
-                    Text("Selected Edge", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit Edge", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Text("Source: ${editItem.src.label} (${editItem.src.primarykeyProperty.value})")
@@ -138,7 +138,7 @@ fun EditItemView(
                     }
                 }
                 is SchemaNode -> {
-                    Text("Selected Node Schema", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -157,7 +157,7 @@ fun EditItemView(
                     }
                 }
                 is SchemaEdge -> {
-                    Text("Selected Edge Schema", style = MaterialTheme.typography.headlineSmall)
+                    Text("Edit Edge Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Text("Source: ${editItem.srcLabel}")
@@ -182,7 +182,7 @@ fun EditItemView(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onClearSelection) {
-                Text("Clear Selection")
+                Text("Clear")
             }
         }
     }

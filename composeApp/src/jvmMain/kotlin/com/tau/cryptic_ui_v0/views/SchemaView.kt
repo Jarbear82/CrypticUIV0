@@ -1,5 +1,6 @@
 package com.tau.cryptic_ui_v0.views
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,8 +30,11 @@ import com.tau.cryptic_ui_v0.SchemaEdge
 @Composable
 fun SchemaView(
     schema: Schema?,
+    selectedItem: Any?,
     onNodeClick: (SchemaNode) -> Unit,
     onEdgeClick: (SchemaEdge) -> Unit,
+    onEditNodeClick: (SchemaNode) -> Unit,
+    onEditEdgeClick: (SchemaEdge) -> Unit,
     onDeleteNodeClick: (SchemaNode) -> Unit,
     onDeleteEdgeClick: (SchemaEdge) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
@@ -55,9 +60,18 @@ fun SchemaView(
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.nodeTables) { table ->
+                    val isSelected = selectedItem == table
                     ListItem(
                         headlineContent = { Text(table.label, style = MaterialTheme.typography.titleMedium) },
-                        modifier = Modifier.padding(bottom = 8.dp).clickable { onNodeClick(table) },
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .clickable { onNodeClick(table) }
+                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
+                        leadingContent = {
+                            IconButton(onClick = { onEditNodeClick(table) }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Node Schema")
+                            }
+                        },
                         supportingContent = {
                             Text(
                                 text = table.properties.joinToString(separator = "\n") { prop ->
@@ -95,9 +109,18 @@ fun SchemaView(
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.edgeTables) { table ->
+                    val isSelected = selectedItem == table
                     ListItem(
                         headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
-                        modifier = Modifier.padding(bottom = 8.dp).clickable { onEdgeClick(table) },
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .clickable { onEdgeClick(table) }
+                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
+                        leadingContent = {
+                            IconButton(onClick = { onEditEdgeClick(table) }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Edge Schema")
+                            }
+                        },
                         supportingContent = { Text("(${table.srcLabel} -> ${table.dstLabel})")},
                         trailingContent = {
                             IconButton(onClick = { onDeleteEdgeClick(table) }) {

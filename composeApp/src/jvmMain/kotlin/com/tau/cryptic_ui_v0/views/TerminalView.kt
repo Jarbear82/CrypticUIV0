@@ -22,7 +22,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
     // Collect the state for the MetadataView
     val nodes by viewModel.metadataViewModel.nodeList.collectAsState()
     val edges by viewModel.metadataViewModel.edgeList.collectAsState()
-    val editItem by viewModel.metadataViewModel.editItem.collectAsState()
+    val itemToEdit by viewModel.metadataViewModel.itemToEdit.collectAsState()
+    val selectedItem by viewModel.metadataViewModel.selectedItem.collectAsState()
+
 
     // Collect states from CreationViewModel
     val nodeCreationState by viewModel.creationViewModel.nodeCreationState.collectAsState()
@@ -108,8 +110,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         dbMetaData = metaData,
                         nodes = nodes,
                         edges = edges,
-                        onNodeClick = { viewModel.metadataViewModel.selectItem(it); println("Item: $it is being selected"); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        selectedItem = selectedItem,
+                        onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); println("Item: $it is being selected"); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
                         onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onAddNodeClick = { viewModel.creationViewModel.initiateNodeCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) },
@@ -117,15 +122,18 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     )
                     TerminalViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
-                        onNodeClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        selectedItem = selectedItem,
+                        onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
                         onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchemaNode(it) },
                         onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchemaEdge(it) },
                         onAddNodeSchemaClick = { viewModel.creationViewModel.initiateNodeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) },
                         onAddEdgeSchemaClick = { viewModel.creationViewModel.initiateEdgeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) }
                     )
                     TerminalViewTabs.EDIT -> EditItemView(
-                        editItem = editItem,
+                        editItem = itemToEdit,
                         nodeCreationState = nodeCreationState,
                         edgeCreationState = edgeCreationState,
                         nodeSchemaCreationState = nodeSchemaCreationState,
