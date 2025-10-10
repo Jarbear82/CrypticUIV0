@@ -12,6 +12,7 @@ class TerminalViewModel(repository: KuzuRepository) {
     val schemaViewModel = SchemaViewModel(repository, viewModelScope)
     val metadataViewModel = MetadataViewModel(repository, viewModelScope, schemaViewModel)
     val queryViewModel = QueryViewModel(repository, viewModelScope, metadataViewModel)
+    val creationViewModel = CreationViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
 
     private val _selectedTab = MutableStateFlow(TerminalViewTabs.METADATA)
@@ -29,5 +30,5 @@ class TerminalViewModel(repository: KuzuRepository) {
 enum class TerminalViewTabs(val value: Int) {
     METADATA(0),
     SCHEMA(1),
-    SELECTED(2)
+    EDIT(2)
 }

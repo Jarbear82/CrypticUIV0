@@ -4,19 +4,11 @@ import com.tau.cryptic_ui_v0.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SchemaViewModel(private val repository: KuzuRepository, private val viewModelScope: CoroutineScope) {
     private val _schema = MutableStateFlow<Schema?>(null)
     val schema = _schema.asStateFlow()
-
-    private val _nodeSchemaCreationState = MutableStateFlow(NodeSchemaCreationState())
-    val nodeSchemaCreationState = _nodeSchemaCreationState.asStateFlow()
-
-    private val _edgeSchemaCreationState = MutableStateFlow(EdgeSchemaCreationState())
-    val edgeSchemaCreationState = _edgeSchemaCreationState.asStateFlow()
-
 
     init {
         viewModelScope.launch {
@@ -116,99 +108,6 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         }
         // Create Schema containing Node and Edge tables
         return Schema(nodeTables = nodeSchemaList, edgeTables = edgeSchemaList)
-    }
-
-    fun onNodeSchemaTableNameChange(name: String) {
-        _nodeSchemaCreationState.update { it.copy(tableName = name) }
-    }
-
-    fun onNodeSchemaPropertyChange(index: Int, property: Property) {
-        _nodeSchemaCreationState.update {
-            val newProperties = it.properties.toMutableList()
-            newProperties[index] = property
-            it.copy(properties = newProperties)
-        }
-    }
-
-    fun onAddNodeSchemaProperty() {
-        _nodeSchemaCreationState.update {
-            it.copy(properties = it.properties + Property())
-        }
-    }
-
-    fun onRemoveNodeSchemaProperty(index: Int) {
-        _nodeSchemaCreationState.update {
-            val newProperties = it.properties.toMutableList()
-            newProperties.removeAt(index)
-            it.copy(properties = newProperties)
-        }
-    }
-
-    fun onEdgeSchemaCreationInitiated(nodeSchemas: List<SchemaNode>) {
-        _edgeSchemaCreationState.update { it.copy(allNodeSchemas = nodeSchemas) }
-    }
-
-    fun onEdgeSchemaTableNameChange(name: String) {
-        _edgeSchemaCreationState.update { it.copy(tableName = name) }
-    }
-
-    fun onEdgeSchemaSrcTableChange(table: String) {
-        _edgeSchemaCreationState.update { it.copy(srcTable = table) }
-    }
-
-    fun onEdgeSchemaDstTableChange(table: String) {
-        _edgeSchemaCreationState.update { it.copy(dstTable = table) }
-    }
-
-    fun onEdgeSchemaPropertyChange(index: Int, property: Property) {
-        _edgeSchemaCreationState.update {
-            val newProperties = it.properties.toMutableList()
-            newProperties[index] = property
-            it.copy(properties = newProperties)
-        }
-    }
-
-    fun onAddEdgeSchemaProperty() {
-        _edgeSchemaCreationState.update {
-            it.copy(properties = it.properties + Property(isPrimaryKey = false))
-        }
-    }
-
-    fun onRemoveEdgeSchemaProperty(index: Int) {
-        _edgeSchemaCreationState.update {
-            val newProperties = it.properties.toMutableList()
-            newProperties.removeAt(index)
-            it.copy(properties = newProperties)
-        }
-    }
-
-    fun createNodeSchemaFromState(state: NodeSchemaCreationState, onFinished: () -> Unit) {
-        viewModelScope.launch {
-            val pk = state.properties.first { it.isPrimaryKey }
-            val properties = state.properties.joinToString(", ") {
-                "${it.name.withBackticks()} ${it.type}"
-            }
-            val q = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
-            repository.executeQuery(q)
-            onFinished()
-            showSchema()
-        }
-    }
-
-    fun createEdgeSchemaFromState(state: EdgeSchemaCreationState, onFinished: () -> Unit) {
-        viewModelScope.launch {
-            val properties = if (state.properties.isNotEmpty()) {
-                ", " + state.properties.joinToString(", ") {
-                    "${it.name.withBackticks()} ${it.type}"
-                }
-            } else {
-                ""
-            }
-            val q = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
-            repository.executeQuery(q)
-            onFinished()
-            showSchema()
-        }
     }
 
     fun deleteSchemaNode(item: SchemaNode) {

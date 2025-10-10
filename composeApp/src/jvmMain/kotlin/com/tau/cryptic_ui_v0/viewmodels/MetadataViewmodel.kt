@@ -21,14 +21,8 @@ class MetadataViewModel(
     private val _edgeList = MutableStateFlow<List<EdgeDisplayItem>>(emptyList())
     val edgeList = _edgeList.asStateFlow()
 
-    private val _selectedItem = MutableStateFlow<Any?>(null)
-    val selectedItem = _selectedItem.asStateFlow()
-
-    private val _nodeCreationState = MutableStateFlow<NodeCreationState?>(null)
-    val nodeCreationState = _nodeCreationState.asStateFlow()
-
-    private val _edgeCreationState = MutableStateFlow<EdgeCreationState?>(null)
-    val edgeCreationState = _edgeCreationState.asStateFlow()
+    private val _editItem = MutableStateFlow<Any?>(null)
+    val editItem = _editItem.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -128,170 +122,15 @@ class MetadataViewModel(
         }
     }
 
-    fun initiateNodeCreation() {
-        viewModelScope.launch {
-            val schema = schemaViewModel.schema.value ?: return@launch
-            _selectedItem.value = null // Clear any selected item
-            _nodeCreationState.value = NodeCreationState(schemas = schema.nodeTables)
-        }
-    }
-    fun initiateEdgeCreation() {
-        viewModelScope.launch {
-            val schema = schemaViewModel.schema.value ?: return@launch
-            if (_nodeList.value.isEmpty()) {
-                listNodes()
-            }
-            _selectedItem.value = null // Clear any selected item
-            _edgeCreationState.value = EdgeCreationState(
-                schemas = schema.edgeTables,
-                availableNodes = _nodeList.value
-            )
-        }
-    }
-    fun initiateNodeSchemaCreation() {
-        _selectedItem.value = "CreateNodeSchema"
-    }
-
-    fun initiateEdgeSchemaCreation() {
-        val nodeSchemas = schemaViewModel.schema.value?.nodeTables ?: emptyList()
-        schemaViewModel.onEdgeSchemaCreationInitiated(nodeSchemas)
-        _selectedItem.value = "CreateEdgeSchema"
-    }
-
-    fun cancelNodeCreation() {
-        _nodeCreationState.value = null
-    }
-    fun cancelEdgeCreation() {
-        _edgeCreationState.value = null
-    }
-
-    fun cancelNodeSchemaCreation() {
-        _selectedItem.value = null
-    }
-
-    fun cancelEdgeSchemaCreation() {
-        _selectedItem.value = null
-    }
-
-    fun updateNodeCreationSchema(schemaNode: SchemaNode) {
-        _nodeCreationState.update {
-            it?.copy(
-                selectedSchema = schemaNode,
-                properties = emptyMap() // Reset properties when schema changes
-            )
-        }
-    }
-
-    fun updateNodeCreationProperty(key: String, value: String) {
-        _nodeCreationState.update { currentState ->
-            currentState?.copy(
-                properties = currentState.properties.toMutableMap().apply {
-                    this[key] = value
-                }
-            )
-        }
-    }
-
-    fun createNodeFromState() {
-        viewModelScope.launch {
-            _nodeCreationState.value?.let { state ->
-                if (state.selectedSchema != null) {
-                    val label = state.selectedSchema.label
-                    // This is a simplification, we might need type conversion based on schema
-                    val properties = state.properties.mapValues { entry ->
-                        entry.value.toLongOrNull() ?: entry.value
-                    }
-                    createNode(label, properties)
-                    _nodeCreationState.value = null // Exit creation mode
-                    listNodes() // Refresh the node list
-                }
-            }
-        }
-    }
-
-    private suspend fun createNode(label: String, properties: Map<String, Any?>) {
-        val propertiesString = properties.entries.joinToString(", ") {
-            "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
-        }
-        val q = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
-        repository.executeQuery(q)
-    }
-
     fun selectItem(item: Any) {
         viewModelScope.launch {
-            _nodeCreationState.value = null // Exit node creation mode if active
-            _edgeCreationState.value = null // Exit edge creation mode if active
-            _selectedItem.value = when (item) {
+            _editItem.value = when (item) {
                 is NodeDisplayItem -> getNode(item)
                 is EdgeDisplayItem -> getEdge(item)
-                is SchemaNode, is SchemaEdge -> item
+                is SchemaNode, is SchemaEdge, is String -> item
                 else -> null
             }
         }
-    }
-    fun updateEdgeCreationSchema(schemaEdge: SchemaEdge) {
-        _edgeCreationState.update {
-            it?.copy(
-                selectedSchema = schemaEdge,
-                src = null,
-                dst = null,
-                properties = emptyMap()
-            )
-        }
-    }
-
-    fun updateEdgeCreationSrc(node: NodeDisplayItem) {
-        _edgeCreationState.update { it?.copy(src = node) }
-    }
-
-    fun updateEdgeCreationDst(node: NodeDisplayItem) {
-        _edgeCreationState.update { it?.copy(dst = node) }
-    }
-
-    fun updateEdgeCreationProperty(key: String, value: String) {
-        _edgeCreationState.update { currentState ->
-            currentState?.copy(
-                properties = currentState.properties.toMutableMap().apply {
-                    this[key] = value
-                }
-            )
-        }
-    }
-    fun createEdgeFromState() {
-        viewModelScope.launch {
-            _edgeCreationState.value?.let { state ->
-                if (state.selectedSchema != null && state.src != null && state.dst != null) {
-                    val label = state.selectedSchema.label
-                    val src = state.src
-                    val dst = state.dst
-                    val properties = state.properties.mapValues { entry ->
-                        entry.value.toLongOrNull() ?: entry.value
-                    }
-                    createEdge(label, src, dst, properties)
-                    _edgeCreationState.value = null // Exit creation mode
-                    listEdges() // Refresh the edge list
-                }
-            }
-        }
-    }
-    private suspend fun createEdge(label: String, src: NodeDisplayItem, dst: NodeDisplayItem, properties: Map<String, Any?>) {
-        val srcPk = src.primarykeyProperty
-        val dstPk = dst.primarykeyProperty
-        val formattedSrcPkValue = formatPkValue(srcPk.value)
-        val formattedDstPkValue = formatPkValue(dstPk.value)
-
-        val propertiesString = if (properties.isNotEmpty()) {
-            "{${properties.entries.joinToString(", ") { "${it.key.withBackticks()}: ${formatPkValue(it.value)}" }}}"
-        } else {
-            ""
-        }
-
-        val q = """
-        MATCH (a:${src.label.withBackticks()}), (b:${dst.label.withBackticks()})
-        WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
-        CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
-    """.trimIndent()
-        repository.executeQuery(q)
     }
 
     private suspend fun getNode(item: NodeDisplayItem): NodeTable? {
@@ -412,7 +251,7 @@ class MetadataViewModel(
     }
 
     fun clearSelectedItem() {
-        _selectedItem.value = null
+        _editItem.value = null
     }
 
     fun onCleared() {

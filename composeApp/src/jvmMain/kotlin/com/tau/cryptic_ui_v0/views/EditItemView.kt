@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.*
 
 @Composable
-fun SelectedItemView(
-    selectedItem: Any?,
+fun EditItemView(
+    editItem: Any?,
     nodeCreationState: NodeCreationState?,
     edgeCreationState: EdgeCreationState?,
     nodeSchemaCreationState: NodeSchemaCreationState,
@@ -68,7 +68,7 @@ fun SelectedItemView(
             onCreateClick = onEdgeCreationCreateClick,
             onCancelClick = onEdgeCreationCancelClick
         )
-    } else if (selectedItem == "CreateNodeSchema") {
+    } else if (editItem == "CreateNodeSchema") {
         CreateNodeSchemaView(
             state = nodeSchemaCreationState,
             onTableNameChange = onNodeSchemaTableNameChange,
@@ -78,7 +78,7 @@ fun SelectedItemView(
             onCreate = onNodeSchemaCreationCreateClick,
             onCancel = onNodeSchemaCreationCancelClick
         )
-    } else if (selectedItem == "CreateEdgeSchema") {
+    } else if (editItem == "CreateEdgeSchema") {
         CreateEdgeSchemaView(
             state = edgeSchemaCreationState,
             onTableNameChange = onEdgeSchemaTableNameChange,
@@ -90,19 +90,19 @@ fun SelectedItemView(
             onCreate = onEdgeSchemaCreationCreateClick,
             onCancel = onEdgeSchemaCreationCancelClick
         )
-    } else if (selectedItem == null) {
+    } else if (editItem == null) {
         Text("No item selected.")
     } else {
         Column(modifier = Modifier.padding(8.dp)) {
-            when (selectedItem) {
+            when (editItem) {
                 is NodeTable -> {
                     Text("Selected Node", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Properties:", style = MaterialTheme.typography.titleMedium)
                     LazyColumn {
-                        items(selectedItem.properties) { property ->
+                        items(editItem.properties) { property ->
                             Row {
                                 Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
                                 Text(property.value.toString())
@@ -117,13 +117,13 @@ fun SelectedItemView(
                 is EdgeTable -> {
                     Text("Selected Edge", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                    Text("Source: ${selectedItem.src.label} (${selectedItem.src.primarykeyProperty.value})")
-                    Text("Destination: ${selectedItem.dst.label} (${selectedItem.dst.primarykeyProperty.value})")
+                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Source: ${editItem.src.label} (${editItem.src.primarykeyProperty.value})")
+                    Text("Destination: ${editItem.dst.label} (${editItem.dst.primarykeyProperty.value})")
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Properties are nullable for edges, so check before displaying
-                    selectedItem.properties?.let { properties ->
+                    editItem.properties?.let { properties ->
                         if (properties.isNotEmpty()) {
                             Text("Properties:", style = MaterialTheme.typography.titleMedium)
                             LazyColumn {
@@ -140,11 +140,11 @@ fun SelectedItemView(
                 is SchemaNode -> {
                     Text("Selected Node Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Properties:", style = MaterialTheme.typography.titleMedium)
                     LazyColumn {
-                        items(selectedItem.properties) { property ->
+                        items(editItem.properties) { property ->
                             Row {
                                 Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
                                 Text(property.valueDataType.toString())
@@ -159,13 +159,13 @@ fun SelectedItemView(
                 is SchemaEdge -> {
                     Text("Selected Edge Schema", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${selectedItem.label}", fontWeight = FontWeight.Bold)
-                    Text("Source: ${selectedItem.srcLabel}")
-                    Text("Destination: ${selectedItem.dstLabel}")
+                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
+                    Text("Source: ${editItem.srcLabel}")
+                    Text("Destination: ${editItem.dstLabel}")
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Properties are nullable for edges, so check before displaying
-                    selectedItem.properties.let { properties ->
+                    editItem.properties.let { properties ->
                         if (properties.isNotEmpty()) {
                             Text("Properties:", style = MaterialTheme.typography.titleMedium)
                             LazyColumn {
