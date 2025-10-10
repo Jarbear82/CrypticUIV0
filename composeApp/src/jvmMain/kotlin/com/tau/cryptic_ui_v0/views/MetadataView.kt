@@ -28,7 +28,8 @@ fun MetadataView(
     dbMetaData: DBMetaData?,
     nodes: List<NodeDisplayItem>,
     edges: List<EdgeDisplayItem>,
-    selectedItem: Any?,
+    primarySelectedItem: Any?,
+    secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
     onEdgeClick: (EdgeDisplayItem) -> Unit,
     onEditNodeClick: (NodeDisplayItem) -> Unit,
@@ -50,19 +51,49 @@ fun MetadataView(
                     )
                 }
             )
-
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        selectedItem?.let {
-            val text = when(it) {
-                is NodeDisplayItem -> "Selected Node: ${it.label} : ${it.primarykeyProperty.value}"
-                is EdgeDisplayItem -> "Selected Edge: ${it.label}"
-                else -> "Selected: $it"
-            }
-            Text(text, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+        // Display selected items
+        val primaryNode = primarySelectedItem as? NodeDisplayItem
+        val secondaryNode = secondarySelectedItem as? NodeDisplayItem
+
+        if (primaryNode != null && secondaryNode != null) {
+            ListItem(
+                // leadingContent = {  },
+                headlineContent = {
+                    Text("Selected Nodes (Source -> Destination):\n" +
+                            "Source: ${primaryNode.label} : ${primaryNode.primarykeyProperty.value}\n" +
+                            "Destination: ${secondaryNode.label} : ${secondaryNode.primarykeyProperty.value}"
+                    )
+                },
+                /// supportingContent = {  }
+            )
+
+
+        } else if (primaryNode != null) {
+            ListItem(
+                // leadingContent = {  },
+                headlineContent = {
+                    Text("Selected Node:\n" +
+                        "${primaryNode.label} : ${primaryNode.primarykeyProperty.value}"
+                    )
+                },
+                /// supportingContent = {  }
+            )
+
+        } else if (primarySelectedItem != null) {
+            ListItem(
+                // leadingContent = {  },
+                headlineContent = {
+                    Text("Selected Item: $primarySelectedItem", style = MaterialTheme.typography.titleMedium)
+                },
+                /// supportingContent = {  }
+            )
+
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Nodes List
@@ -79,7 +110,7 @@ fun MetadataView(
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
                     items(nodes) { node ->
-                        val isSelected = selectedItem == node
+                        val isSelected = primarySelectedItem == node || secondarySelectedItem == node
                         ListItem(
                             headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             leadingContent = {
@@ -115,7 +146,8 @@ fun MetadataView(
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
                     items(edges) { edge ->
-                        val isSelected = selectedItem == edge
+                        // An edge is "selected" if its src and dst nodes are the selected items
+                        val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
                         ListItem(
                             headlineContent = { Column {
                                 Text("Src: (${edge.src.label} : ${edge.src.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)

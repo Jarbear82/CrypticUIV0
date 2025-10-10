@@ -30,7 +30,8 @@ import com.tau.cryptic_ui_v0.SchemaEdge
 @Composable
 fun SchemaView(
     schema: Schema?,
-    selectedItem: Any?,
+    primarySelectedItem: Any?,
+    secondarySelectedItem: Any?,
     onNodeClick: (SchemaNode) -> Unit,
     onEdgeClick: (SchemaEdge) -> Unit,
     onEditNodeClick: (SchemaNode) -> Unit,
@@ -61,7 +62,7 @@ fun SchemaView(
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.nodeTables) { table ->
-                    val isSelected = selectedItem == table
+                    val isSelected = primarySelectedItem == table
                     ListItem(
                         headlineContent = { Text(table.label, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
@@ -109,7 +110,7 @@ fun SchemaView(
             HorizontalDivider(color = Color.Black)
             LazyColumn {
                 items(schema.edgeTables) { table ->
-                    val isSelected = selectedItem == table
+                    val isSelected = primarySelectedItem == table
                     ListItem(
                         headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier

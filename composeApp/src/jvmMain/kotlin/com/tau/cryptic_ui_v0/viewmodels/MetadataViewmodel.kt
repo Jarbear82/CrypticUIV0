@@ -24,8 +24,11 @@ class MetadataViewModel(
     private val _itemToEdit = MutableStateFlow<Any?>(null)
     val itemToEdit = _itemToEdit.asStateFlow()
 
-    private val _selectedItem = MutableStateFlow<Any?>(null)
-    val selectedItem = _selectedItem.asStateFlow()
+    private val _primarySelectedItem = MutableStateFlow<Any?>(null)
+    val primarySelectedItem = _primarySelectedItem.asStateFlow()
+
+    private val _secondarySelectedItem = MutableStateFlow<Any?>(null)
+    val secondarySelectedItem = _secondarySelectedItem.asStateFlow()
 
 
     init {
@@ -138,7 +141,44 @@ class MetadataViewModel(
     }
 
     fun selectItem(item: Any) {
-        _selectedItem.value = item
+        val currentPrimary = _primarySelectedItem.value
+        val currentSecondary = _secondarySelectedItem.value
+
+        when (item) {
+            is NodeDisplayItem -> {
+                // Case 1: The clicked item is already primary -> Deselect it.
+                if (item == currentPrimary) {
+                    _primarySelectedItem.value = null
+                }
+                // Case 2: The clicked item is already secondary -> Deselect it.
+                else if (item == currentSecondary) {
+                    _secondarySelectedItem.value = null
+                }
+                // Case 3: Nothing is primary yet -> Make this item primary.
+                else if (currentPrimary == null) {
+                    _primarySelectedItem.value = item
+                }
+                // Case 4: Primary is set, but secondary is empty -> Make this item secondary.
+                else if (currentSecondary == null) {
+                    _secondarySelectedItem.value = item
+                }
+                // Case 5: Both primary and secondary are already set -> Replace primary and clear secondary.
+                else {
+                    _primarySelectedItem.value = item
+                    _secondarySelectedItem.value = null
+                }
+            }
+            is EdgeDisplayItem -> {
+                // When an edge is selected, set its src and dst as primary and secondary.
+                _primarySelectedItem.value = item.src
+                _secondarySelectedItem.value = item.dst
+            }
+            else -> {
+                // For any other type, set it as primary and clear secondary.
+                _primarySelectedItem.value = item
+                _secondarySelectedItem.value = null
+            }
+        }
     }
 
 
@@ -261,7 +301,8 @@ class MetadataViewModel(
 
     fun clearSelectedItem() {
         _itemToEdit.value = null
-        _selectedItem.value = null
+        _primarySelectedItem.value = null
+        _secondarySelectedItem.value = null
     }
 
 

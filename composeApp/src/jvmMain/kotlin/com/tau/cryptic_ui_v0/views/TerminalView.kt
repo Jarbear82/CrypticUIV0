@@ -23,7 +23,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val nodes by viewModel.metadataViewModel.nodeList.collectAsState()
     val edges by viewModel.metadataViewModel.edgeList.collectAsState()
     val itemToEdit by viewModel.metadataViewModel.itemToEdit.collectAsState()
-    val selectedItem by viewModel.metadataViewModel.selectedItem.collectAsState()
+    val primarySelectedItem by viewModel.metadataViewModel.primarySelectedItem.collectAsState()
+    val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
 
 
     // Collect states from CreationViewModel
@@ -110,7 +111,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         dbMetaData = metaData,
                         nodes = nodes,
                         edges = edges,
-                        selectedItem = selectedItem,
+                        primarySelectedItem = primarySelectedItem,
+                        secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); println("Item: $it is being selected"); viewModel.selectTab(TerminalViewTabs.EDIT) },
@@ -122,7 +124,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     )
                     TerminalViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
-                        selectedItem = selectedItem,
+                        primarySelectedItem = primarySelectedItem,
+                        secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
