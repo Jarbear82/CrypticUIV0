@@ -72,8 +72,8 @@ class CreationViewModel(
                     val propertiesString = properties.entries.joinToString(", ") {
                         "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
                     }
-                    val q = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
-                    repository.executeQuery(q)
+                    val query = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
+                    repository.executeQuery(query)
                     _nodeCreationState.value = null // Exit creation mode
                     metadataViewModel.listNodes() // Refresh the node list
                     onFinished()
@@ -151,12 +151,12 @@ class CreationViewModel(
                         ""
                     }
 
-                    val q = """
+                    val query = """
                         MATCH (a:${src.label.withBackticks()}), (b:${dst.label.withBackticks()})
                         WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
                         CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
                     """.trimIndent()
-                    repository.executeQuery(q)
+                    repository.executeQuery(query)
 
                     _edgeCreationState.value = null // Exit creation mode
                     metadataViewModel.listEdges() // Refresh the edge list
@@ -207,8 +207,8 @@ class CreationViewModel(
             val properties = state.properties.joinToString(", ") {
                 "${it.name.withBackticks()} ${it.type}"
             }
-            val q = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
-            repository.executeQuery(q)
+            val query = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
+            repository.executeQuery(query)
             onFinished()
             schemaViewModel.showSchema()
         }
@@ -273,8 +273,8 @@ class CreationViewModel(
             } else {
                 ""
             }
-            val q = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
-            repository.executeQuery(q)
+            val query = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
+            repository.executeQuery(query)
             onFinished()
             schemaViewModel.showSchema()
         }

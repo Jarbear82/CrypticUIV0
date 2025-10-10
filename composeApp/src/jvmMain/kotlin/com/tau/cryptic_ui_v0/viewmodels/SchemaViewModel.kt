@@ -114,8 +114,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
         viewModelScope.launch {
             // TODO: Create an alert to ask if they want to delete a schema.
             //  Warn them if it deletes other schemas
-            val q = "DROP TABLE ${item.label.withBackticks()}"
-            val result = repository.executeQuery(q)
+            val query = "DROP TABLE ${item.label.withBackticks()}"
+            val result = repository.executeQuery(query)
             if (result is ExecutionResult.Success) {
                 showSchema()
             }
@@ -124,8 +124,8 @@ class SchemaViewModel(private val repository: KuzuRepository, private val viewMo
 
     fun deleteSchemaEdge(item: SchemaEdge) {
         viewModelScope.launch {
-            val q = "DROP TABLE ${item.label.withBackticks()}"
-            val result = repository.executeQuery(q)
+            val query = "DROP TABLE ${item.label.withBackticks()}"
+            val result = repository.executeQuery(query)
             if (result is ExecutionResult.Success) {
                 showSchema()
             }

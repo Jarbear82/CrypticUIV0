@@ -58,8 +58,8 @@ class MetadataViewModel(
             val nodes = mutableListOf<NodeDisplayItem>()
             schemaViewModel.schema.value?.nodeTables?.forEach { table ->
                 val pk = repository.getPrimaryKey(table.label) ?: return@forEach
-                val q = "MATCH (n:${table.label.withBackticks()}) RETURN n.${pk.withBackticks()}"
-                val result = repository.executeQuery(q)
+                val query = "MATCH (n:${table.label.withBackticks()}) RETURN n.${pk.withBackticks()}"
+                val result = repository.executeQuery(query)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
                         nodes.add(
@@ -82,8 +82,8 @@ class MetadataViewModel(
             schemaViewModel.schema.value?.edgeTables?.forEach { table ->
                 val srcPkName = repository.getPrimaryKey(table.srcLabel) ?: return@forEach
                 val dstPkName = repository.getPrimaryKey(table.dstLabel) ?: return@forEach
-                val q = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
-                val result = repository.executeQuery(q)
+                val query = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
+                val result = repository.executeQuery(query)
                 if (result is ExecutionResult.Success) {
                     result.results.firstOrNull()?.rows?.forEach { row ->
                         val srcPkValue = row[0]
@@ -138,8 +138,8 @@ class MetadataViewModel(
         val pkValue = item.primarykeyProperty.value
         val formattedPkValue = formatPkValue(pkValue)
 
-        val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
-        val result = repository.executeQuery(q)
+        val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
+        val result = repository.executeQuery(query)
 
         if (result is ExecutionResult.Success) {
             val nodeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? NodeValue
@@ -169,10 +169,10 @@ class MetadataViewModel(
         val formattedSrcPkValue = formatPkValue(srcPk.value)
         val formattedDstPkValue = formatPkValue(dstPk.value)
 
-        val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
+        val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
                 "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
                 "RETURN r LIMIT 1"
-        val result = repository.executeQuery(q)
+        val result = repository.executeQuery(query)
 
         if (result is ExecutionResult.Success) {
             val edgeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? EdgeValue
@@ -215,8 +215,8 @@ class MetadataViewModel(
         val pkKey = item.primarykeyProperty.key
         val pkValue = item.primarykeyProperty.value
         val formattedPkValue = formatPkValue(pkValue)
-        val q = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue DETACH DELETE n"
-        val result = repository.executeQuery(q)
+        val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue DETACH DELETE n"
+        val result = repository.executeQuery(query)
         if (result is ExecutionResult.Success) {
             _nodeList.update { list -> list.filterNot { it == item } }
             // Also remove any edges connected to the deleted node
@@ -232,10 +232,10 @@ class MetadataViewModel(
 
         // This query deletes ALL edges of this type between the two specific nodes.
         // This is a limitation due to not storing a unique internal ID on the EdgeDisplayItem.
-        val q = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
+        val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
                 "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
                 "DELETE r"
-        val result = repository.executeQuery(q)
+        val result = repository.executeQuery(query)
         if (result is ExecutionResult.Success) {
             _edgeList.update { list -> list.filterNot { it == item } }
         }
