@@ -25,14 +25,6 @@ class CreationViewModel(
     private val _edgeSchemaCreationState = MutableStateFlow(EdgeSchemaCreationState())
     val edgeSchemaCreationState = _edgeSchemaCreationState.asStateFlow()
 
-    private fun String.withBackticks(): String {
-        return if (reservedWords.contains(this.uppercase())) "`$this`" else this
-    }
-
-    private fun formatPkValue(value: Any?): String {
-        return if (value is String) "'$value'" else value.toString()
-    }
-
     // --- Node Creation ---
     fun initiateNodeCreation() {
         viewModelScope.launch {
@@ -65,15 +57,11 @@ class CreationViewModel(
         viewModelScope.launch {
             _nodeCreationState.value?.let { state ->
                 if (state.selectedSchema != null) {
-                    val label = state.selectedSchema.label
-                    val properties = state.properties.mapValues { entry ->
-                        entry.value.toLongOrNull() ?: entry.value
+                    val properties = state.properties.map {
+                        TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
                     }
-                    val propertiesString = properties.entries.joinToString(", ") {
-                        "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
-                    }
-                    val query = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
-                    repository.executeQuery(query)
+                    val nodeTable = NodeTable(state.selectedSchema.label, properties, false, false)
+                    createNode(repository, nodeTable)
                     _nodeCreationState.value = null // Exit creation mode
                     metadataViewModel.listNodes() // Refresh the node list
                     onFinished()
@@ -134,30 +122,11 @@ class CreationViewModel(
         viewModelScope.launch {
             _edgeCreationState.value?.let { state ->
                 if (state.selectedSchema != null && state.src != null && state.dst != null) {
-                    val label = state.selectedSchema.label
-                    val src = state.src
-                    val dst = state.dst
-                    val properties = state.properties.mapValues { entry ->
-                        entry.value.toLongOrNull() ?: entry.value
+                    val properties = state.properties.map {
+                        TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
                     }
-                    val srcPk = src.primarykeyProperty
-                    val dstPk = dst.primarykeyProperty
-                    val formattedSrcPkValue = formatPkValue(srcPk.value)
-                    val formattedDstPkValue = formatPkValue(dstPk.value)
-
-                    val propertiesString = if (properties.isNotEmpty()) {
-                        "{${properties.entries.joinToString(", ") { "${it.key.withBackticks()}: ${formatPkValue(it.value)}" }}}"
-                    } else {
-                        ""
-                    }
-
-                    val query = """
-                        MATCH (a:${src.label.withBackticks()}), (b:${dst.label.withBackticks()})
-                        WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
-                        CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
-                    """.trimIndent()
-                    repository.executeQuery(query)
-
+                    val edgeTable = EdgeTable(state.selectedSchema.label, state.src!!, state.dst!!, properties, false, false, false, false)
+                    createEdge(repository, edgeTable)
                     _edgeCreationState.value = null // Exit creation mode
                     metadataViewModel.listEdges() // Refresh the edge list
                     onFinished()
@@ -203,12 +172,7 @@ class CreationViewModel(
 
     fun createNodeSchemaFromState(state: NodeSchemaCreationState, onFinished: () -> Unit) {
         viewModelScope.launch {
-            val pk = state.properties.first { it.isPrimaryKey }
-            val properties = state.properties.joinToString(", ") {
-                "${it.name.withBackticks()} ${it.type}"
-            }
-            val query = "CREATE NODE TABLE ${state.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
-            repository.executeQuery(query)
+            createNodeSchema(repository, state)
             onFinished()
             schemaViewModel.showSchema()
         }
@@ -266,15 +230,7 @@ class CreationViewModel(
 
     fun createEdgeSchemaFromState(state: EdgeSchemaCreationState, onFinished: () -> Unit) {
         viewModelScope.launch {
-            val properties = if (state.properties.isNotEmpty()) {
-                ", " + state.properties.joinToString(", ") {
-                    "${it.name.withBackticks()} ${it.type}"
-                }
-            } else {
-                ""
-            }
-            val query = "CREATE REL TABLE ${state.tableName.withBackticks()} (FROM ${state.srcTable!!.withBackticks()} TO ${state.dstTable!!.withBackticks()}$properties)"
-            repository.executeQuery(query)
+            createEdgeSchema(repository, state)
             onFinished()
             schemaViewModel.showSchema()
         }
