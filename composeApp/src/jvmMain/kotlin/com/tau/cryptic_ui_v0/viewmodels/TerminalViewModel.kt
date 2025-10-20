@@ -15,11 +15,18 @@ class TerminalViewModel(repository: KuzuRepository) {
     val creationViewModel = CreationViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
 
-    private val _selectedTab = MutableStateFlow(TerminalViewTabs.METADATA)
-    val selectedTab = _selectedTab.asStateFlow()
+    private val _selectedDataTab = MutableStateFlow(DataViewTabs.METADATA)
+    val selectedDataTab = _selectedDataTab.asStateFlow()
 
-    fun selectTab(tab: TerminalViewTabs) {
-        _selectedTab.value = tab
+    fun selectDataTab(tab: DataViewTabs) {
+        _selectedDataTab.value = tab
+    }
+
+    private val _selectedViewTab = MutableStateFlow(ViewTabs.QUERY)
+    val selectedViewTab = _selectedViewTab.asStateFlow()
+
+    fun selectViewTab(tab: ViewTabs) {
+        _selectedViewTab.value = tab
     }
 
     fun onCleared() {
@@ -27,8 +34,13 @@ class TerminalViewModel(repository: KuzuRepository) {
     }
 }
 
-enum class TerminalViewTabs(val value: Int) {
+enum class DataViewTabs(val value: Int) {
     METADATA(0),
     SCHEMA(1),
     EDIT(2)
+}
+
+enum class ViewTabs(val value: Int) {
+    QUERY(0),
+    GRAPH(1)
 }

@@ -8,7 +8,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
-import com.tau.cryptic_ui_v0.viewmodels.TerminalViewTabs
+import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
+import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
 import kotlinx.coroutines.launch
 
 @Composable
@@ -34,8 +35,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val edgeSchemaCreationState by viewModel.creationViewModel.edgeSchemaCreationState.collectAsState()
 
 
-    // Tabs
-    val selectedTab by viewModel.selectedTab.collectAsState()
+    // Data Tabs
+    val selectedDataTab by viewModel.selectedDataTab.collectAsState()
+
+    // View Tabs
+    val selectedViewTab by viewModel.selectedViewTab.collectAsState()
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -43,71 +47,91 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             // ------------------ Left panel for controls and query results --------------------------
 
-            LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
-                item {
-
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Button(onClick = {
-                            scope.launch { // Launch a coroutine to call the suspend function
-                                viewModel.schemaViewModel.showSchema()
-                            }
-                        }) {
-                            Text("Show Schema")
-                        }
-
-                        Button(onClick = { viewModel.metadataViewModel.listNodes() }) {
-                            Text("List Nodes")
-                        }
-
-                        Button(onClick = { viewModel.metadataViewModel.listEdges() }) {
-                            Text("List Edges")
-                        }
-
-                        Button(onClick = { viewModel.metadataViewModel.listAll() }) {
-                            Text("List All")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { viewModel.queryViewModel.onQueryChange(it) },
-                        label = { Text("Cypher Query") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { viewModel.queryViewModel.executeQuery() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Execute")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
-            // --------------- Right panel for Schema and Metadata tabs ------------------------------
-
-            Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
-
-
-                TabRow(selectedTabIndex = selectedTab.value) {
-                    TerminalViewTabs.entries.forEach { tab ->
+            Column(modifier = Modifier.weight(1f).padding(16.dp)) {
+                TabRow(selectedTabIndex = selectedViewTab.value) {
+                    ViewTabs.entries.forEach { tab ->
                         Tab(
                             text = { Text(tab.name) },
-                            selected = selectedTab.value == tab.value,
-                            onClick = { viewModel.selectTab(tab) }
+                            selected = selectedViewTab.value == tab.value,
+                            onClick = { viewModel.selectViewTab(tab) }
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                when (selectedTab) {
-                    TerminalViewTabs.METADATA -> MetadataView(
+                when (selectedViewTab) {
+                    ViewTabs.QUERY -> {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            item {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Button(onClick = {
+                                        scope.launch { // Launch a coroutine to call the suspend function
+                                            viewModel.schemaViewModel.showSchema()
+                                        }
+                                    }) {
+                                        Text("Show Schema")
+                                    }
+
+                                    Button(onClick = { viewModel.metadataViewModel.listNodes() }) {
+                                        Text("List Nodes")
+                                    }
+
+                                    Button(onClick = { viewModel.metadataViewModel.listEdges() }) {
+                                        Text("List Edges")
+                                    }
+
+                                    Button(onClick = { viewModel.metadataViewModel.listAll() }) {
+                                        Text("List All")
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedTextField(
+                                    value = query,
+                                    onValueChange = { viewModel.queryViewModel.onQueryChange(it) },
+                                    label = { Text("Cypher Query") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = { viewModel.queryViewModel.executeQuery() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Execute")
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+                    }
+                    ViewTabs.GRAPH -> {
+                        GraphView()
+                    }
+                }
+            }
+
+
+            // --------------- Right panel for Schema and Metadata tabs ------------------------------
+
+            Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
+
+
+                TabRow(selectedTabIndex = selectedDataTab.value) {
+                    DataViewTabs.entries.forEach { tab ->
+                        Tab(
+                            text = { Text(tab.name) },
+                            selected = selectedDataTab.value == tab.value,
+                            onClick = { viewModel.selectDataTab(tab) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                when (selectedDataTab) {
+                    DataViewTabs.METADATA -> MetadataView(
                         dbMetaData = metaData,
                         nodes = nodes,
                         edges = edges,
@@ -115,33 +139,33 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); println("Item: $it is being selected"); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); println("Item: $it is being selected"); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                        onAddNodeClick = { viewModel.creationViewModel.initiateNodeCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onAddEdgeClick = { viewModel.creationViewModel.initiateEdgeCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) }
+                        onAddNodeClick = { viewModel.creationViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeClick = { viewModel.creationViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
-                    TerminalViewTabs.SCHEMA -> SchemaView(
+                    DataViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
                         primarySelectedItem = primarySelectedItem,
                         secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectTab(TerminalViewTabs.EDIT) },
+                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchemaNode(it) },
                         onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchemaEdge(it) },
-                        onAddNodeSchemaClick = { viewModel.creationViewModel.initiateNodeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) },
-                        onAddEdgeSchemaClick = { viewModel.creationViewModel.initiateEdgeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.EDIT) }
+                        onAddNodeSchemaClick = { viewModel.creationViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeSchemaClick = { viewModel.creationViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
-                    TerminalViewTabs.EDIT -> EditItemView(
+                    DataViewTabs.EDIT -> EditItemView(
                         editItem = itemToEdit,
                         nodeCreationState = nodeCreationState,
                         edgeCreationState = edgeCreationState,
                         nodeSchemaCreationState = nodeSchemaCreationState,
                         edgeSchemaCreationState = edgeSchemaCreationState,
-                        onClearSelection = { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onClearSelection = { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.METADATA) },
                         onNodeCreationSchemaSelected = { viewModel.creationViewModel.updateNodeCreationSchema(it) },
                         onNodeCreationPropertyChanged = { key, value ->
                             viewModel.creationViewModel.updateNodeCreationProperty(
@@ -149,8 +173,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                                 value
                             )
                         },
-                        onNodeCreationCreateClick = { viewModel.creationViewModel.createNodeFromState { viewModel.selectTab(TerminalViewTabs.METADATA) } },
-                        onNodeCreationCancelClick = { viewModel.creationViewModel.cancelNodeCreation(); viewModel.selectTab(TerminalViewTabs.METADATA) },
+                        onNodeCreationCreateClick = { viewModel.creationViewModel.createNodeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
+                        onNodeCreationCancelClick = { viewModel.creationViewModel.cancelNodeCreation(); viewModel.selectDataTab(DataViewTabs.METADATA) },
                         onEdgeCreationSchemaSelected = { viewModel.creationViewModel.updateEdgeCreationSchema(it) },
                         onEdgeCreationSrcSelected = { viewModel.creationViewModel.updateEdgeCreationSrc(it) },
                         onEdgeCreationDstSelected = { viewModel.creationViewModel.updateEdgeCreationDst(it) },
@@ -160,12 +184,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                                 value
                             )
                         },
-                        onEdgeCreationCreateClick = { viewModel.creationViewModel.createEdgeFromState { viewModel.selectTab(TerminalViewTabs.METADATA) } },
-                        onEdgeCreationCancelClick = { viewModel.creationViewModel.cancelEdgeCreation(); viewModel.selectTab(TerminalViewTabs.METADATA) },
-                        onNodeSchemaCreationCreateClick = { viewModel.creationViewModel.createNodeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.SCHEMA)} },
-                        onNodeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelNodeSchemaCreation(); viewModel.selectTab(TerminalViewTabs.SCHEMA) },
-                        onEdgeSchemaCreationCreateClick = { viewModel.creationViewModel.createEdgeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectTab(TerminalViewTabs.SCHEMA)} },
-                        onEdgeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelEdgeSchemaCreationFromState(); viewModel.selectTab(TerminalViewTabs.SCHEMA) },
+                        onEdgeCreationCreateClick = { viewModel.creationViewModel.createEdgeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
+                        onEdgeCreationCancelClick = { viewModel.creationViewModel.cancelEdgeCreation(); viewModel.selectDataTab(DataViewTabs.METADATA) },
+                        onNodeSchemaCreationCreateClick = { viewModel.creationViewModel.createNodeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onNodeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.SCHEMA) },
+                        onEdgeSchemaCreationCreateClick = { viewModel.creationViewModel.createEdgeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onEdgeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelEdgeSchemaCreationFromState(); viewModel.selectDataTab(DataViewTabs.SCHEMA) },
                         onNodeSchemaTableNameChange = { viewModel.creationViewModel.onNodeSchemaTableNameChange(it) },
                         onNodeSchemaPropertyChange = { index, property -> viewModel.creationViewModel.onNodeSchemaPropertyChange(index, property) },
                         onAddNodeSchemaProperty = { viewModel.creationViewModel.onAddNodeSchemaProperty() },
