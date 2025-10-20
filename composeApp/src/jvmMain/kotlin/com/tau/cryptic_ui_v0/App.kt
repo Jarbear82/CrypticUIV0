@@ -28,9 +28,8 @@ fun App() {
     var downloadProgress by remember { mutableStateOf(0f) }
     var isDownloading by remember { mutableStateOf(false) }
     var initialized by remember { mutableStateOf(false) }
-    val bundleLocation = System.getProperty("compose.application.resources.dir")?.let { File(it) } ?: File(".")
-
-    // Define installDir here so we can reuse it in the settings
+    // Use a persistent folder in the user's home directory
+    val bundleLocation = File(System.getProperty("user.home"), ".crypticui-kcef")    // Define installDir here so we can reuse it in the settings
     val installDir = File(bundleLocation, "kcef-bundle")
 
     LaunchedEffect(Unit) {
