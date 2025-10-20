@@ -21,8 +21,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val scope = rememberCoroutineScope() // Get a coroutine scope
 
     // Collect the state for the MetadataView
-    val nodes by viewModel.metadataViewModel.nodeList.collectAsState()
-    val edges by viewModel.metadataViewModel.edgeList.collectAsState()
+    val nodes by viewModel.metadataViewModel.nodeList.collectAsState() //
+    val edges by viewModel.metadataViewModel.edgeList.collectAsState() //
     val itemToEdit by viewModel.metadataViewModel.itemToEdit.collectAsState()
     val primarySelectedItem by viewModel.metadataViewModel.primarySelectedItem.collectAsState()
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
@@ -107,7 +107,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         }
                     }
                     ViewTabs.GRAPH -> {
-                        GraphView()
+                        // Pass the collected nodes and edges to the GraphView
+                        GraphView(nodes = nodes, edges = edges)
                     }
                 }
             }
