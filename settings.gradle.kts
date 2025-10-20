@@ -1,4 +1,4 @@
-rootProject.name = "CrypticTerminal"
+rootProject.name = "CrypticUIV0"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
