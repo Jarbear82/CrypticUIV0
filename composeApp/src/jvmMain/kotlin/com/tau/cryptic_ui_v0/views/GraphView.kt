@@ -11,6 +11,7 @@ import com.tau.cryptic_ui_v0.NodeDisplayItem
 import dev.datlag.kcef.KCEF
 import kotlinx.coroutines.delay
 import org.cef.browser.CefRendering
+import java.awt.Color // Import java.awt.Color
 
 // --- Define HTML content ---
 
@@ -22,7 +23,7 @@ private val helloWorldHtml = """
             body, html {
                 margin: 0; padding: 0; width: 100%; height: 100%;
                 display: flex; align-items: center; justify-content: center;
-                background-color: #2b2b2b; color: #eeeeee;
+                background-color: #FFFFFF; color: #000000;
                 font-family: sans-serif; font-size: 2em;
             }
         </style>
@@ -69,8 +70,9 @@ private val dynamicVisHtml = """
         <title>Dynamic Graph View</title>
         <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
         <style type="text/css">
-            #mynetwork { width: 100%; height: 100vh; border: 1px solid lightgray; background-color: #2b2b2b; }
-            body, html { margin: 0; padding: 0; overflow: hidden; background-color: #2b2b2b; }
+            /* UPDATED: White background for the graph and page */
+            #mynetwork { width: 100%; height: 100vh; border: 1px solid lightgray; background-color: #FFFFFF; }
+            body, html { margin: 0; padding: 0; overflow: hidden; background-color: #FFFFFF; }
         </style>
     </head>
     <body>
@@ -83,8 +85,17 @@ private val dynamicVisHtml = """
             var options = {
                 layout: { randomSeed: 2 },
                 physics: { enabled: true, solver: 'forceAtlas2Based' },
-                nodes: { shape: 'box', font: { color: '#eeeeee' }, color: { border: '#6075f2', background: '#3c3f41' } },
-                edges: { arrows: 'to', color: { color: '#eeeeee', highlight: '#6075f2' }, font: { align: 'top', color: '#eeeeee' }, smooth: { type: 'cubicBezier' } }
+                nodes: {
+                    shape: 'box'
+                    // UPDATED: Removed global font color. It will be set per-node.
+                    // Node background/border/font colors will be set individually from Kotlin
+                },
+                edges: {
+                    arrows: 'to', 
+                    color: { color: '#848484', highlight: '#6075f2' }, // Dark grey edge
+                    font: { align: 'top', color: '#000000' }, // Black text for edge labels
+                    smooth: { type: 'cubicBezier' } // Ensures A->B and B->A render as two separate curves
+                }
             };
             var network = new vis.Network(container, data, options);
 
@@ -114,14 +125,52 @@ private val dynamicVisHtml = """
 // Enum to represent the content types
 private enum class DisplayContent { HELLO_WORLD, GOOGLE, VIS_EXAMPLE, DYNAMIC_VIS }
 
+/**
+ * Stores the generated hex color and its raw RGB components.
+ */
+private data class NodeColorInfo(val hex: String, val rgb: IntArray)
+
+/**
+ * Generates a consistent hex color string and RGB array from a label string.
+ */
+private fun labelToColor(label: String): NodeColorInfo {
+    val hash = label.hashCode()
+    val r = (hash shr 16) and 0xFF
+    val g = (hash shr 8) and 0xFF
+    val b = hash and 0xFF
+    val hex = String.format("#%02X%02X%02X", r, g, b)
+    return NodeColorInfo(hex, intArrayOf(r, g, b))
+}
+
+/**
+ * NEW: Calculates perceived luminance and returns black or white for best contrast.
+ */
+private fun getFontColor(rgb: IntArray): String {
+    // Standard luminance formula
+    val luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255
+    // Use white text on dark backgrounds, black text on light backgrounds
+    return if (luminance < 0.5) "#FFFFFF" else "#000000"
+}
+
+
 // Simple serializer for the graph data to pass to JavaScript
 // Uses JSON syntax directly, escaping quotes within labels if necessary
 private fun serializeNodes(nodes: List<NodeDisplayItem>): String {
     return nodes.joinToString(prefix = "[", postfix = "]") {
         // Use primary key value (converted to string) as the unique ID for vis.js
         val id = it.primarykeyProperty.value?.toString() ?: "null_${nodes.indexOf(it)}" // Fallback ID
-        val label = "${it.label}\\n(${it.primarykeyProperty.value})".replace("'", "\\'") // Escape single quotes for JS
-        "{ id: '$id', label: '$label' }"
+        val nodeLabel = it.label // Get the base label for hashing
+        val displayLabel = "${it.label}\\n(${it.primarykeyProperty.value})".replace("'", "\\'") // Escape single quotes for JS
+
+        // UPDATED: Get background color AND complementary font color
+        val colorInfo = labelToColor(nodeLabel)
+        val bgColor = colorInfo.hex
+        val fontColor = getFontColor(colorInfo.rgb)
+
+        val colorJs = "{ background: '$bgColor', border: '$bgColor', highlight: { background: '$bgColor', border: '$bgColor' } }"
+        val fontJs = "{ color: '$fontColor' }" // NEW: Define font color for this node
+
+        "{ id: '$id', label: '$displayLabel', color: $colorJs, font: $fontJs }"
     }
 }
 
