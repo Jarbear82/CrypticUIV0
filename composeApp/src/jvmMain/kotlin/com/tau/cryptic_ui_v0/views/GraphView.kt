@@ -11,7 +11,7 @@ import com.tau.cryptic_ui_v0.NodeDisplayItem
 import dev.datlag.kcef.KCEF
 import kotlinx.coroutines.delay
 import org.cef.browser.CefRendering
-import java.awt.Color
+// import java.awt.Color // No longer needed
 
 // --- Define HTML content ---
 
@@ -130,33 +130,7 @@ private val dynamicVisHtml = """
 // Enum to represent the content types
 private enum class DisplayContent { HELLO_WORLD, GOOGLE, VIS_EXAMPLE, DYNAMIC_VIS }
 
-/**
- * Stores the generated hex color and its raw RGB components.
- */
-private data class NodeColorInfo(val hex: String, val rgb: IntArray)
-
-/**
- * Generates a consistent hex color string and RGB array from a label string.
- */
-private fun labelToColor(label: String): NodeColorInfo {
-    val hash = label.hashCode()
-    val r = (hash shr 16) and 0xFF
-    val g = (hash shr 8) and 0xFF
-    val b = hash and 0xFF
-    val hex = String.format("#%02X%02X%02X", r, g, b)
-    return NodeColorInfo(hex, intArrayOf(r, g, b))
-}
-
-/**
- * NEW: Calculates perceived luminance and returns black or white for best contrast.
- */
-private fun getFontColor(rgb: IntArray): String {
-    // Standard luminance formula
-    val luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255
-    // Use white text on dark backgrounds, black text on light backgrounds
-    return if (luminance < 0.5) "#FFFFFF" else "#000000"
-}
-
+// --- REMOVED PRIVATE DATA CLASS AND FUNCTIONS ---
 
 // Simple serializer for the graph data to pass to JavaScript
 // Uses JSON syntax directly, escaping quotes within labels if necessary
@@ -168,9 +142,9 @@ private fun serializeNodes(nodes: List<NodeDisplayItem>): String {
         val displayLabel = "${it.label}\\n(${it.primarykeyProperty.value})".replace("'", "\\'") // Escape single quotes for JS
 
         // UPDATED: Get background color AND complementary font color
-        val colorInfo = labelToColor(nodeLabel)
+        val colorInfo = labelToColor(nodeLabel) // Use shared function
         val bgColor = colorInfo.hex
-        val fontColor = getFontColor(colorInfo.rgb)
+        val fontColor = getFontColor(colorInfo.rgb) // Use shared function
 
         val colorJs = "{ background: '$bgColor', border: '$bgColor', highlight: { background: '$bgColor', border: '$bgColor' } }"
         val fontJs = "{ color: '$fontColor' }" // NEW: Define font color for this node

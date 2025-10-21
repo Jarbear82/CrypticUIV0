@@ -3,6 +3,7 @@ package com.tau.cryptic_ui_v0.views
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +65,7 @@ fun SchemaView(
             LazyColumn {
                 items(schema.nodeTables) { table ->
                     val isSelected = primarySelectedItem == table
+                    val colorInfo = labelToColor(table.label) // Get color info
                     ListItem(
                         headlineContent = { Text(table.label, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
@@ -90,7 +93,14 @@ fun SchemaView(
                             IconButton(onClick = { onDeleteNodeClick(table) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Node Schema")
                             }
-                        }
+                        },
+                        colors = ListItemDefaults.colors( // Apply colors
+                            containerColor = colorInfo.composeColor,
+                            headlineColor = colorInfo.composeFontColor,
+                            supportingColor = colorInfo.composeFontColor,
+                            leadingIconColor = colorInfo.composeFontColor,
+                            trailingIconColor = colorInfo.composeFontColor
+                        )
                     )
                 }
             }
@@ -122,7 +132,26 @@ fun SchemaView(
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Edge Schema")
                             }
                         },
-                        supportingContent = { Text("(${table.srcLabel} -> ${table.dstLabel})")},
+                        supportingContent = {
+                            // Get colors for src and dst nodes
+                            val srcColorInfo = labelToColor(table.srcLabel)
+                            val dstColorInfo = labelToColor(table.dstLabel)
+                            Row {
+                                Text("(", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    table.srcLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = srcColorInfo.composeColor // Use node color
+                                )
+                                Text(" -> ", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    table.dstLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = dstColorInfo.composeColor // Use node color
+                                )
+                                Text(")", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        },
                         trailingContent = {
                             IconButton(onClick = { onDeleteEdgeClick(table) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Edge Schema")

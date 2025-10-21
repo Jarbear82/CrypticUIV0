@@ -76,7 +76,7 @@ fun MetadataView(
                 // leadingContent = {  },
                 headlineContent = {
                     Text("Selected Node:\n" +
-                        "${primaryNode.label} : ${primaryNode.primarykeyProperty.value}"
+                            "${primaryNode.label} : ${primaryNode.primarykeyProperty.value}"
                     )
                 },
                 /// supportingContent = {  }
@@ -111,6 +111,7 @@ fun MetadataView(
                 LazyColumn {
                     items(nodes) { node ->
                         val isSelected = primarySelectedItem == node || secondarySelectedItem == node
+                        val colorInfo = labelToColor(node.label) // Get color info
                         ListItem(
                             headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             leadingContent = {
@@ -126,7 +127,13 @@ fun MetadataView(
                                 IconButton(onClick = { onDeleteNodeClick(node) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Node")
                                 }
-                            }
+                            },
+                            colors = ListItemDefaults.colors( // Apply colors
+                                containerColor = colorInfo.composeColor,
+                                headlineColor = colorInfo.composeFontColor,
+                                leadingIconColor = colorInfo.composeFontColor,
+                                trailingIconColor = colorInfo.composeFontColor
+                            )
                         )
                     }
                 }
@@ -148,11 +155,28 @@ fun MetadataView(
                     items(edges) { edge ->
                         // An edge is "selected" if its src and dst nodes are the selected items
                         val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
+                        // Get colors for src and dst nodes
+                        val srcColorInfo = labelToColor(edge.src.label)
+                        val dstColorInfo = labelToColor(edge.dst.label)
+
                         ListItem(
                             headlineContent = { Column {
-                                Text("Src: (${edge.src.label} : ${edge.src.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
-                                Text("[${edge.label}]", style=MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                                Text("Dst: (${edge.dst.label} : ${edge.dst.primarykeyProperty.value})", style= MaterialTheme.typography.bodySmall)
+                                Text(
+                                    "Src: (${edge.src.label} : ${edge.src.primarykeyProperty.value})",
+                                    style= MaterialTheme.typography.bodySmall,
+                                    color = srcColorInfo.composeColor // Use node color
+                                )
+                                Text(
+                                    "[${edge.label}]",
+                                    style=MaterialTheme.typography.headlineSmall,
+                                    textAlign = TextAlign.Center
+                                    // Default text color for edge label
+                                )
+                                Text(
+                                    "Dst: (${edge.dst.label} : ${edge.dst.primarykeyProperty.value})",
+                                    style= MaterialTheme.typography.bodySmall,
+                                    color = dstColorInfo.composeColor // Use node color
+                                )
                             }},
                             leadingContent = {
                                 IconButton(onClick = { onEditEdgeClick(edge) }) {
