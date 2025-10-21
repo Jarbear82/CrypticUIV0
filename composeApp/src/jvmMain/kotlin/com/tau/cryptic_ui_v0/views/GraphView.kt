@@ -11,7 +11,6 @@ import com.tau.cryptic_ui_v0.NodeDisplayItem
 import dev.datlag.kcef.KCEF
 import kotlinx.coroutines.delay
 import org.cef.browser.CefRendering
-// import java.awt.Color // No longer needed
 
 // --- Define HTML content ---
 
@@ -98,8 +97,7 @@ private val dynamicVisHtml = """
     },
     edges: {
         arrows: 'to', 
-        color: { color: '#848484', highlight: '#6075f2' }, 
-        font: { align: 'top', color: '#000000' }, 
+        font: { align: 'top' }
     }
 };
             var network = new vis.Network(container, data, options);
@@ -130,8 +128,6 @@ private val dynamicVisHtml = """
 // Enum to represent the content types
 private enum class DisplayContent { HELLO_WORLD, GOOGLE, VIS_EXAMPLE, DYNAMIC_VIS }
 
-// --- REMOVED PRIVATE DATA CLASS AND FUNCTIONS ---
-
 // Simple serializer for the graph data to pass to JavaScript
 // Uses JSON syntax directly, escaping quotes within labels if necessary
 private fun serializeNodes(nodes: List<NodeDisplayItem>): String {
@@ -158,7 +154,18 @@ private fun serializeEdges(edges: List<EdgeDisplayItem>): String {
         val fromId = it.src.primarykeyProperty.value?.toString() ?: "null_src_${edges.indexOf(it)}"
         val toId = it.dst.primarykeyProperty.value?.toString() ?: "null_dst_${edges.indexOf(it)}"
         val label = it.label.replace("'", "\\'")
-        "{ from: '$fromId', to: '$toId', label: '$label' }"
+
+        // --- Color edge and label based on edge label ---
+        val colorInfo = labelToColor(it.label)
+        val colorHex = colorInfo.hex
+        // Currently, always black for edges
+        val fontColor = "#000000"
+
+        val colorJs = "{ color: '$colorHex', highlight: '$colorHex' }"
+        // Set font color for contrast on top of the edge arrow
+        val fontJs = "{ color: '$fontColor', align: 'top' }"
+
+        "{ from: '$fromId', to: '$toId', label: '$label', color: $colorJs, font: $fontJs }"
     }
 }
 

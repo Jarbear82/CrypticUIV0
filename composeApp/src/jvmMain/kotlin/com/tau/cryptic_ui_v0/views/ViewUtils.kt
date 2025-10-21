@@ -5,12 +5,12 @@ import androidx.compose.ui.graphics.Color
 /**
  * Stores the generated hex color and its raw RGB components.
  */
-data class NodeColorInfo(val hex: String, val rgb: IntArray, val composeColor: Color, val composeFontColor: Color)
+data class ColorInfo(val hex: String, val rgb: IntArray, val composeColor: Color, val composeFontColor: Color)
 
 /**
  * Generates a consistent hex color string and RGB array from a label string.
  */
-fun labelToColor(label: String): NodeColorInfo {
+fun labelToColor(label: String): ColorInfo {
     val hash = label.hashCode()
     val r = (hash shr 16) and 0xFF
     val g = (hash shr 8) and 0xFF
@@ -20,7 +20,7 @@ fun labelToColor(label: String): NodeColorInfo {
     val composeColor = Color(r, g, b)
     val fontColor = getFontColor(rgb)
     val composeFontColor = if (fontColor == "#FFFFFF") Color.White else Color.Black
-    return NodeColorInfo(hex, rgb, composeColor, composeFontColor)
+    return ColorInfo(hex, rgb, composeColor, composeFontColor)
 }
 
 /**

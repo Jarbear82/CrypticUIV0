@@ -121,6 +121,8 @@ fun SchemaView(
             LazyColumn {
                 items(schema.edgeTables) { table ->
                     val isSelected = primarySelectedItem == table
+                    // Get color based on the *edge* label
+                    val colorInfo = labelToColor(table.label)
                     ListItem(
                         headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
@@ -133,21 +135,15 @@ fun SchemaView(
                             }
                         },
                         supportingContent = {
-                            // Get colors for src and dst nodes
-                            val srcColorInfo = labelToColor(table.srcLabel)
-                            val dstColorInfo = labelToColor(table.dstLabel)
                             Row {
                                 Text("(", style = MaterialTheme.typography.bodyMedium)
                                 Text(
                                     table.srcLabel,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = srcColorInfo.composeColor // Use node color
-                                )
+                                    style = MaterialTheme.typography.bodyMedium)
                                 Text(" -> ", style = MaterialTheme.typography.bodyMedium)
                                 Text(
                                     table.dstLabel,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = dstColorInfo.composeColor // Use node color
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(")", style = MaterialTheme.typography.bodyMedium)
                             }
@@ -156,7 +152,15 @@ fun SchemaView(
                             IconButton(onClick = { onDeleteEdgeClick(table) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete Edge Schema")
                             }
-                        }
+                        },
+                        colors = ListItemDefaults.colors(
+                            // Apply colors based on edge label
+                            containerColor = colorInfo.composeColor,
+                            headlineColor = colorInfo.composeFontColor,
+                            supportingColor = colorInfo.composeFontColor,
+                            leadingIconColor = colorInfo.composeFontColor,
+                            trailingIconColor = colorInfo.composeFontColor
+                        )
                     )
                 }
             }
