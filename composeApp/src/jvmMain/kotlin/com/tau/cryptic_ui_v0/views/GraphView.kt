@@ -11,7 +11,7 @@ import com.tau.cryptic_ui_v0.NodeDisplayItem
 import dev.datlag.kcef.KCEF
 import kotlinx.coroutines.delay
 import org.cef.browser.CefRendering
-import java.awt.Color // Import java.awt.Color
+import java.awt.Color
 
 // --- Define HTML content ---
 
@@ -32,7 +32,7 @@ private val helloWorldHtml = """
     </html>
 """.trimIndent()
 
-// vis.js example HTML provided by the user
+// -- vis.js example HTML --
 private val visExampleHtml = """
     <!doctype html>
     <html lang="en">
@@ -63,14 +63,13 @@ private val visExampleHtml = """
     </html>
 """.trimIndent()
 
-// HTML template for dynamic graph rendering
+// -- HTML template for dynamic graph rendering --
 private val dynamicVisHtml = """
     <html>
     <head>
         <title>Dynamic Graph View</title>
         <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
         <style type="text/css">
-            /* UPDATED: White background for the graph and page */
             #mynetwork { width: 100%; height: 100vh; border: 1px solid lightgray; background-color: #FFFFFF; }
             body, html { margin: 0; padding: 0; overflow: hidden; background-color: #FFFFFF; }
         </style>
@@ -83,20 +82,26 @@ private val dynamicVisHtml = """
             var edges = new vis.DataSet([]);
             var data = { nodes: nodes, edges: edges };
             var options = {
-                layout: { randomSeed: 2 },
-                physics: { enabled: true, solver: 'forceAtlas2Based' },
-                nodes: {
-                    shape: 'box'
-                    // UPDATED: Removed global font color. It will be set per-node.
-                    // Node background/border/font colors will be set individually from Kotlin
-                },
-                edges: {
-                    arrows: 'to', 
-                    color: { color: '#848484', highlight: '#6075f2' }, // Dark grey edge
-                    font: { align: 'top', color: '#000000' }, // Black text for edge labels
-                    smooth: { type: 'cubicBezier' } // Ensures A->B and B->A render as two separate curves
-                }
-            };
+    layout: { randomSeed: 2 },
+    physics: { 
+        enabled: true, 
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: {
+            // Increase the length of the edges (springs)
+            springLength: 200, 
+            // Increase the repulsion force between nodes
+            gravitationalConstant: -100, 
+        }
+    },
+    nodes: {
+        shape: 'box'
+    },
+    edges: {
+        arrows: 'to', 
+        color: { color: '#848484', highlight: '#6075f2' }, 
+        font: { align: 'top', color: '#000000' }, 
+    }
+};
             var network = new vis.Network(container, data, options);
 
             // Function to be called from Kotlin to update the graph
