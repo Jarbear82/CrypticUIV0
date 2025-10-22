@@ -71,7 +71,6 @@ fun MainView(mainViewModel: MainViewModel) {
                     label = { Text("Terminal") },
                     selected = selectedScreen == Screen.TERMINAL,
                     onClick = {
-                        // Add the check inside the onClick lambda
                         if (terminalViewModel != null) {
                             scope.launch { drawerState.close() }
                             mainViewModel.navigateTo(Screen.TERMINAL)
@@ -82,7 +81,7 @@ fun MainView(mainViewModel: MainViewModel) {
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                // You can add other items here later (e.g., Settings, Import/Export)
+                // Add other items here later (e.g., Settings, Import/Export)
             }
         }
     ) {
