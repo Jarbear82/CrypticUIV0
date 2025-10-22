@@ -6,7 +6,7 @@ import androidx.compose.ui.window.application
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Cryptic UI V0",
+        title = "Cryptic UI", // Changed from "Cryptic UI V0"
     ) {
         App()
     }

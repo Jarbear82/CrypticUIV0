@@ -13,8 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
-import com.tau.cryptic_ui_v0.views.TerminalView
+import com.tau.cryptic_ui_v0.viewmodels.rememberMainViewModel
+import com.tau.cryptic_ui_v0.views.MainView
 import dev.datlag.kcef.KCEF
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,13 +75,18 @@ actual fun App() {
 
     MaterialTheme {
         if (initialized) {
-            val viewModel = remember { TerminalViewModel(KuzuDBService()) }
-            val scope = rememberCoroutineScope() // Get a coroutine scope
-            TerminalView(viewModel)
+            // Create the MainViewModel which now controls navigation
+            val mainViewModel = rememberMainViewModel()
+            val scope = rememberCoroutineScope()
+
+            // Show the MainView, which contains the nav drawer and screen logic
+            MainView(mainViewModel)
 
             DisposableEffect(Unit) {
                 onDispose {
-                    viewModel.onCleared()
+                    // Dispose the MainViewModel, which in turn disposes the TerminalViewModel
+                    mainViewModel.onDispose()
+                    // Dispose KCEF
                     scope.launch(Dispatchers.IO) {
                         KCEF.dispose()
                     }

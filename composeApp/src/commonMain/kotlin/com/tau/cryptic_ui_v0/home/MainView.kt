@@ -70,10 +70,12 @@ fun MainView(mainViewModel: MainViewModel) {
                     icon = { Icon(Icons.Default.Terminal, contentDescription = "Terminal") },
                     label = { Text("Terminal") },
                     selected = selectedScreen == Screen.TERMINAL,
-                    enabled = terminalViewModel != null,
                     onClick = {
-                        scope.launch { drawerState.close() }
-                        mainViewModel.navigateTo(Screen.TERMINAL)
+                        // Add the check inside the onClick lambda
+                        if (terminalViewModel != null) {
+                            scope.launch { drawerState.close() }
+                            mainViewModel.navigateTo(Screen.TERMINAL)
+                        }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
