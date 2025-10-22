@@ -1,7 +1,5 @@
 package com.tau.cryptic_ui_v0
 
-import kotlinx.coroutines.launch
-
 // --- Helper Functions ---
 private fun String.withBackticks(): String {
     return if (reservedWords.contains(this.uppercase())) "`$this`" else this
@@ -14,17 +12,17 @@ private fun formatPkValue(value: Any?): String {
 // --- Create Functions ---
 
 // Create Node
-suspend fun createNode(repository: KuzuRepository, node: NodeTable) {
+suspend fun createNode(dbService: KuzuDBService, node: NodeTable) {
     val label = node.label
     val propertiesString = node.properties.joinToString(", ") {
         "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
     }
     val query = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
 // Create Edge
-suspend fun createEdge(repository: KuzuRepository, edge: EdgeTable) {
+suspend fun createEdge(dbService: KuzuDBService, edge: EdgeTable) {
     val label = edge.label
     val src = edge.src
     val dst = edge.dst
@@ -45,21 +43,21 @@ suspend fun createEdge(repository: KuzuRepository, edge: EdgeTable) {
         WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue
         CREATE (a)-[r:${label.withBackticks()} $propertiesString]->(b)
     """.trimIndent()
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
 // Create Node Schema
-suspend fun createNodeSchema(repository: KuzuRepository, nodeSchema: NodeSchemaCreationState) {
+suspend fun createNodeSchema(dbService: KuzuDBService, nodeSchema: NodeSchemaCreationState) {
     val pk = nodeSchema.properties.first { it.isPrimaryKey }
     val properties = nodeSchema.properties.joinToString(", ") {
         "${it.name.withBackticks()} ${it.type}"
     }
     val query = "CREATE NODE TABLE ${nodeSchema.tableName.withBackticks()} ($properties, PRIMARY KEY (${pk.name.withBackticks()}))"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
 // Create Edge Schema
-suspend fun createEdgeSchema(repository: KuzuRepository, edgeSchema: EdgeSchemaCreationState) {
+suspend fun createEdgeSchema(dbService: KuzuDBService, edgeSchema: EdgeSchemaCreationState) {
     val properties = if (edgeSchema.properties.isNotEmpty()) {
         ", " + edgeSchema.properties.joinToString(", ") {
             "${it.name.withBackticks()} ${it.type}"
@@ -68,14 +66,14 @@ suspend fun createEdgeSchema(repository: KuzuRepository, edgeSchema: EdgeSchemaC
         ""
     }
     val query = "CREATE REL TABLE ${edgeSchema.tableName.withBackticks()} (FROM ${edgeSchema.srcTable!!.withBackticks()} TO ${edgeSchema.dstTable!!.withBackticks()}$properties)"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
 
 // --- Read Functions ---
 
-suspend fun getSchema(repository: KuzuRepository): Schema? {
-    val execResult = repository.executeQuery("CALL SHOW_TABLES() RETURN *;")
+suspend fun getSchema(dbService: KuzuDBService): Schema? {
+    val execResult = dbService.executeQuery("CALL SHOW_TABLES() RETURN *;")
     if (execResult !is ExecutionResult.Success) {
         println("Failed to fetch schema")
         return null
@@ -88,7 +86,7 @@ suspend fun getSchema(repository: KuzuRepository): Schema? {
     for ((tableName, tableType) in allTables) {
         when (tableType) {
             "NODE" -> {
-                val tableInfoResult = repository.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
                 if (tableInfoResult is ExecutionResult.Success) {
                     val properties = tableInfoResult.results.first().rows.map { row ->
                         SchemaProperty(row[1].toString(), row[2].toString(), row[4] as Boolean)
@@ -97,7 +95,7 @@ suspend fun getSchema(repository: KuzuRepository): Schema? {
                 }
             }
             "REL" -> {
-                val tableInfoResult = repository.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
+                val tableInfoResult = dbService.executeQuery("CALL TABLE_INFO(\"$tableName\") RETURN *;")
                 val properties = if (tableInfoResult is ExecutionResult.Success) {
                     tableInfoResult.results.first().rows.map { row ->
                         SchemaProperty(row[1].toString(), row[2].toString(), isPrimaryKey = false)
@@ -106,7 +104,7 @@ suspend fun getSchema(repository: KuzuRepository): Schema? {
                     emptyList()
                 }
 
-                val showConnectionResult = repository.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
+                val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
                 if (showConnectionResult is ExecutionResult.Success) {
                     showConnectionResult.results.first().rows.forEach { row ->
                         edgeSchemaList.add(SchemaEdge(tableName, row[0] as String, row[1] as String, properties))
@@ -118,12 +116,12 @@ suspend fun getSchema(repository: KuzuRepository): Schema? {
     return Schema(nodeTables = nodeSchemaList, edgeTables = edgeSchemaList)
 }
 
-suspend fun listNodes(repository: KuzuRepository): List<NodeDisplayItem> {
+suspend fun listNodes(dbService: KuzuDBService): List<NodeDisplayItem> {
     val nodes = mutableListOf<NodeDisplayItem>()
-    getSchema(repository)?.nodeTables?.forEach { table ->
-        val pk = repository.getPrimaryKey(table.label) ?: return@forEach
+    getSchema(dbService)?.nodeTables?.forEach { table ->
+        val pk = dbService.getPrimaryKey(table.label) ?: return@forEach
         val query = "MATCH (n:${table.label.withBackticks()}) RETURN n.${pk.withBackticks()}"
-        val result = repository.executeQuery(query)
+        val result = dbService.executeQuery(query)
         if (result is ExecutionResult.Success) {
             result.results.firstOrNull()?.rows?.forEach { row ->
                 nodes.add(
@@ -138,13 +136,13 @@ suspend fun listNodes(repository: KuzuRepository): List<NodeDisplayItem> {
     return nodes
 }
 
-suspend fun listEdges(repository: KuzuRepository): List<EdgeDisplayItem> {
+suspend fun listEdges(dbService: KuzuDBService): List<EdgeDisplayItem> {
     val edges = mutableListOf<EdgeDisplayItem>()
-    getSchema(repository)?.edgeTables?.forEach { table ->
-        val srcPkName = repository.getPrimaryKey(table.srcLabel) ?: return@forEach
-        val dstPkName = repository.getPrimaryKey(table.dstLabel) ?: return@forEach
+    getSchema(dbService)?.edgeTables?.forEach { table ->
+        val srcPkName = dbService.getPrimaryKey(table.srcLabel) ?: return@forEach
+        val dstPkName = dbService.getPrimaryKey(table.dstLabel) ?: return@forEach
         val query = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
-        val result = repository.executeQuery(query)
+        val result = dbService.executeQuery(query)
         if (result is ExecutionResult.Success) {
             result.results.firstOrNull()?.rows?.forEach { row ->
                 val srcNode = NodeDisplayItem(table.srcLabel, DisplayItemProperty(srcPkName, row[0]))
@@ -156,13 +154,13 @@ suspend fun listEdges(repository: KuzuRepository): List<EdgeDisplayItem> {
     return edges
 }
 
-suspend fun getNode(repository: KuzuRepository, item: NodeDisplayItem): NodeTable? {
+suspend fun getNode(dbService: KuzuDBService, item: NodeDisplayItem): NodeTable? {
     val pkKey = item.primarykeyProperty.key
     val pkValue = item.primarykeyProperty.value
     val formattedPkValue = formatPkValue(pkValue)
 
     val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
-    val result = repository.executeQuery(query)
+    val result = dbService.executeQuery(query)
 
     if (result is ExecutionResult.Success) {
         val nodeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? NodeValue
@@ -176,7 +174,7 @@ suspend fun getNode(repository: KuzuRepository, item: NodeDisplayItem): NodeTabl
     return null
 }
 
-suspend fun getEdge(repository: KuzuRepository, item: EdgeDisplayItem): EdgeTable? {
+suspend fun getEdge(dbService: KuzuDBService, item: EdgeDisplayItem): EdgeTable? {
     val srcPk = item.src.primarykeyProperty
     val dstPk = item.dst.primarykeyProperty
     val formattedSrcPkValue = formatPkValue(srcPk.value)
@@ -185,7 +183,7 @@ suspend fun getEdge(repository: KuzuRepository, item: EdgeDisplayItem): EdgeTabl
     val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
             "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
             "RETURN r LIMIT 1"
-    val result = repository.executeQuery(query)
+    val result = dbService.executeQuery(query)
 
     if (result is ExecutionResult.Success) {
         val edgeValue = result.results.firstOrNull()?.rows?.firstOrNull()?.getOrNull(0) as? EdgeValue
@@ -204,15 +202,15 @@ suspend fun getEdge(repository: KuzuRepository, item: EdgeDisplayItem): EdgeTabl
 // --- Update Functions ---
 
 // --- Delete Functions ---
-suspend fun deleteNode(repository: KuzuRepository, item: NodeDisplayItem) {
+suspend fun deleteNode(dbService: KuzuDBService, item: NodeDisplayItem) {
     val pkKey = item.primarykeyProperty.key
     val pkValue = item.primarykeyProperty.value
     val formattedPkValue = formatPkValue(pkValue)
     val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue DETACH DELETE n"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
-suspend fun deleteEdge(repository: KuzuRepository, item: EdgeDisplayItem) {
+suspend fun deleteEdge(dbService: KuzuDBService, item: EdgeDisplayItem) {
     val srcPk = item.src.primarykeyProperty
     val dstPk = item.dst.primarykeyProperty
     val formattedSrcPkValue = formatPkValue(srcPk.value)
@@ -221,15 +219,15 @@ suspend fun deleteEdge(repository: KuzuRepository, item: EdgeDisplayItem) {
     val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
             "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
             "DELETE r"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
-suspend fun deleteSchemaNode(repository: KuzuRepository, item: SchemaNode) {
+suspend fun deleteSchemaNode(dbService: KuzuDBService, item: SchemaNode) {
     val query = "DROP TABLE ${item.label.withBackticks()}"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }
 
-suspend fun deleteSchemaEdge(repository: KuzuRepository, item: SchemaEdge) {
+suspend fun deleteSchemaEdge(dbService: KuzuDBService, item: SchemaEdge) {
     val query = "DROP TABLE ${item.label.withBackticks()}"
-    repository.executeQuery(query)
+    dbService.executeQuery(query)
 }

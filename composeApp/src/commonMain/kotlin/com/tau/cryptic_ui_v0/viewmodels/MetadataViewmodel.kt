@@ -8,9 +8,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MetadataViewModel(
-    private val repository: KuzuRepository,
+    private val dbService: KuzuDBService,
     private val viewModelScope: CoroutineScope,
-    private val schemaViewModel: SchemaViewModel
 ) {
     private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
     val dbMetaData = _dbMetaData.asStateFlow()
@@ -33,8 +32,8 @@ class MetadataViewModel(
 
     init {
         viewModelScope.launch {
-            repository.initialize()
-            _dbMetaData.value = repository.getDBMetaData()
+            dbService.initialize()
+            _dbMetaData.value = dbService.getDBMetaData()
         }
     }
 
@@ -54,13 +53,13 @@ class MetadataViewModel(
 
     fun listNodes() {
         viewModelScope.launch {
-            _nodeList.value = listNodes(repository)
+            _nodeList.value = listNodes(dbService)
         }
     }
 
     fun listEdges() {
         viewModelScope.launch {
-            val edges = listEdges(repository)
+            val edges = listEdges(dbService)
             val nodesFromEdges = mutableSetOf<NodeDisplayItem>()
             edges.forEach {
                 nodesFromEdges.add(it.src)
@@ -82,8 +81,8 @@ class MetadataViewModel(
     fun setItemToEdit(item: Any) {
         viewModelScope.launch {
             _itemToEdit.value = when (item) {
-                is NodeDisplayItem -> getNode(repository, item)
-                is EdgeDisplayItem -> getEdge(repository, item)
+                is NodeDisplayItem -> getNode(dbService, item)
+                is EdgeDisplayItem -> getEdge(dbService, item)
                 is SchemaNode, is SchemaEdge, is String -> item
                 else -> null
             }
@@ -135,13 +134,13 @@ class MetadataViewModel(
         viewModelScope.launch {
             when (item) {
                 is NodeDisplayItem -> {
-                    deleteNode(repository, item)
+                    deleteNode(dbService, item)
                     _nodeList.update { list -> list.filterNot { it == item } }
                     // Also remove any edges connected to the deleted node
                     _edgeList.update { list -> list.filterNot { it.src == item || it.dst == item } }
                 }
                 is EdgeDisplayItem -> {
-                    deleteEdge(repository, item)
+                    deleteEdge(dbService, item)
                     _edgeList.update { list -> list.filterNot { it == item } }
                 }
             }
@@ -164,6 +163,6 @@ class MetadataViewModel(
 
 
     fun onCleared() {
-        repository.close()
+        dbService.close()
     }
 }

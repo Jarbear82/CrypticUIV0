@@ -24,7 +24,7 @@ import java.io.File
 
 @Composable
 @Preview
-fun App() {
+actual fun App() {
     var downloadProgress by remember { mutableStateOf(0f) }
     var isDownloading by remember { mutableStateOf(false) }
     var initialized by remember { mutableStateOf(false) }
@@ -75,7 +75,7 @@ fun App() {
 
     MaterialTheme {
         if (initialized) {
-            val viewModel = remember { TerminalViewModel(KuzuRepository()) }
+            val viewModel = remember { TerminalViewModel(KuzuDBService()) }
             val scope = rememberCoroutineScope() // Get a coroutine scope
             TerminalView(viewModel)
 

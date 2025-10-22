@@ -1,7 +1,6 @@
 package com.tau.cryptic_ui_v0
 
 import androidx.compose.ui.graphics.Color
-import com.kuzudb.DataType as KuzuDataType
 
 data class NodeDisplayItem(
     val label: String,
@@ -102,7 +101,7 @@ data class Schema(
 data class FormattedResult(
     val headers: List<String>,
     val rows: List<List<Any?>>,
-    val dataTypes: Map<String, KuzuDataType>,
+    val dataTypes: Map<String, Any?>,
     val summary: String,
     val rowCount: Long
 ) {

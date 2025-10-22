@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class QueryViewModel(
-    private val repository: KuzuRepository,
+    private val dbService: KuzuDBService,
     private val viewModelScope: CoroutineScope,
     private val metadataViewModel: MetadataViewModel
 ) {
@@ -29,7 +29,7 @@ class QueryViewModel(
         viewModelScope.launch {
             metadataViewModel.clearNodeList()
             metadataViewModel.clearEdgeList()
-            val result = repository.executeQuery(query.value)
+            val result = dbService.executeQuery(query.value)
             _queryResult.value = result
             if (result !is ExecutionResult.Success) return@launch
 
@@ -56,7 +56,7 @@ class QueryViewModel(
             val nodeItems = async {
                 nodeValues.map { nodeValue ->
                     async {
-                        val pkName = repository.getPrimaryKey(nodeValue.label) ?: "_id"
+                        val pkName = dbService.getPrimaryKey(nodeValue.label) ?: "_id"
                         val pkValue = nodeValue.properties[pkName]
                         val nodeItem = NodeDisplayItem(
                             label = nodeValue.label,

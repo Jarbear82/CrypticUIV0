@@ -1,18 +1,18 @@
 package com.tau.cryptic_ui_v0.viewmodels
 
-import com.tau.cryptic_ui_v0.KuzuRepository
+import com.tau.cryptic_ui_v0.KuzuDBService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class TerminalViewModel(repository: KuzuRepository) {
+class TerminalViewModel(dbService: KuzuDBService) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    val schemaViewModel = SchemaViewModel(repository, viewModelScope)
-    val metadataViewModel = MetadataViewModel(repository, viewModelScope, schemaViewModel)
-    val queryViewModel = QueryViewModel(repository, viewModelScope, metadataViewModel)
-    val creationViewModel = CreationViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
+    val schemaViewModel = SchemaViewModel(dbService, viewModelScope)
+    val metadataViewModel = MetadataViewModel(dbService, viewModelScope)
+    val queryViewModel = QueryViewModel(dbService, viewModelScope, metadataViewModel)
+    val creationViewModel = CreationViewModel(dbService, viewModelScope, schemaViewModel, metadataViewModel)
 
 
     private val _selectedDataTab = MutableStateFlow(DataViewTabs.METADATA)

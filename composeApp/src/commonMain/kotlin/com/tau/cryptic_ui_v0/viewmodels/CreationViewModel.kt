@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CreationViewModel(
-    private val repository: KuzuRepository,
+    private val dbService: KuzuDBService,
     private val viewModelScope: CoroutineScope,
     private val schemaViewModel: SchemaViewModel,
     private val metadataViewModel: MetadataViewModel,
@@ -61,7 +61,7 @@ class CreationViewModel(
                         TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
                     }
                     val nodeTable = NodeTable(state.selectedSchema.label, properties, false, false)
-                    createNode(repository, nodeTable)
+                    createNode(dbService, nodeTable)
                     _nodeCreationState.value = null // Exit creation mode
                     metadataViewModel.listNodes() // Refresh the node list
                     onFinished()
@@ -126,7 +126,7 @@ class CreationViewModel(
                         TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
                     }
                     val edgeTable = EdgeTable(state.selectedSchema.label, state.src!!, state.dst!!, properties, false, false, false, false)
-                    createEdge(repository, edgeTable)
+                    createEdge(dbService, edgeTable)
                     _edgeCreationState.value = null // Exit creation mode
                     metadataViewModel.listEdges() // Refresh the edge list
                     onFinished()
@@ -172,7 +172,7 @@ class CreationViewModel(
 
     fun createNodeSchemaFromState(state: NodeSchemaCreationState, onFinished: () -> Unit) {
         viewModelScope.launch {
-            createNodeSchema(repository, state)
+            createNodeSchema(dbService, state)
             onFinished()
             schemaViewModel.showSchema()
         }
@@ -230,7 +230,7 @@ class CreationViewModel(
 
     fun createEdgeSchemaFromState(state: EdgeSchemaCreationState, onFinished: () -> Unit) {
         viewModelScope.launch {
-            createEdgeSchema(repository, state)
+            createEdgeSchema(dbService, state)
             onFinished()
             schemaViewModel.showSchema()
         }

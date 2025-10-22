@@ -18,7 +18,6 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
-
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
@@ -28,7 +27,6 @@ kotlin {
             implementation(libs.kotlin.test)
         }
         jvmMain.dependencies {
-
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.kuzu)
@@ -43,7 +41,7 @@ compose.desktop {
         mainClass = "com.tau.cryptic_ui_v0.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.AppImage)
 
             packageName = "com.tau.cryptic_ui_v0"
             packageVersion = "1.0.0"
@@ -52,7 +50,7 @@ compose.desktop {
 
         // Add JVM args for KCEF
         jvmArgs("--add-opens", "java.desktop/sun.awt=ALL-UNNAMED")
-        jvmArgs("--add-opens", "java.desktop/java.awt.peer=ALL-UNNAMED") // recommended but not necessary
+        jvmArgs("--add-opens", "java.desktop/java.awt.peer=ALL-UNNAMED")
 
         if (System.getProperty("os.name").contains("Mac")) {
             jvmArgs("--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED")
@@ -69,7 +67,3 @@ compose.desktop {
 configurations.all {
     exclude(group = "androidx.compose.ui", module = "ui-util")
 }
-
-//tasks.withType<JavaExec>().configureEach {
-//    standardInput = System.`in`
-//}

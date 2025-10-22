@@ -21,13 +21,13 @@ import java.nio.file.Paths
 
 // --- The Main Service Class ---
 
-class KuzuDBService {
+actual class KuzuDBService {
     private var db: KuzuDatabase? = null
     private var conn: KuzuConnection? = null
     private var currentSchemaSignature: String? = null
     private var storagePath: String? = null
 
-    fun initialize(directoryPath: String? = null) {
+    actual fun initialize(directoryPath: String?) {
         try {
             storagePath = directoryPath
             db = if (directoryPath != null) {
@@ -50,7 +50,7 @@ class KuzuDBService {
         }
     }
 
-    fun getDBMetaData(): DBMetaData {
+    actual fun getDBMetaData(): DBMetaData {
         val name = if (storagePath != null) Paths.get(storagePath).fileName.toString() else "In-Memory"
         val version = KuzuVersion.getVersion()
         val storage = storagePath ?: "RAM"
@@ -58,7 +58,7 @@ class KuzuDBService {
     }
 
 
-    fun close() {
+    actual fun close() {
         try {
             conn?.close()
             db?.close()
@@ -68,9 +68,9 @@ class KuzuDBService {
         }
     }
 
-    fun isInitialized(): Boolean = db != null && conn != null
+    actual fun isInitialized(): Boolean = db != null && conn != null
 
-    suspend fun executeQuery(query: String): ExecutionResult {
+    actual suspend fun executeQuery(query: String): ExecutionResult {
         println("\n\n Executing: $query")
 
         if (!isInitialized()) return ExecutionResult.Error("Database not initialized.")
@@ -109,6 +109,8 @@ class KuzuDBService {
         }
     }
 
+
+    // TODO: Implement each type
     private fun getFormattedValue(v: KuzuValue): Any? {
         if (v.isNull) return null
         return when (v.dataType.id) {
@@ -219,7 +221,7 @@ class KuzuDBService {
         }
     }
 
-    suspend fun getPrimaryKey(tableName: String): String? = withContext(Dispatchers.IO) {
+    actual suspend fun getPrimaryKey(tableName: String): String? = withContext(Dispatchers.IO) {
         try {
             val propertiesResult = conn!!.query("CALL TABLE_INFO('$tableName') RETURN *;")
             while (propertiesResult.hasNext()) {
