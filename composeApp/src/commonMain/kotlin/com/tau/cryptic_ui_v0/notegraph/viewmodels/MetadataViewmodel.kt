@@ -32,7 +32,6 @@ class MetadataViewModel(
 
     init {
         viewModelScope.launch {
-            dbService.initialize()
             _dbMetaData.value = dbService.getDBMetaData()
         }
     }

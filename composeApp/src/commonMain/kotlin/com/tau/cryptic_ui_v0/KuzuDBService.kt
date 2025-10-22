@@ -8,7 +8,7 @@ expect class KuzuDBService() {
     /**
      * Initializes the database connection.
      */
-    fun initialize(directoryPath: String? = null)
+    fun initialize(databasePath: String? = null)
 
     /**
      * Retrieves metadata about the current database.

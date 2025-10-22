@@ -2,6 +2,12 @@ package com.tau.cryptic_ui_v0
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Represents an on-disk notegraph database.
+ * @param name The display name (the filename, e.g., "my_db.kuzu").
+ * @param path The absolute path to the database file.
+ */
+data class NoteGraphItem(val name: String, val path: String)
 data class NodeDisplayItem(
     val label: String,
     val primarykeyProperty: DisplayItemProperty,

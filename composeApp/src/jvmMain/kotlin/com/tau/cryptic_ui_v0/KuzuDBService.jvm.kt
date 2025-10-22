@@ -15,6 +15,7 @@ import com.kuzudb.ValueRecursiveRelUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -27,16 +28,14 @@ actual class KuzuDBService {
     private var currentSchemaSignature: String? = null
     private var storagePath: String? = null
 
-    actual fun initialize(directoryPath: String?) {
+    actual fun initialize(databasePath: String?) {
         try {
-            storagePath = directoryPath
-            db = if (directoryPath != null) {
-                val dbDirectory = Paths.get(directoryPath)
-                if (!Files.exists(dbDirectory)) {
-                    Files.createDirectories(dbDirectory)
-                }
-                println("Initializing KuzuDB at: $directoryPath")
-                KuzuDatabase(directoryPath)
+            storagePath = databasePath // Keep track of the path
+            db = if (databasePath != null) {
+                println("Initializing KuzuDB at: $databasePath")
+                // KuzuDatabase constructor takes the file path.
+                // It will create the file if it doesn't exist.
+                KuzuDatabase(databasePath)
             } else {
                 println("Initializing In-Memory KuzuDB.")
                 KuzuDatabase(":memory:")
@@ -46,6 +45,7 @@ actual class KuzuDBService {
             currentSchemaSignature = fetchSchemaSignature()
         } catch (e: Exception) {
             println("Failed to initialize KuzuDB: ${e.message}")
+            // Re-throw as IllegalStateException to be caught by the ViewModel
             throw IllegalStateException("Could not initialize Kuzu database.", e)
         }
     }

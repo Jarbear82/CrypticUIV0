@@ -110,7 +110,7 @@ fun MainView(mainViewModel: MainViewModel) {
             Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
                 when (selectedScreen) {
                     Screen.HOME -> HomeView(
-                        onOpenTerminal = { mainViewModel.openTerminal() }
+                        viewModel = mainViewModel
                     )
                     Screen.TERMINAL -> {
                         val vm = terminalViewModel
@@ -118,7 +118,7 @@ fun MainView(mainViewModel: MainViewModel) {
                             TerminalView(viewModel = vm)
                         } else {
                             // Fallback in case state is somehow incorrect
-                            HomeView(onOpenTerminal = { mainViewModel.openTerminal() })
+                            HomeView(viewModel = mainViewModel)
                         }
                     }
                 }
