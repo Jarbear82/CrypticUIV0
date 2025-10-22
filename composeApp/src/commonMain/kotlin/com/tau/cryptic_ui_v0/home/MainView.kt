@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Terminal
@@ -60,7 +61,8 @@ fun MainView(mainViewModel: MainViewModel) {
                     selected = selectedScreen == Screen.HOME,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        mainViewModel.navigateTo(Screen.HOME)
+                        // This will close the terminal if one is open
+                        mainViewModel.closeTerminal()
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -102,6 +104,20 @@ fun MainView(mainViewModel: MainViewModel) {
                             }
                         }) {
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    // Add actions for the TopAppBar
+                    actions = {
+                        // Show close button only when in terminal view
+                        if (selectedScreen == Screen.TERMINAL) {
+                            IconButton(onClick = {
+                                mainViewModel.closeTerminal()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = "Close Notegraph"
+                                )
+                            }
                         }
                     }
                 )
