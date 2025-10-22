@@ -44,29 +44,61 @@ data class RecursiveEdgeValue(
     val edges: List<EdgeValue>
 )
 
+// --- Data classes for Editing Instances ---
 data class NodeTable(
     val label: String,
-    val properties: List<TableProperty>,
-    val labelChanged: Boolean,
-    val propertiesChanged: Boolean
-)
+    var properties: List<TableProperty>, // This list will be mutated during edit
+    val labelChanged: Boolean, // Not used yet
+    val propertiesChanged: Boolean // Not used yet
+) {
+    /**
+     * Creates a deep copy of the NodeTable, ensuring the properties list
+     * is a new list containing copies of the TableProperty objects.
+     */
+    fun deepCopy(): NodeTable {
+        return NodeTable(
+            label = this.label,
+            properties = this.properties.map { it.copy() },
+            labelChanged = this.labelChanged,
+            propertiesChanged = this.propertiesChanged
+        )
+    }
+}
+
 
 data class EdgeTable(
     val label: String,
     val src: NodeDisplayItem,
     val dst: NodeDisplayItem,
-    val properties: List<TableProperty>?,
+    var properties: List<TableProperty>?, // This list will be mutated
     val labelChanged: Boolean,
     val srcChanged: Boolean,
     val dstChanged: Boolean,
     val propertiesChanged: Boolean
-)
+) {
+    /**
+     * Creates a deep copy of the EdgeTable, ensuring the properties list
+     * is a new list containing copies of the TableProperty objects.
+     */
+    fun deepCopy(): EdgeTable {
+        return EdgeTable(
+            label = this.label,
+            src = this.src,
+            dst = this.dst,
+            properties = this.properties?.map { it.copy() },
+            labelChanged = this.labelChanged,
+            srcChanged = this.srcChanged,
+            dstChanged = this.dstChanged,
+            propertiesChanged = this.propertiesChanged
+        )
+    }
+}
 
 data class TableProperty(
     val key: String,
-    val value: Any?,
+    var value: Any?, // This value will be mutated
     val isPrimaryKey: Boolean,
-    val valueChanged: Boolean
+    var valueChanged: Boolean // Flag to track changes
 )
 
 // --- Data classes for Schema Representation ---
@@ -100,6 +132,29 @@ data class SchemaProperty(
 data class Schema(
     val nodeTables: List<SchemaNode>,
     val edgeTables: List<SchemaEdge>
+)
+
+// --- Data classes for Editing Schemas ---
+data class NodeSchemaEditState(
+    val originalSchema: SchemaNode,
+    var currentLabel: String,
+    val properties: MutableList<EditableSchemaProperty>
+)
+
+data class EdgeSchemaEditState(
+    val originalSchema: SchemaEdge,
+    var currentLabel: String,
+    val properties: MutableList<EditableSchemaProperty>
+    // Note: Altering src/dst of an edge schema is not supported by Kuzu.
+)
+
+data class EditableSchemaProperty(
+    var key: String,
+    var valueDataType: String,
+    var isPrimaryKey: Boolean,
+    val originalKey: String, // To know what to rename
+    val isNew: Boolean = false,
+    var isDeleted: Boolean = false
 )
 
 

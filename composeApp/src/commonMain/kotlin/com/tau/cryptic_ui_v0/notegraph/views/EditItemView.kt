@@ -1,62 +1,84 @@
 package com.tau.cryptic_ui_v0.views
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.*
 
 @Composable
 fun EditItemView(
-    editItem: Any?,
+    // Creation States
     nodeCreationState: NodeCreationState?,
     edgeCreationState: EdgeCreationState?,
     nodeSchemaCreationState: NodeSchemaCreationState,
     edgeSchemaCreationState: EdgeSchemaCreationState,
-    onClearSelection: () -> Unit,
+
+    // Editing States
+    nodeEditState: NodeTable?,
+    edgeEditState: EdgeTable?,
+    nodeSchemaEditState: NodeSchemaEditState?,
+    edgeSchemaEditState: EdgeSchemaEditState?,
+
+    // Event Handlers
+    onSaveClick: () -> Unit,
+    onCancelClick: () -> Unit,
+
+    // Node Creation Handlers
     onNodeCreationSchemaSelected: (SchemaNode) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
     onNodeCreationCreateClick: () -> Unit,
-    onNodeCreationCancelClick: () -> Unit,
+
+    // Edge Creation Handlers
     onEdgeCreationSchemaSelected: (SchemaEdge) -> Unit,
     onEdgeCreationSrcSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationDstSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationPropertyChanged: (String, String) -> Unit,
     onEdgeCreationCreateClick: () -> Unit,
-    onEdgeCreationCancelClick: () -> Unit,
+
+    // Node Schema Creation Handlers
     onNodeSchemaCreationCreateClick: (NodeSchemaCreationState) -> Unit,
-    onNodeSchemaCreationCancelClick: () -> Unit,
-    onEdgeSchemaCreationCreateClick: (EdgeSchemaCreationState) -> Unit,
-    onEdgeSchemaCreationCancelClick: () -> Unit,
     onNodeSchemaTableNameChange: (String) -> Unit,
     onNodeSchemaPropertyChange: (Int, Property) -> Unit,
     onAddNodeSchemaProperty: () -> Unit,
     onRemoveNodeSchemaProperty: (Int) -> Unit,
+
+    // Edge Schema Creation Handlers
+    onEdgeSchemaCreationCreateClick: (EdgeSchemaCreationState) -> Unit,
     onEdgeSchemaTableNameChange: (String) -> Unit,
     onEdgeSchemaSrcTableChange: (String) -> Unit,
     onEdgeSchemaDstTableChange: (String) -> Unit,
     onEdgeSchemaPropertyChange: (Int, Property) -> Unit,
     onAddEdgeSchemaProperty: () -> Unit,
-    onRemoveEdgeSchemaProperty: (Int) -> Unit
+    onRemoveEdgeSchemaProperty: (Int) -> Unit,
+
+    // Node Edit Handlers
+    onNodeEditPropertyChange: (Int, String) -> Unit,
+
+    // Edge Edit Handlers
+    onEdgeEditPropertyChange: (Int, String) -> Unit,
+
+    // Node Schema Edit Handlers
+    onNodeSchemaEditLabelChange: (String) -> Unit,
+    onNodeSchemaEditPropertyChange: (Int, EditableSchemaProperty) -> Unit,
+    onNodeSchemaEditAddProperty: () -> Unit,
+    onNodeSchemaEditRemoveProperty: (Int) -> Unit,
+
+    // Edge Schema Edit Handlers
+    onEdgeSchemaEditLabelChange: (String) -> Unit,
+    onEdgeSchemaEditPropertyChange: (Int, EditableSchemaProperty) -> Unit,
+    onEdgeSchemaEditAddProperty: () -> Unit,
+    onEdgeSchemaEditRemoveProperty: (Int) -> Unit,
+
+    // Special "Create" string triggers
+    editItem: Any?
 ) {
+    // --- Creation Flows ---
     if (nodeCreationState != null) {
         CreateNodeView(
             nodeCreationState = nodeCreationState,
             onSchemaSelected = onNodeCreationSchemaSelected,
             onPropertyChanged = onNodeCreationPropertyChanged,
             onCreateClick = onNodeCreationCreateClick,
-            onCancelClick = onNodeCreationCancelClick
+            onCancelClick = onCancelClick
         )
     } else if (edgeCreationState != null) {
         CreateEdgeView(
@@ -66,7 +88,7 @@ fun EditItemView(
             onDstSelected = onEdgeCreationDstSelected,
             onPropertyChanged = onEdgeCreationPropertyChanged,
             onCreateClick = onEdgeCreationCreateClick,
-            onCancelClick = onEdgeCreationCancelClick
+            onCancelClick = onCancelClick
         )
     } else if (editItem == "CreateNodeSchema") {
         CreateNodeSchemaView(
@@ -76,7 +98,7 @@ fun EditItemView(
             onAddProperty = onAddNodeSchemaProperty,
             onRemoveProperty = onRemoveNodeSchemaProperty,
             onCreate = onNodeSchemaCreationCreateClick,
-            onCancel = onNodeSchemaCreationCancelClick
+            onCancel = onCancelClick
         )
     } else if (editItem == "CreateEdgeSchema") {
         CreateEdgeSchemaView(
@@ -88,102 +110,44 @@ fun EditItemView(
             onAddProperty = onAddEdgeSchemaProperty,
             onRemoveProperty = onRemoveEdgeSchemaProperty,
             onCreate = onEdgeSchemaCreationCreateClick,
-            onCancel = onEdgeSchemaCreationCancelClick
+            onCancel = onCancelClick
         )
-    } else if (editItem == null) {
-        Text("No item selected to edit.")
+        // --- Editing Flows ---
+    } else if (nodeEditState != null) {
+        EditNodeView(
+            state = nodeEditState,
+            onPropertyChange = onNodeEditPropertyChange,
+            onSave = onSaveClick,
+            onCancel = onCancelClick
+        )
+    } else if (edgeEditState != null) {
+        EditEdgeView(
+            state = edgeEditState,
+            onPropertyChange = onEdgeEditPropertyChange,
+            onSave = onSaveClick,
+            onCancel = onCancelClick
+        )
+    } else if (nodeSchemaEditState != null) {
+        EditNodeSchemaView(
+            state = nodeSchemaEditState,
+            onLabelChange = onNodeSchemaEditLabelChange,
+            onPropertyChange = onNodeSchemaEditPropertyChange,
+            onAddProperty = onNodeSchemaEditAddProperty,
+            onRemoveProperty = onNodeSchemaEditRemoveProperty,
+            onSave = onSaveClick,
+            onCancel = onCancelClick
+        )
+    } else if (edgeSchemaEditState != null) {
+        EditEdgeSchemaView(
+            state = edgeSchemaEditState,
+            onLabelChange = onEdgeSchemaEditLabelChange,
+            onPropertyChange = onEdgeSchemaEditPropertyChange,
+            onAddProperty = onEdgeSchemaEditAddProperty,
+            onRemoveProperty = onEdgeSchemaEditRemoveProperty,
+            onSave = onSaveClick,
+            onCancel = onCancelClick
+        )
     } else {
-        Column(modifier = Modifier.padding(8.dp)) {
-            when (editItem) {
-                is NodeTable -> {
-                    Text("Edit Node", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn {
-                        items(editItem.properties) { property ->
-                            Row {
-                                Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                Text(property.value.toString())
-                                if (property.isPrimaryKey) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("⭐", style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
-                }
-                is EdgeTable -> {
-                    Text("Edit Edge", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
-                    Text("Source: ${editItem.src.label} (${editItem.src.primarykeyProperty.value})")
-                    Text("Destination: ${editItem.dst.label} (${editItem.dst.primarykeyProperty.value})")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Properties are nullable for edges, so check before displaying
-                    editItem.properties?.let { properties ->
-                        if (properties.isNotEmpty()) {
-                            Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                            LazyColumn {
-                                items(properties) { property ->
-                                    Row {
-                                        Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                        Text(property.value.toString())
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                is SchemaNode -> {
-                    Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn {
-                        items(editItem.properties) { property ->
-                            Row {
-                                Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                Text(property.valueDataType.toString())
-                                if (property.isPrimaryKey) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("⭐", style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
-                }
-                is SchemaEdge -> {
-                    Text("Edit Edge Schema", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Label: ${editItem.label}", fontWeight = FontWeight.Bold)
-                    Text("Source: ${editItem.srcLabel}")
-                    Text("Destination: ${editItem.dstLabel}")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Properties are nullable for edges, so check before displaying
-                    editItem.properties.let { properties ->
-                        if (properties.isNotEmpty()) {
-                            Text("Properties:", style = MaterialTheme.typography.titleMedium)
-                            LazyColumn {
-                                items(properties) { property ->
-                                    Row {
-                                        Text("${property.key}: ", fontWeight = FontWeight.SemiBold)
-                                        Text(property.valueDataType.toString())
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onClearSelection) {
-                Text("Clear")
-            }
-        }
+        Text("No item selected to edit.")
     }
 }

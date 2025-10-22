@@ -5,8 +5,12 @@ private fun String.withBackticks(): String {
     return if (reservedWords.contains(this.uppercase())) "`$this`" else this
 }
 
-private fun formatPkValue(value: Any?): String {
-    return if (value is String) "'$value'" else value.toString()
+private fun formatValue(value: Any?): String {
+    return when (value) {
+        is String -> "'${value.replace("'", "\\'")}'" // Escape single quotes
+        null -> "NULL"
+        else -> value.toString()
+    }
 }
 
 // --- Create Functions ---
@@ -15,7 +19,7 @@ private fun formatPkValue(value: Any?): String {
 suspend fun createNode(dbService: KuzuDBService, node: NodeTable) {
     val label = node.label
     val propertiesString = node.properties.joinToString(", ") {
-        "${it.key.withBackticks()}: ${formatPkValue(it.value)}"
+        "${it.key.withBackticks()}: ${formatValue(it.value)}"
     }
     val query = "CREATE (n:${label.withBackticks()} {${propertiesString}})"
     dbService.executeQuery(query)
@@ -27,16 +31,20 @@ suspend fun createEdge(dbService: KuzuDBService, edge: EdgeTable) {
     val src = edge.src
     val dst = edge.dst
 
-    val propertiesString = if (edge.properties?.isNotEmpty() == true) {
-        "{${edge.properties.joinToString(", ") { "${it.key.withBackticks()}: ${formatPkValue(it.value)}" }}}"
+    // FIX: Read mutable property into a local variable
+    val edgeProperties = edge.properties
+
+    val propertiesString = if (edgeProperties?.isNotEmpty() == true) {
+        // Use the local variable here
+        "{${edgeProperties.joinToString(", ") { "${it.key.withBackticks()}: ${formatValue(it.value)}" }}}"
     } else {
         ""
     }
 
     val srcPk = src.primarykeyProperty
     val dstPk = dst.primarykeyProperty
-    val formattedSrcPkValue = formatPkValue(srcPk.value)
-    val formattedDstPkValue = formatPkValue(dstPk.value)
+    val formattedSrcPkValue = formatValue(srcPk.value)
+    val formattedDstPkValue = formatValue(dstPk.value)
 
     val query = """
         MATCH (a:${src.label.withBackticks()}), (b:${dst.label.withBackticks()})
@@ -157,7 +165,7 @@ suspend fun listEdges(dbService: KuzuDBService): List<EdgeDisplayItem> {
 suspend fun getNode(dbService: KuzuDBService, item: NodeDisplayItem): NodeTable? {
     val pkKey = item.primarykeyProperty.key
     val pkValue = item.primarykeyProperty.value
-    val formattedPkValue = formatPkValue(pkValue)
+    val formattedPkValue = formatValue(pkValue)
 
     val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue RETURN n"
     val result = dbService.executeQuery(query)
@@ -177,8 +185,8 @@ suspend fun getNode(dbService: KuzuDBService, item: NodeDisplayItem): NodeTable?
 suspend fun getEdge(dbService: KuzuDBService, item: EdgeDisplayItem): EdgeTable? {
     val srcPk = item.src.primarykeyProperty
     val dstPk = item.dst.primarykeyProperty
-    val formattedSrcPkValue = formatPkValue(srcPk.value)
-    val formattedDstPkValue = formatPkValue(dstPk.value)
+    val formattedSrcPkValue = formatValue(srcPk.value)
+    val formattedDstPkValue = formatValue(dstPk.value)
 
     val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
             "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
@@ -201,11 +209,80 @@ suspend fun getEdge(dbService: KuzuDBService, item: EdgeDisplayItem): EdgeTable?
 
 // --- Update Functions ---
 
+suspend fun alterNodeProperties(dbService: KuzuDBService, label: String, pk: DisplayItemProperty, propertiesToSet: List<TableProperty>) {
+    if (propertiesToSet.isEmpty()) return
+    val pkKey = pk.key.withBackticks()
+    val pkValue = formatValue(pk.value)
+    val setString = propertiesToSet.joinToString(", ") {
+        "n.${it.key.withBackticks()} = ${formatValue(it.value)}"
+    }
+    val query = "MATCH (n:${label.withBackticks()}) WHERE n.$pkKey = $pkValue SET $setString"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterEdgeProperties(dbService: KuzuDBService, item: EdgeDisplayItem, propertiesToSet: List<TableProperty>) {
+    if (propertiesToSet.isEmpty()) return
+    val srcPk = item.src.primarykeyProperty
+    val dstPk = item.dst.primarykeyProperty
+    val formattedSrcPkValue = formatValue(srcPk.value)
+    val formattedDstPkValue = formatValue(dstPk.value)
+
+    val setString = propertiesToSet.joinToString(", ") {
+        "r.${it.key.withBackticks()} = ${formatValue(it.value)}"
+    }
+
+    val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
+            "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +
+            "SET $setString"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterNodeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} ADD ${propertyName.withBackticks()} $propertyType"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterNodeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} DROP ${propertyName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterNodeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} RENAME ${oldName.withBackticks()} TO ${newName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterNodeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
+    val query = "ALTER TABLE ${oldName.withBackticks()} RENAME TO ${newName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterEdgeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} ADD ${propertyName.withBackticks()} $propertyType"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterEdgeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} DROP ${propertyName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterEdgeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
+    val query = "ALTER TABLE ${tableName.withBackticks()} RENAME ${oldName.withBackticks()} TO ${newName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+suspend fun alterEdgeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
+    val query = "ALTER TABLE ${oldName.withBackticks()} RENAME TO ${newName.withBackticks()}"
+    dbService.executeQuery(query)
+}
+
+
 // --- Delete Functions ---
 suspend fun deleteNode(dbService: KuzuDBService, item: NodeDisplayItem) {
     val pkKey = item.primarykeyProperty.key
     val pkValue = item.primarykeyProperty.value
-    val formattedPkValue = formatPkValue(pkValue)
+    val formattedPkValue = formatValue(pkValue)
     val query = "MATCH (n:${item.label.withBackticks()}) WHERE n.${pkKey.withBackticks()} = $formattedPkValue DETACH DELETE n"
     dbService.executeQuery(query)
 }
@@ -213,8 +290,8 @@ suspend fun deleteNode(dbService: KuzuDBService, item: NodeDisplayItem) {
 suspend fun deleteEdge(dbService: KuzuDBService, item: EdgeDisplayItem) {
     val srcPk = item.src.primarykeyProperty
     val dstPk = item.dst.primarykeyProperty
-    val formattedSrcPkValue = formatPkValue(srcPk.value)
-    val formattedDstPkValue = formatPkValue(dstPk.value)
+    val formattedSrcPkValue = formatValue(srcPk.value)
+    val formattedDstPkValue = formatValue(dstPk.value)
 
     val query = "MATCH (a:${item.src.label.withBackticks()})-[r:${item.label.withBackticks()}]->(b:${item.dst.label.withBackticks()}) " +
             "WHERE a.${srcPk.key.withBackticks()} = $formattedSrcPkValue AND b.${dstPk.key.withBackticks()} = $formattedDstPkValue " +

@@ -7,6 +7,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.NodeTable
+import com.tau.cryptic_ui_v0.EdgeTable
+import com.tau.cryptic_ui_v0.NodeSchemaEditState
+import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.EdgeSchemaEditState
+import com.tau.cryptic_ui_v0.SchemaEdge
 import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
 import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
 import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
@@ -28,11 +34,17 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
 
 
-    // Collect states from CreationViewModel
-    val nodeCreationState by viewModel.creationViewModel.nodeCreationState.collectAsState()
-    val edgeCreationState by viewModel.creationViewModel.edgeCreationState.collectAsState()
-    val nodeSchemaCreationState by viewModel.creationViewModel.nodeSchemaCreationState.collectAsState()
-    val edgeSchemaCreationState by viewModel.creationViewModel.edgeSchemaCreationState.collectAsState()
+    // Collect states from EditCreateViewModel
+    val nodeCreationState by viewModel.editCreateViewModel.nodeCreationState.collectAsState()
+    val edgeCreationState by viewModel.editCreateViewModel.edgeCreationState.collectAsState()
+    val nodeSchemaCreationState by viewModel.editCreateViewModel.nodeSchemaCreationState.collectAsState()
+    val edgeSchemaCreationState by viewModel.editCreateViewModel.edgeSchemaCreationState.collectAsState()
+
+    // Collect edit states from EditCreateViewModel
+    val nodeEditState by viewModel.editCreateViewModel.nodeEditState.collectAsState()
+    val edgeEditState by viewModel.editCreateViewModel.edgeEditState.collectAsState()
+    val nodeSchemaEditState by viewModel.editCreateViewModel.nodeSchemaEditState.collectAsState()
+    val edgeSchemaEditState by viewModel.editCreateViewModel.edgeSchemaEditState.collectAsState()
 
 
     // Data Tabs
@@ -40,6 +52,42 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
     // View Tabs
     val selectedViewTab by viewModel.selectedViewTab.collectAsState()
+
+    // --- Unified Save/Cancel Handlers ---
+
+    val onSave: () -> Unit = {
+        val currentState = viewModel.editCreateViewModel.getCurrentEditState()
+        viewModel.metadataViewModel.saveEditedItem(
+            editedState = currentState,
+            onFinished = {
+                // This code now runs *after* the save is complete
+                viewModel.editCreateViewModel.cancelAllEditing() // Clear the *edited* state
+
+                // Navigate back to the correct tab
+                val targetTab = when (currentState) {
+                    is NodeTable, is EdgeTable -> DataViewTabs.METADATA
+                    is NodeSchemaEditState, is EdgeSchemaEditState -> DataViewTabs.SCHEMA
+                    else -> DataViewTabs.METADATA
+                }
+                viewModel.selectDataTab(targetTab)
+            }
+        )
+    }
+
+    val onCancel: () -> Unit = {
+        val originalItem = viewModel.metadataViewModel.itemToEdit.value
+        viewModel.editCreateViewModel.cancelAllEditing() // Clear edited state
+        viewModel.metadataViewModel.clearSelectedItem() // Clear original state
+
+        // Navigate back to the correct tab based on what *was* being edited
+        val targetTab = when (originalItem) {
+            is NodeTable, is EdgeTable -> DataViewTabs.METADATA
+            is SchemaNode, is SchemaEdge -> DataViewTabs.SCHEMA
+            is String -> DataViewTabs.SCHEMA // For "Create..." strings
+            else -> DataViewTabs.METADATA
+        }
+        viewModel.selectDataTab(targetTab)
+    }
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -140,12 +188,28 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); println("Item: $it is being selected"); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onEditNodeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                if (fullItem is NodeTable) {
+                                    viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
+                        onEditEdgeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                if (fullItem is EdgeTable) {
+                                    viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
                         onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                        onAddNodeClick = { viewModel.creationViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeClick = { viewModel.creationViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -153,54 +217,97 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEditNodeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onEditEdgeClick = { viewModel.metadataViewModel.setItemToEdit(it); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onEditNodeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                if (fullItem is SchemaNode) {
+                                    viewModel.editCreateViewModel.initiateNodeSchemaEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
+                        onEditEdgeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                if (fullItem is SchemaEdge) {
+                                    viewModel.editCreateViewModel.initiateEdgeSchemaEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
                         onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchemaNode(it) },
                         onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchemaEdge(it) },
-                        onAddNodeSchemaClick = { viewModel.creationViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeSchemaClick = { viewModel.creationViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.EDIT -> EditItemView(
-                        editItem = itemToEdit,
+                        // Creation States
                         nodeCreationState = nodeCreationState,
                         edgeCreationState = edgeCreationState,
                         nodeSchemaCreationState = nodeSchemaCreationState,
                         edgeSchemaCreationState = edgeSchemaCreationState,
-                        onClearSelection = { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.METADATA) },
-                        onNodeCreationSchemaSelected = { viewModel.creationViewModel.updateNodeCreationSchema(it) },
+                        // Edit States
+                        nodeEditState = nodeEditState,
+                        edgeEditState = edgeEditState,
+                        nodeSchemaEditState = nodeSchemaEditState,
+                        edgeSchemaEditState = edgeSchemaEditState,
+
+                        // Event Handlers
+                        onSaveClick = onSave,
+                        onCancelClick = onCancel,
+
+                        // Node Creation Handlers
+                        onNodeCreationSchemaSelected = { viewModel.editCreateViewModel.updateNodeCreationSchema(it) },
                         onNodeCreationPropertyChanged = { key, value ->
-                            viewModel.creationViewModel.updateNodeCreationProperty(
-                                key,
-                                value
-                            )
+                            viewModel.editCreateViewModel.updateNodeCreationProperty(key, value)
                         },
-                        onNodeCreationCreateClick = { viewModel.creationViewModel.createNodeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
-                        onNodeCreationCancelClick = { viewModel.creationViewModel.cancelNodeCreation(); viewModel.selectDataTab(DataViewTabs.METADATA) },
-                        onEdgeCreationSchemaSelected = { viewModel.creationViewModel.updateEdgeCreationSchema(it) },
-                        onEdgeCreationSrcSelected = { viewModel.creationViewModel.updateEdgeCreationSrc(it) },
-                        onEdgeCreationDstSelected = { viewModel.creationViewModel.updateEdgeCreationDst(it) },
+                        onNodeCreationCreateClick = { viewModel.editCreateViewModel.createNodeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
+
+                        // Edge Creation Handlers
+                        onEdgeCreationSchemaSelected = { viewModel.editCreateViewModel.updateEdgeCreationSchema(it) },
+                        onEdgeCreationSrcSelected = { viewModel.editCreateViewModel.updateEdgeCreationSrc(it) },
+                        onEdgeCreationDstSelected = { viewModel.editCreateViewModel.updateEdgeCreationDst(it) },
                         onEdgeCreationPropertyChanged = { key, value ->
-                            viewModel.creationViewModel.updateEdgeCreationProperty(
-                                key,
-                                value
-                            )
+                            viewModel.editCreateViewModel.updateEdgeCreationProperty(key, value)
                         },
-                        onEdgeCreationCreateClick = { viewModel.creationViewModel.createEdgeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
-                        onEdgeCreationCancelClick = { viewModel.creationViewModel.cancelEdgeCreation(); viewModel.selectDataTab(DataViewTabs.METADATA) },
-                        onNodeSchemaCreationCreateClick = { viewModel.creationViewModel.createNodeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
-                        onNodeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.SCHEMA) },
-                        onEdgeSchemaCreationCreateClick = { viewModel.creationViewModel.createEdgeSchemaFromState(it) { viewModel.metadataViewModel.clearSelectedItem(); viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
-                        onEdgeSchemaCreationCancelClick = { viewModel.creationViewModel.cancelEdgeSchemaCreationFromState(); viewModel.selectDataTab(DataViewTabs.SCHEMA) },
-                        onNodeSchemaTableNameChange = { viewModel.creationViewModel.onNodeSchemaTableNameChange(it) },
-                        onNodeSchemaPropertyChange = { index, property -> viewModel.creationViewModel.onNodeSchemaPropertyChange(index, property) },
-                        onAddNodeSchemaProperty = { viewModel.creationViewModel.onAddNodeSchemaProperty() },
-                        onRemoveNodeSchemaProperty = { viewModel.creationViewModel.onRemoveNodeSchemaProperty(it) },
-                        onEdgeSchemaTableNameChange = { viewModel.creationViewModel.onEdgeSchemaTableNameChange(it) },
-                        onEdgeSchemaSrcTableChange = { viewModel.creationViewModel.onEdgeSchemaSrcTableChange(it) },
-                        onEdgeSchemaDstTableChange = { viewModel.creationViewModel.onEdgeSchemaDstTableChange(it) },
-                        onEdgeSchemaPropertyChange = { index, property -> viewModel.creationViewModel.onEdgeSchemaPropertyChange(index, property) },
-                        onAddEdgeSchemaProperty = { viewModel.creationViewModel.onAddEdgeSchemaProperty() },
-                        onRemoveEdgeSchemaProperty = { viewModel.creationViewModel.onRemoveEdgeSchemaProperty(it) }
+                        onEdgeCreationCreateClick = { viewModel.editCreateViewModel.createEdgeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
+
+                        // Node Schema Creation Handlers
+                        onNodeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createNodeSchemaFromState(it) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onNodeSchemaTableNameChange = { viewModel.editCreateViewModel.onNodeSchemaTableNameChange(it) },
+                        onNodeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onNodeSchemaPropertyChange(index, property) },
+                        onAddNodeSchemaProperty = { viewModel.editCreateViewModel.onAddNodeSchemaProperty() },
+                        onRemoveNodeSchemaProperty = { viewModel.editCreateViewModel.onRemoveNodeSchemaProperty(it) },
+
+                        // Edge Schema Creation Handlers
+                        onEdgeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createEdgeSchemaFromState(it) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onEdgeSchemaTableNameChange = { viewModel.editCreateViewModel.onEdgeSchemaTableNameChange(it) },
+                        onEdgeSchemaSrcTableChange = { viewModel.editCreateViewModel.onEdgeSchemaSrcTableChange(it) },
+                        onEdgeSchemaDstTableChange = { viewModel.editCreateViewModel.onEdgeSchemaDstTableChange(it) },
+                        onEdgeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onEdgeSchemaPropertyChange(index, property) },
+                        onAddEdgeSchemaProperty = { viewModel.editCreateViewModel.onAddEdgeSchemaProperty() },
+                        onRemoveEdgeSchemaProperty = { viewModel.editCreateViewModel.onRemoveEdgeSchemaProperty(it) },
+
+                        // Node Edit Handlers
+                        onNodeEditPropertyChange = { index, value -> viewModel.editCreateViewModel.updateNodeEditProperty(index, value) },
+
+                        // Edge Edit Handlers
+                        onEdgeEditPropertyChange = { index, value -> viewModel.editCreateViewModel.updateEdgeEditProperty(index, value) },
+
+                        // Node Schema Edit Handlers
+                        onNodeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateNodeSchemaEditLabel(it) },
+                        onNodeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateNodeSchemaEditProperty(index, prop) },
+                        onNodeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateNodeSchemaEditAddProperty() },
+                        onNodeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateNodeSchemaEditRemoveProperty(it) },
+
+                        // Edge Schema Edit Handlers
+                        onEdgeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateEdgeSchemaEditLabel(it) },
+                        onEdgeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateEdgeSchemaEditProperty(index, prop) },
+                        onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
+                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
+
+                        // Special "Create" string triggers
+                        editItem = itemToEdit
                     )
                 }
             }
