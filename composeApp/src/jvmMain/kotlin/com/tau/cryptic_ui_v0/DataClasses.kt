@@ -1,5 +1,6 @@
 package com.tau.cryptic_ui_v0
 
+import androidx.compose.ui.graphics.Color
 import com.kuzudb.DataType as KuzuDataType
 
 data class NodeDisplayItem(
@@ -168,3 +169,8 @@ data class Property(
     val type: String = "STRING",
     val isPrimaryKey: Boolean = false
 )
+
+/**
+ * Stores the generated hex color and its raw RGB components.
+ */
+data class ColorInfo(val hex: String, val rgb: IntArray, val composeColor: Color, val composeFontColor: Color)

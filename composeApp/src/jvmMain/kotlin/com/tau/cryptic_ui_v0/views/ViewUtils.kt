@@ -1,11 +1,7 @@
 package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.ui.graphics.Color
-
-/**
- * Stores the generated hex color and its raw RGB components.
- */
-data class ColorInfo(val hex: String, val rgb: IntArray, val composeColor: Color, val composeFontColor: Color)
+import com.tau.cryptic_ui_v0.ColorInfo
 
 /**
  * Generates a consistent hex color string and RGB array from a label string.

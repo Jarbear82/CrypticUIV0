@@ -46,7 +46,7 @@ fun App() {
                     //
                     settings {
                         windowlessRenderingEnabled = false
-                        noSandbox = true // <-- This is the key fix
+                        noSandbox = true
                         browserSubProcessPath = File(installDir, "jcef_helper").canonicalPath
                         resourcesDirPath = installDir.canonicalPath
                         localesDirPath = File(installDir, "locales").canonicalPath
