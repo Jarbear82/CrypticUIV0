@@ -133,7 +133,7 @@ private enum class DisplayContent { HELLO_WORLD, GOOGLE, VIS_EXAMPLE, DYNAMIC_VI
 private fun serializeNodes(nodes: List<NodeDisplayItem>): String {
     return nodes.joinToString(prefix = "[", postfix = "]") {
         // Use primary key value (converted to string) as the unique ID for vis.js
-        val id = it.primarykeyProperty.value?.toString() ?: "null_${nodes.indexOf(it)}" // Fallback ID
+        val id = "${it.label}_${it.primarykeyProperty.value?.toString()}"
         val nodeLabel = it.label // Get the base label for hashing
         val displayLabel = "${it.label}\\n(${it.primarykeyProperty.value})".replace("'", "\\'") // Escape single quotes for JS
 
@@ -151,8 +151,8 @@ private fun serializeNodes(nodes: List<NodeDisplayItem>): String {
 
 private fun serializeEdges(edges: List<EdgeDisplayItem>): String {
     return edges.joinToString(prefix = "[", postfix = "]") {
-        val fromId = it.src.primarykeyProperty.value?.toString() ?: "null_src_${edges.indexOf(it)}"
-        val toId = it.dst.primarykeyProperty.value?.toString() ?: "null_dst_${edges.indexOf(it)}"
+        val fromId = "${it.src.label}_${it.src.primarykeyProperty.value?.toString()}"
+        val toId = "${it.dst.label}_${it.dst.primarykeyProperty.value?.toString()}"
         val label = it.label.replace("'", "\\'")
 
         // --- Color edge and label based on edge label ---
