@@ -158,8 +158,8 @@ class MetadataViewModel(
         println("DEBUG: Found ${changedProperties.size} changed properties for node '${original.label}'.")
 
         if (changedProperties.isNotEmpty()) {
-            println("DEBUG: Executing alterNodeProperties.")
-            alterNodeProperties(dbService, original.label, pkDisplay, changedProperties)
+            println("DEBUG: Executing updateNodeProperties.")
+            updateNodeProperties(dbService, original.label, pkDisplay, changedProperties)
         }
     }
 
@@ -167,9 +167,9 @@ class MetadataViewModel(
         val changedProperties = edited.properties?.filter { it.valueChanged } ?: emptyList()
         println("DEBUG: Found ${changedProperties.size} changed properties for edge '${original.label}'.")
         if (changedProperties.isNotEmpty()) {
-            println("DEBUG: Executing alterEdgeProperties.")
+            println("DEBUG: Executing updateEdgeProperties.")
             val edgeDisplay = EdgeDisplayItem(original.label, original.src, original.dst)
-            alterEdgeProperties(dbService, edgeDisplay, changedProperties)
+            updateEdgeProperties(dbService, edgeDisplay, changedProperties)
         }
     }
 
@@ -181,7 +181,7 @@ class MetadataViewModel(
         // Handle table rename last, as it changes the reference
         if (originalLabel != currentLabel) {
             println("DEBUG: Renaming table: $originalLabel -> $currentLabel")
-            alterNodeSchemaRenameTable(dbService, originalLabel, currentLabel)
+            updateNodeSchemaRenameTable(dbService, originalLabel, currentLabel)
             activeLabel = currentLabel // Use the new label for all subsequent operations
         }
 
@@ -191,15 +191,15 @@ class MetadataViewModel(
                 when {
                     prop.isDeleted -> {
                         println("DEBUG: Dropping property: ${prop.originalKey} from table $activeLabel")
-                        alterNodeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
+                        updateNodeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
                     }
                     prop.isNew -> {
                         println("DEBUG: Adding property: ${prop.key} ${prop.valueDataType} to table $activeLabel")
-                        alterNodeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
+                        updateNodeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
                     }
                     prop.originalKey != prop.key -> {
                         println("DEBUG: Renaming property: ${prop.originalKey} -> ${prop.key} in table $activeLabel")
-                        alterNodeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
+                        updateNodeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
                     }
                     // TODO: Add data type change support when Kuzu supports it
                 }
@@ -216,7 +216,7 @@ class MetadataViewModel(
         // Rename table first
         if (originalLabel != currentLabel) {
             println("DEBUG: Renaming edge table: $originalLabel -> $currentLabel")
-            alterEdgeSchemaRenameTable(dbService, originalLabel, currentLabel)
+            updateEdgeSchemaRenameTable(dbService, originalLabel, currentLabel)
             activeLabel = currentLabel
         }
 
@@ -226,15 +226,15 @@ class MetadataViewModel(
                 when {
                     prop.isDeleted -> {
                         println("DEBUG: Dropping edge property: ${prop.originalKey} from table $activeLabel")
-                        alterEdgeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
+                        updateEdgeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
                     }
                     prop.isNew -> {
                         println("DEBUG: Adding edge property: ${prop.key} ${prop.valueDataType} to table $activeLabel")
-                        alterEdgeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
+                        updateEdgeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
                     }
                     prop.originalKey != prop.key -> {
                         println("DEBUG: Renaming edge property: ${prop.originalKey} -> ${prop.key} in table $activeLabel")
-                        alterEdgeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
+                        updateEdgeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
                     }
                 }
             }

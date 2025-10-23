@@ -209,7 +209,7 @@ suspend fun getEdge(dbService: KuzuDBService, item: EdgeDisplayItem): EdgeTable?
 
 // --- Update Functions ---
 
-suspend fun alterNodeProperties(dbService: KuzuDBService, label: String, pk: DisplayItemProperty, propertiesToSet: List<TableProperty>) {
+suspend fun updateNodeProperties(dbService: KuzuDBService, label: String, pk: DisplayItemProperty, propertiesToSet: List<TableProperty>) {
     if (propertiesToSet.isEmpty()) return
     val pkKey = pk.key.withBackticks()
     val pkValue = formatValue(pk.value)
@@ -220,7 +220,7 @@ suspend fun alterNodeProperties(dbService: KuzuDBService, label: String, pk: Dis
     dbService.executeQuery(query)
 }
 
-suspend fun alterEdgeProperties(dbService: KuzuDBService, item: EdgeDisplayItem, propertiesToSet: List<TableProperty>) {
+suspend fun updateEdgeProperties(dbService: KuzuDBService, item: EdgeDisplayItem, propertiesToSet: List<TableProperty>) {
     if (propertiesToSet.isEmpty()) return
     val srcPk = item.src.primarykeyProperty
     val dstPk = item.dst.primarykeyProperty
@@ -237,42 +237,42 @@ suspend fun alterEdgeProperties(dbService: KuzuDBService, item: EdgeDisplayItem,
     dbService.executeQuery(query)
 }
 
-suspend fun alterNodeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
+suspend fun updateNodeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} ADD ${propertyName.withBackticks()} $propertyType"
     dbService.executeQuery(query)
 }
 
-suspend fun alterNodeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
+suspend fun updateNodeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} DROP ${propertyName.withBackticks()}"
     dbService.executeQuery(query)
 }
 
-suspend fun alterNodeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
+suspend fun updateNodeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} RENAME ${oldName.withBackticks()} TO ${newName.withBackticks()}"
     dbService.executeQuery(query)
 }
 
-suspend fun alterNodeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
+suspend fun updateNodeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
     val query = "ALTER TABLE ${oldName.withBackticks()} RENAME TO ${newName.withBackticks()}"
     dbService.executeQuery(query)
 }
 
-suspend fun alterEdgeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
+suspend fun updateEdgeSchemaAddProperty(dbService: KuzuDBService, tableName: String, propertyName: String, propertyType: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} ADD ${propertyName.withBackticks()} $propertyType"
     dbService.executeQuery(query)
 }
 
-suspend fun alterEdgeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
+suspend fun updateEdgeSchemaDropProperty(dbService: KuzuDBService, tableName: String, propertyName: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} DROP ${propertyName.withBackticks()}"
     dbService.executeQuery(query)
 }
 
-suspend fun alterEdgeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
+suspend fun updateEdgeSchemaRenameProperty(dbService: KuzuDBService, tableName: String, oldName: String, newName: String) {
     val query = "ALTER TABLE ${tableName.withBackticks()} RENAME ${oldName.withBackticks()} TO ${newName.withBackticks()}"
     dbService.executeQuery(query)
 }
 
-suspend fun alterEdgeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
+suspend fun updateEdgeSchemaRenameTable(dbService: KuzuDBService, oldName: String, newName: String) {
     val query = "ALTER TABLE ${oldName.withBackticks()} RENAME TO ${newName.withBackticks()}"
     dbService.executeQuery(query)
 }

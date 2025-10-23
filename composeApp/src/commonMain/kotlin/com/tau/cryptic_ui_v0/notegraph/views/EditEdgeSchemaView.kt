@@ -39,7 +39,7 @@ fun EditEdgeSchemaView(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        // Show original src/dst as read-only, as Kuzu doesn't support altering them
+        // Show original src/dst as read-only, as Kuzu doesn't support updating them
         OutlinedTextField(
             value = state.originalSchema.srcLabel,
             onValueChange = {},
