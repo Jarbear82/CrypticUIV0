@@ -34,17 +34,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
 
 
-    // Collect states from EditCreateViewModel
-    val nodeCreationState by viewModel.editCreateViewModel.nodeCreationState.collectAsState()
-    val edgeCreationState by viewModel.editCreateViewModel.edgeCreationState.collectAsState()
-    val nodeSchemaCreationState by viewModel.editCreateViewModel.nodeSchemaCreationState.collectAsState()
-    val edgeSchemaCreationState by viewModel.editCreateViewModel.edgeSchemaCreationState.collectAsState()
-
-    // Collect edit states from EditCreateViewModel
-    val nodeEditState by viewModel.editCreateViewModel.nodeEditState.collectAsState()
-    val edgeEditState by viewModel.editCreateViewModel.edgeEditState.collectAsState()
-    val nodeSchemaEditState by viewModel.editCreateViewModel.nodeSchemaEditState.collectAsState()
-    val edgeSchemaEditState by viewModel.editCreateViewModel.edgeSchemaEditState.collectAsState()
+    // --- COLLECT THE NEW CONSOLIDATED STATE ---
+    val editScreenState by viewModel.editCreateViewModel.editScreenState.collectAsState()
+    // (Old individual states are no longer needed)
 
 
     // Data Tabs
@@ -241,16 +233,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.EDIT -> EditItemView(
-                        // Creation States
-                        nodeCreationState = nodeCreationState,
-                        edgeCreationState = edgeCreationState,
-                        nodeSchemaCreationState = nodeSchemaCreationState,
-                        edgeSchemaCreationState = edgeSchemaCreationState,
-                        // Edit States
-                        nodeEditState = nodeEditState,
-                        edgeEditState = edgeEditState,
-                        nodeSchemaEditState = nodeSchemaEditState,
-                        edgeSchemaEditState = edgeSchemaEditState,
+                        // --- PASS THE NEW STATE ---
+                        editScreenState = editScreenState,
 
                         // Event Handlers
                         onSaveClick = onSave,
@@ -273,14 +257,14 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeCreationCreateClick = { viewModel.editCreateViewModel.createEdgeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
 
                         // Node Schema Creation Handlers
-                        onNodeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createNodeSchemaFromState(it) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onNodeSchemaCreationCreateClick = { state -> viewModel.editCreateViewModel.createNodeSchemaFromState(state) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
                         onNodeSchemaTableNameChange = { viewModel.editCreateViewModel.onNodeSchemaTableNameChange(it) },
                         onNodeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onNodeSchemaPropertyChange(index, property) },
                         onAddNodeSchemaProperty = { viewModel.editCreateViewModel.onAddNodeSchemaProperty() },
                         onRemoveNodeSchemaProperty = { viewModel.editCreateViewModel.onRemoveNodeSchemaProperty(it) },
 
                         // Edge Schema Creation Handlers
-                        onEdgeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createEdgeSchemaFromState(it) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onEdgeSchemaCreationCreateClick = { state -> viewModel.editCreateViewModel.createEdgeSchemaFromState(state) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
                         onEdgeSchemaTableNameChange = { viewModel.editCreateViewModel.onEdgeSchemaTableNameChange(it) },
                         onEdgeSchemaSrcTableChange = { viewModel.editCreateViewModel.onEdgeSchemaSrcTableChange(it) },
                         onEdgeSchemaDstTableChange = { viewModel.editCreateViewModel.onEdgeSchemaDstTableChange(it) },
@@ -304,10 +288,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateEdgeSchemaEditLabel(it) },
                         onEdgeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateEdgeSchemaEditProperty(index, prop) },
                         onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
-                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
-
-                        // Special "Create" string triggers
-                        editItem = itemToEdit
+                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) }
                     )
                 }
             }

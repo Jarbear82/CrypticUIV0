@@ -6,17 +6,8 @@ import com.tau.cryptic_ui_v0.*
 
 @Composable
 fun EditItemView(
-    // Creation States
-    nodeCreationState: NodeCreationState?,
-    edgeCreationState: EdgeCreationState?,
-    nodeSchemaCreationState: NodeSchemaCreationState,
-    edgeSchemaCreationState: EdgeSchemaCreationState,
-
-    // Editing States
-    nodeEditState: NodeTable?,
-    edgeEditState: EdgeTable?,
-    nodeSchemaEditState: NodeSchemaEditState?,
-    edgeSchemaEditState: EdgeSchemaEditState?,
+    // The single state object that drives this view
+    editScreenState: EditScreenState,
 
     // Event Handlers
     onSaveClick: () -> Unit,
@@ -66,88 +57,94 @@ fun EditItemView(
     onEdgeSchemaEditLabelChange: (String) -> Unit,
     onEdgeSchemaEditPropertyChange: (Int, EditableSchemaProperty) -> Unit,
     onEdgeSchemaEditAddProperty: () -> Unit,
-    onEdgeSchemaEditRemoveProperty: (Int) -> Unit,
-
-    // Special "Create" string triggers
-    editItem: Any?
+    onEdgeSchemaEditRemoveProperty: (Int) -> Unit
 ) {
-    // --- Creation Flows ---
-    if (nodeCreationState != null) {
-        CreateNodeView(
-            nodeCreationState = nodeCreationState,
-            onSchemaSelected = onNodeCreationSchemaSelected,
-            onPropertyChanged = onNodeCreationPropertyChanged,
-            onCreateClick = onNodeCreationCreateClick,
-            onCancelClick = onCancelClick
-        )
-    } else if (edgeCreationState != null) {
-        CreateEdgeView(
-            edgeCreationState = edgeCreationState,
-            onSchemaSelected = onEdgeCreationSchemaSelected,
-            onSrcSelected = onEdgeCreationSrcSelected,
-            onDstSelected = onEdgeCreationDstSelected,
-            onPropertyChanged = onEdgeCreationPropertyChanged,
-            onCreateClick = onEdgeCreationCreateClick,
-            onCancelClick = onCancelClick
-        )
-    } else if (editItem == "CreateNodeSchema") {
-        CreateNodeSchemaView(
-            state = nodeSchemaCreationState,
-            onTableNameChange = onNodeSchemaTableNameChange,
-            onPropertyChange = onNodeSchemaPropertyChange,
-            onAddProperty = onAddNodeSchemaProperty,
-            onRemoveProperty = onRemoveNodeSchemaProperty,
-            onCreate = onNodeSchemaCreationCreateClick,
-            onCancel = onCancelClick
-        )
-    } else if (editItem == "CreateEdgeSchema") {
-        CreateEdgeSchemaView(
-            state = edgeSchemaCreationState,
-            onTableNameChange = onEdgeSchemaTableNameChange,
-            onSrcTableChange = onEdgeSchemaSrcTableChange,
-            onDstTableChange = onEdgeSchemaDstTableChange,
-            onPropertyChange = onEdgeSchemaPropertyChange,
-            onAddProperty = onAddEdgeSchemaProperty,
-            onRemoveProperty = onRemoveEdgeSchemaProperty,
-            onCreate = onEdgeSchemaCreationCreateClick,
-            onCancel = onCancelClick
-        )
-        // --- Editing Flows ---
-    } else if (nodeEditState != null) {
-        EditNodeView(
-            state = nodeEditState,
-            onPropertyChange = onNodeEditPropertyChange,
-            onSave = onSaveClick,
-            onCancel = onCancelClick
-        )
-    } else if (edgeEditState != null) {
-        EditEdgeView(
-            state = edgeEditState,
-            onPropertyChange = onEdgeEditPropertyChange,
-            onSave = onSaveClick,
-            onCancel = onCancelClick
-        )
-    } else if (nodeSchemaEditState != null) {
-        EditNodeSchemaView(
-            state = nodeSchemaEditState,
-            onLabelChange = onNodeSchemaEditLabelChange,
-            onPropertyChange = onNodeSchemaEditPropertyChange,
-            onAddProperty = onNodeSchemaEditAddProperty,
-            onRemoveProperty = onNodeSchemaEditRemoveProperty,
-            onSave = onSaveClick,
-            onCancel = onCancelClick
-        )
-    } else if (edgeSchemaEditState != null) {
-        EditEdgeSchemaView(
-            state = edgeSchemaEditState,
-            onLabelChange = onEdgeSchemaEditLabelChange,
-            onPropertyChange = onEdgeSchemaEditPropertyChange,
-            onAddProperty = onEdgeSchemaEditAddProperty,
-            onRemoveProperty = onEdgeSchemaEditRemoveProperty,
-            onSave = onSaveClick,
-            onCancel = onCancelClick
-        )
-    } else {
-        Text("No item selected to edit.")
+    // Use a 'when' block to route to the correct composable
+    when (editScreenState) {
+        is EditScreenState.CreateNode -> {
+            CreateNodeView(
+                nodeCreationState = editScreenState.state,
+                onSchemaSelected = onNodeCreationSchemaSelected,
+                onPropertyChanged = onNodeCreationPropertyChanged,
+                onCreateClick = onNodeCreationCreateClick,
+                onCancelClick = onCancelClick
+            )
+        }
+        is EditScreenState.CreateEdge -> {
+            CreateEdgeView(
+                edgeCreationState = editScreenState.state,
+                onSchemaSelected = onEdgeCreationSchemaSelected,
+                onSrcSelected = onEdgeCreationSrcSelected,
+                onDstSelected = onEdgeCreationDstSelected,
+                onPropertyChanged = onEdgeCreationPropertyChanged,
+                onCreateClick = onEdgeCreationCreateClick,
+                onCancelClick = onCancelClick
+            )
+        }
+        is EditScreenState.CreateNodeSchema -> {
+            CreateNodeSchemaView(
+                state = editScreenState.state,
+                onTableNameChange = onNodeSchemaTableNameChange,
+                onPropertyChange = onNodeSchemaPropertyChange,
+                onAddProperty = onAddNodeSchemaProperty,
+                onRemoveProperty = onRemoveNodeSchemaProperty,
+                onCreate = onNodeSchemaCreationCreateClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.CreateEdgeSchema -> {
+            CreateEdgeSchemaView(
+                state = editScreenState.state,
+                onTableNameChange = onEdgeSchemaTableNameChange,
+                onSrcTableChange = onEdgeSchemaSrcTableChange,
+                onDstTableChange = onEdgeSchemaDstTableChange,
+                onPropertyChange = onEdgeSchemaPropertyChange,
+                onAddProperty = onAddEdgeSchemaProperty,
+                onRemoveProperty = onRemoveEdgeSchemaProperty,
+                onCreate = onEdgeSchemaCreationCreateClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.EditNode -> {
+            EditNodeView(
+                state = editScreenState.state,
+                onPropertyChange = onNodeEditPropertyChange,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.EditEdge -> {
+            EditEdgeView(
+                state = editScreenState.state,
+                onPropertyChange = onEdgeEditPropertyChange,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.EditNodeSchema -> {
+            EditNodeSchemaView(
+                state = editScreenState.state,
+                onLabelChange = onNodeSchemaEditLabelChange,
+                onPropertyChange = onNodeSchemaEditPropertyChange,
+                onAddProperty = onNodeSchemaEditAddProperty,
+                onRemoveProperty = onNodeSchemaEditRemoveProperty,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.EditEdgeSchema -> {
+            EditEdgeSchemaView(
+                state = editScreenState.state,
+                onLabelChange = onEdgeSchemaEditLabelChange,
+                onPropertyChange = onEdgeSchemaEditPropertyChange,
+                onAddProperty = onEdgeSchemaEditAddProperty,
+                onRemoveProperty = onEdgeSchemaEditRemoveProperty,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
+        }
+        is EditScreenState.None -> {
+            Text("No item selected to edit.")
+        }
     }
 }

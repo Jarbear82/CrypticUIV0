@@ -44,61 +44,32 @@ data class RecursiveEdgeValue(
     val edges: List<EdgeValue>
 )
 
-// --- Data classes for Editing Instances ---
+// --- Data classes for Editing Instances (NOW IMMUTABLE) ---
 data class NodeTable(
     val label: String,
-    var properties: List<TableProperty>, // This list will be mutated during edit
-    val labelChanged: Boolean, // Not used yet
-    val propertiesChanged: Boolean // Not used yet
-) {
-    /**
-     * Creates a deep copy of the NodeTable, ensuring the properties list
-     * is a new list containing copies of the TableProperty objects.
-     */
-    fun deepCopy(): NodeTable {
-        return NodeTable(
-            label = this.label,
-            properties = this.properties.map { it.copy() },
-            labelChanged = this.labelChanged,
-            propertiesChanged = this.propertiesChanged
-        )
-    }
-}
-
+    val properties: List<TableProperty>, // Changed to val
+    val labelChanged: Boolean,
+    val propertiesChanged: Boolean
+)
+// No deepCopy() needed
 
 data class EdgeTable(
     val label: String,
     val src: NodeDisplayItem,
     val dst: NodeDisplayItem,
-    var properties: List<TableProperty>?, // This list will be mutated
+    val properties: List<TableProperty>?, // Changed to val
     val labelChanged: Boolean,
     val srcChanged: Boolean,
     val dstChanged: Boolean,
     val propertiesChanged: Boolean
-) {
-    /**
-     * Creates a deep copy of the EdgeTable, ensuring the properties list
-     * is a new list containing copies of the TableProperty objects.
-     */
-    fun deepCopy(): EdgeTable {
-        return EdgeTable(
-            label = this.label,
-            src = this.src,
-            dst = this.dst,
-            properties = this.properties?.map { it.copy() },
-            labelChanged = this.labelChanged,
-            srcChanged = this.srcChanged,
-            dstChanged = this.dstChanged,
-            propertiesChanged = this.propertiesChanged
-        )
-    }
-}
+)
+// No deepCopy() needed
 
 data class TableProperty(
     val key: String,
-    var value: Any?, // This value will be mutated
+    val value: Any?, // Changed to val
     val isPrimaryKey: Boolean,
-    var valueChanged: Boolean // Flag to track changes
+    val valueChanged: Boolean // Changed to val
 )
 
 // --- Data classes for Schema Representation ---
@@ -134,27 +105,27 @@ data class Schema(
     val edgeTables: List<SchemaEdge>
 )
 
-// --- Data classes for Editing Schemas ---
+// --- Data classes for Editing Schemas (NOW IMMUTABLE) ---
 data class NodeSchemaEditState(
     val originalSchema: SchemaNode,
-    var currentLabel: String,
-    val properties: MutableList<EditableSchemaProperty>
+    val currentLabel: String, // Changed to val
+    val properties: List<EditableSchemaProperty> // Changed to val (was MutableList)
 )
 
 data class EdgeSchemaEditState(
     val originalSchema: SchemaEdge,
-    var currentLabel: String,
-    val properties: MutableList<EditableSchemaProperty>
+    val currentLabel: String, // Changed to val
+    val properties: List<EditableSchemaProperty> // Changed to val (was MutableList)
     // Note: Altering src/dst of an edge schema is not supported by Kuzu.
 )
 
 data class EditableSchemaProperty(
-    var key: String,
-    var valueDataType: String,
-    var isPrimaryKey: Boolean,
+    val key: String, // Changed to val
+    val valueDataType: String, // Changed to val
+    val isPrimaryKey: Boolean, // Changed to val
     val originalKey: String, // To know what to rename
     val isNew: Boolean = false,
-    var isDeleted: Boolean = false
+    val isDeleted: Boolean = false // Changed to val
 )
 
 
@@ -234,3 +205,19 @@ data class Property(
  * Stores the generated hex color and its raw RGB components.
  */
 data class ColorInfo(val hex: String, val rgb: IntArray, val composeColor: Color, val composeFontColor: Color)
+
+// --- NEW SEALED INTERFACE ---
+/**
+ * Represents the entire state of the "Edit" tab.
+ */
+sealed interface EditScreenState {
+    data object None : EditScreenState // Default state, nothing is happening
+    data class CreateNode(val state: NodeCreationState) : EditScreenState
+    data class CreateEdge(val state: EdgeCreationState) : EditScreenState
+    data class CreateNodeSchema(val state: NodeSchemaCreationState) : EditScreenState
+    data class CreateEdgeSchema(val state: EdgeSchemaCreationState) : EditScreenState
+    data class EditNode(val state: NodeTable) : EditScreenState
+    data class EditEdge(val state: EdgeTable) : EditScreenState
+    data class EditNodeSchema(val state: NodeSchemaEditState) : EditScreenState
+    data class EditEdgeSchema(val state: EdgeSchemaEditState) : EditScreenState
+}
