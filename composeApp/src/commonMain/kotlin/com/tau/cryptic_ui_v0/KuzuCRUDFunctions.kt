@@ -73,7 +73,17 @@ suspend fun createEdgeSchema(dbService: KuzuDBService, edgeSchema: EdgeSchemaCre
     } else {
         ""
     }
-    val query = "CREATE REL TABLE ${edgeSchema.tableName.withBackticks()} (FROM ${edgeSchema.srcTable!!.withBackticks()} TO ${edgeSchema.dstTable!!.withBackticks()}$properties)"
+    val propertiesString = if (edgeSchema.properties.isNotEmpty()) {
+        ", " + edgeSchema.properties.joinToString(", ") {
+            "${it.name.withBackticks()} ${it.type}"
+        }
+    } else { "" }
+
+    val fromToString = edgeSchema.connections.joinToString(", ") {
+        "FROM ${it.src.withBackticks()} TO ${it.dst.withBackticks()}"
+    }
+
+    val query = "CREATE REL TABLE ${edgeSchema.tableName.withBackticks()} ($fromToString$propertiesString)"
     dbService.executeQuery(query)
 }
 
@@ -114,8 +124,14 @@ suspend fun getSchema(dbService: KuzuDBService): Schema? {
 
                 val showConnectionResult = dbService.executeQuery("CALL SHOW_CONNECTION(\"$tableName\") RETURN *;")
                 if (showConnectionResult is ExecutionResult.Success) {
-                    showConnectionResult.results.first().rows.forEach { row ->
-                        edgeSchemaList.add(SchemaEdge(tableName, row[0] as String, row[1] as String, properties))
+                    // Map all returned rows into a List<ConnectionPair>
+                    val connections = showConnectionResult.results.first().rows.map { row ->
+                        ConnectionPair(src = row[0] as String, dst = row[1] as String)
+                    }
+
+                    // Add only ONE SchemaEdge with the full list of connections
+                    if (connections.isNotEmpty()) {
+                        edgeSchemaList.add(SchemaEdge(tableName, connections, properties))
                     }
                 }
             }
@@ -147,15 +163,20 @@ suspend fun listNodes(dbService: KuzuDBService): List<NodeDisplayItem> {
 suspend fun listEdges(dbService: KuzuDBService): List<EdgeDisplayItem> {
     val edges = mutableListOf<EdgeDisplayItem>()
     getSchema(dbService)?.edgeTables?.forEach { table ->
-        val srcPkName = dbService.getPrimaryKey(table.srcLabel) ?: return@forEach
-        val dstPkName = dbService.getPrimaryKey(table.dstLabel) ?: return@forEach
-        val query = "MATCH (src:${table.srcLabel.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${table.dstLabel.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
-        val result = dbService.executeQuery(query)
-        if (result is ExecutionResult.Success) {
-            result.results.firstOrNull()?.rows?.forEach { row ->
-                val srcNode = NodeDisplayItem(table.srcLabel, DisplayItemProperty(srcPkName, row[0]))
-                val dstNode = NodeDisplayItem(table.dstLabel, DisplayItemProperty(dstPkName, row[1]))
-                edges.add(EdgeDisplayItem(label = table.label, src = srcNode, dst = dstNode))
+        // Loop over every connection pair this edge schema supports
+        table.connections.forEach { connection ->
+            val srcPkName = dbService.getPrimaryKey(connection.src) ?: return@forEach
+            val dstPkName = dbService.getPrimaryKey(connection.dst) ?: return@forEach
+
+            val query = "MATCH (src:${connection.src.withBackticks()})-[r:${table.label.withBackticks()}]->(dst:${connection.dst.withBackticks()}) RETURN src.${srcPkName.withBackticks()}, dst.${dstPkName.withBackticks()}"
+
+            val result = dbService.executeQuery(query)
+            if (result is ExecutionResult.Success) {
+                result.results.firstOrNull()?.rows?.forEach { row ->
+                    val srcNode = NodeDisplayItem(connection.src, DisplayItemProperty(srcPkName, row[0]))
+                    val dstNode = NodeDisplayItem(connection.dst, DisplayItemProperty(dstPkName, row[1]))
+                    edges.add(EdgeDisplayItem(label = table.label, src = srcNode, dst = dstNode))
+                }
             }
         }
     }

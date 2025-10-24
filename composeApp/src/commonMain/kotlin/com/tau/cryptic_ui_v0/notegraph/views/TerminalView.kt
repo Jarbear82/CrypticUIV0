@@ -249,6 +249,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
                         // Edge Creation Handlers
                         onEdgeCreationSchemaSelected = { viewModel.editCreateViewModel.updateEdgeCreationSchema(it) },
+                        onEdgeCreationConnectionSelected = { viewModel.editCreateViewModel.updateEdgeCreationConnection(it) },
                         onEdgeCreationSrcSelected = { viewModel.editCreateViewModel.updateEdgeCreationSrc(it) },
                         onEdgeCreationDstSelected = { viewModel.editCreateViewModel.updateEdgeCreationDst(it) },
                         onEdgeCreationPropertyChanged = { key, value ->
@@ -266,8 +267,8 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         // Edge Schema Creation Handlers
                         onEdgeSchemaCreationCreateClick = { state -> viewModel.editCreateViewModel.createEdgeSchemaFromState(state) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
                         onEdgeSchemaTableNameChange = { viewModel.editCreateViewModel.onEdgeSchemaTableNameChange(it) },
-                        onEdgeSchemaSrcTableChange = { viewModel.editCreateViewModel.onEdgeSchemaSrcTableChange(it) },
-                        onEdgeSchemaDstTableChange = { viewModel.editCreateViewModel.onEdgeSchemaDstTableChange(it) },
+                        onEdgeSchemaCreationAddConnection = { src, dst -> viewModel.editCreateViewModel.onAddEdgeSchemaConnection(src, dst) },
+                        onEdgeSchemaCreationRemoveConnection = { index -> viewModel.editCreateViewModel.onRemoveEdgeSchemaConnection(index) },
                         onEdgeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onEdgeSchemaPropertyChange(index, property) },
                         onAddEdgeSchemaProperty = { viewModel.editCreateViewModel.onAddEdgeSchemaProperty() },
                         onRemoveEdgeSchemaProperty = { viewModel.editCreateViewModel.onRemoveEdgeSchemaProperty(it) },

@@ -38,22 +38,16 @@ fun EditEdgeSchemaView(
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        // Show original src/dst as read-only, as Kuzu doesn't support updating them
-        OutlinedTextField(
-            value = state.originalSchema.srcLabel,
-            onValueChange = {},
-            label = { Text("Source Table (read-only)") },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true
-        )
-        OutlinedTextField(
-            value = state.originalSchema.dstLabel,
-            onValueChange = {},
-            label = { Text("Destination Table (read-only)") },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true
-        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Kuzu doesn't support updating connections, so we show them as read-only.
+        Text("Connections (read-only)", style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.heightIn(max = 150.dp).padding(start = 8.dp)) {
+            state.originalSchema.connections.forEach {
+                Text("FROM (${it.src}) TO (${it.dst})", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)

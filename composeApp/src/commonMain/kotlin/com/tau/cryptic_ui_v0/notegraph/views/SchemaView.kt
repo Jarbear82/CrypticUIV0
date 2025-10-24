@@ -135,17 +135,11 @@ fun SchemaView(
                             }
                         },
                         supportingContent = {
-                            Row {
-                                Text("(", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    table.srcLabel,
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Text(" -> ", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    table.dstLabel,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(")", style = MaterialTheme.typography.bodyMedium)
+                            // Display all connection pairs
+                            Column {
+                                table.connections.forEach {
+                                    Text("(${it.src}) -> (${it.dst})", style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         },
                         trailingContent = {

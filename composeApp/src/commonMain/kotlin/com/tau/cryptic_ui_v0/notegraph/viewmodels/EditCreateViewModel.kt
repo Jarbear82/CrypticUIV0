@@ -56,7 +56,7 @@ class EditCreateViewModel(
             current.copy(
                 state = current.state.copy(
                     selectedSchema = schemaNode,
-                    properties = emptyMap() // Reset properties when schema changes
+                    properties = emptyMap()
                 )
             )
         }
@@ -78,13 +78,12 @@ class EditCreateViewModel(
 
             if (state.selectedSchema != null) {
                 val properties = state.properties.map {
-                    // Use new immutable TableProperty
                     TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
                 }
                 val nodeTable = NodeTable(state.selectedSchema.label, properties, false, false)
                 createNode(dbService, nodeTable)
-                cancelAllEditing() // Exit creation mode
-                metadataViewModel.listNodes() // Refresh the node list
+                cancelAllEditing()
+                metadataViewModel.listNodes()
                 onFinished()
             }
         }
@@ -113,9 +112,23 @@ class EditCreateViewModel(
             current.copy(
                 state = current.state.copy(
                     selectedSchema = schemaEdge,
+                    selectedConnection = null,
                     src = null,
                     dst = null,
                     properties = emptyMap()
+                )
+            )
+        }
+    }
+
+    fun updateEdgeCreationConnection(connection: ConnectionPair) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateEdge) return@update current
+            current.copy(
+                state = current.state.copy(
+                    selectedConnection = connection,
+                    src = null, // Reset src/dst when connection type changes
+                    dst = null
                 )
             )
         }
@@ -231,17 +244,26 @@ class EditCreateViewModel(
         }
     }
 
-    fun onEdgeSchemaSrcTableChange(table: String) {
+    // --- NEW ---
+    fun onAddEdgeSchemaConnection(src: String, dst: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
-            current.copy(state = current.state.copy(srcTable = table))
+            val newConnection = ConnectionPair(src, dst)
+            if (!current.state.connections.contains(newConnection)) {
+                current.copy(state = current.state.copy(connections = current.state.connections + newConnection))
+            } else {
+                current
+            }
         }
     }
 
-    fun onEdgeSchemaDstTableChange(table: String) {
+    fun onRemoveEdgeSchemaConnection(index: Int) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
-            current.copy(state = current.state.copy(dstTable = table))
+            val newConnections = current.state.connections.toMutableList().apply {
+                removeAt(index)
+            }
+            current.copy(state = current.state.copy(connections = newConnections))
         }
     }
 

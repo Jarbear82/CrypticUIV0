@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ConnectionPair
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.EdgeCreationState
 import com.tau.cryptic_ui_v0.SchemaEdge
@@ -14,6 +15,7 @@ import com.tau.cryptic_ui_v0.SchemaEdge
 fun CreateEdgeView(
     edgeCreationState: EdgeCreationState,
     onSchemaSelected: (SchemaEdge) -> Unit,
+    onConnectionSelected: (ConnectionPair) -> Unit,
     onSrcSelected: (NodeDisplayItem) -> Unit,
     onDstSelected: (NodeDisplayItem) -> Unit,
     onPropertyChanged: (String, String) -> Unit,
@@ -21,6 +23,7 @@ fun CreateEdgeView(
     onCancelClick: () -> Unit
 ) {
     var schemaExpanded by remember { mutableStateOf(false) }
+    var connectionExpanded by remember { mutableStateOf(false) }
     var srcExpanded by remember { mutableStateOf(false) }
     var dstExpanded by remember { mutableStateOf(false) }
 
@@ -56,7 +59,43 @@ fun CreateEdgeView(
             }
         }
 
+        // --- NEW Connection Pair Dropdown ---
+        // Only show this after schema is selected
         edgeCreationState.selectedSchema?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            ExposedDropdownMenuBox(
+                expanded = connectionExpanded,
+                onExpandedChange = { connectionExpanded = !connectionExpanded }
+            ) {
+                OutlinedTextField(
+                    // Display selected connection
+                    value = edgeCreationState.selectedConnection?.let { "${it.src} -> ${it.dst}" } ?: "Select Connection Type",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = connectionExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = connectionExpanded,
+                    onDismissRequest = { connectionExpanded = false }
+                ) {
+                    // Populate from the selected schema connection list
+                    edgeCreationState.selectedSchema.connections.forEach { connection ->
+                        DropdownMenuItem(
+                            text = { Text("${connection.src} -> ${connection.dst}") },
+                            onClick = {
+                                onConnectionSelected(connection)
+                                connectionExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- Source/Destination/Properties ---
+        // Only show these after connection type is selected
+        edgeCreationState.selectedConnection?.let {
             // Source Node Dropdown
             ExposedDropdownMenuBox(
                 expanded = srcExpanded,
@@ -73,7 +112,8 @@ fun CreateEdgeView(
                     expanded = srcExpanded,
                     onDismissRequest = { srcExpanded = false }
                 ) {
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedSchema.srcLabel }.forEach { node ->
+                    // Filter nodes based on selected connection's src
+                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
                         DropdownMenuItem(
                             text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             onClick = {
@@ -101,7 +141,8 @@ fun CreateEdgeView(
                     expanded = dstExpanded,
                     onDismissRequest = { dstExpanded = false }
                 ) {
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedSchema.dstLabel }.forEach { node ->
+                    // Filter nodes based on selected connection's dst
+                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
                         DropdownMenuItem(
                             text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
                             onClick = {
@@ -114,7 +155,7 @@ fun CreateEdgeView(
             }
 
             // Properties
-            it.properties.forEach { property ->
+            edgeCreationState.selectedSchema?.properties?.forEach { property ->
                 OutlinedTextField(
                     value = edgeCreationState.properties[property.key] ?: "",
                     onValueChange = { onPropertyChanged(property.key, it) },
@@ -126,6 +167,7 @@ fun CreateEdgeView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Create/Cancel Buttons
         Row {
             Button(onClick = onCreateClick, enabled = edgeCreationState.src != null && edgeCreationState.dst != null) {
                 Text("Create")

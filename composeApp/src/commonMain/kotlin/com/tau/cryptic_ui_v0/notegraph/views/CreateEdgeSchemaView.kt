@@ -1,9 +1,11 @@
 package com.tau.cryptic_ui_v0.views
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ConnectionPair
 import com.tau.cryptic_ui_v0.Property
 import com.tau.cryptic_ui_v0.EdgeSchemaCreationState
 
@@ -19,15 +22,24 @@ import com.tau.cryptic_ui_v0.EdgeSchemaCreationState
 fun CreateEdgeSchemaView(
     state: EdgeSchemaCreationState,
     onTableNameChange: (String) -> Unit,
-    onSrcTableChange: (String) -> Unit,
-    onDstTableChange: (String) -> Unit,
+    // Callbacks for managing the connection pair list
+    onAddConnection: (src: String, dst: String) -> Unit,
+    onRemoveConnection: (Int) -> Unit,
+    // Callbacks for managing properties
     onPropertyChange: (Int, Property) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
+    // Create/Cancel
     onCreate: (EdgeSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
     val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID")
+
+    // --- Local state for the "Add Connection" UI ---
+    var newSrcTable by remember { mutableStateOf<String?>(null) }
+    var newSrcExpanded by remember { mutableStateOf(false) }
+    var newDstTable by remember { mutableStateOf<String?>(null) }
+    var newDstExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Create Edge Schema", style = MaterialTheme.typography.headlineSmall)
@@ -39,68 +51,108 @@ fun CreateEdgeSchemaView(
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Dropdowns for Src and Dst
-        var srcExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = srcExpanded,
-            onExpandedChange = { srcExpanded = !srcExpanded }
-        ) {
-            OutlinedTextField(
-                value = state.srcTable ?: "Source Table",
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = srcExpanded,
-                onDismissRequest = { srcExpanded = false }
+        // --- Section for adding new connection pairs ---
+        Text("Connection Pairs", style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Source Table Dropdown
+            ExposedDropdownMenuBox(
+                expanded = newSrcExpanded,
+                onExpandedChange = { newSrcExpanded = !newSrcExpanded },
+                modifier = Modifier.weight(1f)
             ) {
-                state.allNodeSchemas.forEach { schema ->
-                    DropdownMenuItem(
-                        text = { Text(schema.label) },
-                        onClick = {
-                            onSrcTableChange(schema.label)
-                            srcExpanded = false
-                        }
-                    )
+                OutlinedTextField(
+                    value = newSrcTable ?: "From...",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newSrcExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = newSrcExpanded,
+                    onDismissRequest = { newSrcExpanded = false }
+                ) {
+                    state.allNodeSchemas.forEach { schema ->
+                        DropdownMenuItem(
+                            text = { Text(schema.label) },
+                            onClick = {
+                                newSrcTable = schema.label
+                                newSrcExpanded = false
+                            }
+                        )
+                    }
                 }
+            }
+            Spacer(Modifier.width(8.dp))
+            // Destination Table Dropdown
+            ExposedDropdownMenuBox(
+                expanded = newDstExpanded,
+                onExpandedChange = { newDstExpanded = !newDstExpanded },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = newDstTable ?: "To...",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newDstExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = newDstExpanded,
+                    onDismissRequest = { newDstExpanded = false }
+                ) {
+                    state.allNodeSchemas.forEach { schema ->
+                        DropdownMenuItem(
+                            text = { Text(schema.label) },
+                            onClick = {
+                                newDstTable = schema.label
+                                newDstExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            // Add Button
+            IconButton(
+                onClick = {
+                    onAddConnection(newSrcTable!!, newDstTable!!)
+                    // Reset local state
+                    newSrcTable = null
+                    newDstTable = null
+                },
+                enabled = newSrcTable != null && newDstTable != null
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Connection Pair")
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        var dstExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = dstExpanded,
-            onExpandedChange = { dstExpanded = !dstExpanded }
-        ) {
-            OutlinedTextField(
-                value = state.dstTable ?: "Destination Table",
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = dstExpanded,
-                onDismissRequest = { dstExpanded = false }
-            ) {
-                state.allNodeSchemas.forEach { schema ->
-                    DropdownMenuItem(
-                        text = { Text(schema.label) },
-                        onClick = {
-                            onDstTableChange(schema.label)
-                            dstExpanded = false
+
+        // --- List of current connection pairs ---
+        LazyColumn(modifier = Modifier.heightIn(max = 150.dp).border(1.dp, MaterialTheme.colorScheme.outline)) {
+            itemsIndexed(state.connections) { index, connection ->
+                ListItem(
+                    headlineContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(connection.src, style = MaterialTheme.typography.bodyMedium)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "to", modifier = Modifier.padding(horizontal = 8.dp))
+                            Text(connection.dst, style = MaterialTheme.typography.bodyMedium)
                         }
-                    )
-                }
+                    },
+                    trailingContent = {
+                        IconButton(onClick = { onRemoveConnection(index) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove Connection")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Properties Section ---
         Text("Properties", style = MaterialTheme.typography.titleMedium)
         LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
             itemsIndexed(state.properties) { index, property ->
@@ -160,8 +212,12 @@ fun CreateEdgeSchemaView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Create/Cancel Buttons ---
         Row {
-            Button(onClick = { onCreate(state) }, enabled = state.srcTable != null && state.dstTable != null && state.tableName.isNotBlank()) {
+            Button(
+                onClick = { onCreate(state) },
+                enabled = state.tableName.isNotBlank() && state.connections.isNotEmpty()
+            ) {
                 Text("Create")
             }
             Spacer(modifier = Modifier.width(8.dp))

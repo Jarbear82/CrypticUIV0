@@ -20,6 +20,7 @@ fun EditItemView(
 
     // Edge Creation Handlers
     onEdgeCreationSchemaSelected: (SchemaEdge) -> Unit,
+    onEdgeCreationConnectionSelected: (ConnectionPair) -> Unit,
     onEdgeCreationSrcSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationDstSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationPropertyChanged: (String, String) -> Unit,
@@ -35,8 +36,8 @@ fun EditItemView(
     // Edge Schema Creation Handlers
     onEdgeSchemaCreationCreateClick: (EdgeSchemaCreationState) -> Unit,
     onEdgeSchemaTableNameChange: (String) -> Unit,
-    onEdgeSchemaSrcTableChange: (String) -> Unit,
-    onEdgeSchemaDstTableChange: (String) -> Unit,
+    onEdgeSchemaCreationAddConnection: (String, String) -> Unit,
+    onEdgeSchemaCreationRemoveConnection: (Int) -> Unit,
     onEdgeSchemaPropertyChange: (Int, Property) -> Unit,
     onAddEdgeSchemaProperty: () -> Unit,
     onRemoveEdgeSchemaProperty: (Int) -> Unit,
@@ -74,6 +75,7 @@ fun EditItemView(
             CreateEdgeView(
                 edgeCreationState = editScreenState.state,
                 onSchemaSelected = onEdgeCreationSchemaSelected,
+                onConnectionSelected = onEdgeCreationConnectionSelected,
                 onSrcSelected = onEdgeCreationSrcSelected,
                 onDstSelected = onEdgeCreationDstSelected,
                 onPropertyChanged = onEdgeCreationPropertyChanged,
@@ -96,8 +98,8 @@ fun EditItemView(
             CreateEdgeSchemaView(
                 state = editScreenState.state,
                 onTableNameChange = onEdgeSchemaTableNameChange,
-                onSrcTableChange = onEdgeSchemaSrcTableChange,
-                onDstTableChange = onEdgeSchemaDstTableChange,
+                onAddConnection = onEdgeSchemaCreationAddConnection,
+                onRemoveConnection = onEdgeSchemaCreationRemoveConnection,
                 onPropertyChange = onEdgeSchemaPropertyChange,
                 onAddProperty = onAddEdgeSchemaProperty,
                 onRemoveProperty = onRemoveEdgeSchemaProperty,

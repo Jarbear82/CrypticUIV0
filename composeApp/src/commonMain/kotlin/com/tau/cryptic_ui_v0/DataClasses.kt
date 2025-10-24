@@ -7,7 +7,10 @@ import androidx.compose.ui.graphics.Color
  * @param name The display name (the filename, e.g., "my_db.kuzu").
  * @param path The absolute path to the database file.
  */
-data class NoteGraphItem(val name: String, val path: String)
+data class NoteGraphItem(
+    val name: String,
+    val path: String
+)
 data class NodeDisplayItem(
     val label: String,
     val primarykeyProperty: DisplayItemProperty,
@@ -37,6 +40,11 @@ data class EdgeValue(
     val src: String,
     val dst: String,
     val properties: Map<String, Any?>
+)
+
+data class ConnectionPair(
+    val src: String,
+    val dst: String
 )
 
 data class RecursiveEdgeValue(
@@ -82,8 +90,7 @@ data class SchemaNode(
 )
 data class SchemaEdge(
     val label: String,
-    val srcLabel: String,
-    val dstLabel: String,
+    val connections: List<ConnectionPair>,
     val properties: List<SchemaProperty>,
     val labelChanged: Boolean = false,
     val srcLabelChanged: Boolean = false,
@@ -174,6 +181,7 @@ data class EdgeCreationState(
     val schemas: List<SchemaEdge>,
     val availableNodes: List<NodeDisplayItem>,
     val selectedSchema: SchemaEdge? = null,
+    val selectedConnection: ConnectionPair? = null,
     val src: NodeDisplayItem? = null,
     val dst: NodeDisplayItem? = null,
     val properties: Map<String, String> = emptyMap()
@@ -188,8 +196,7 @@ data class NodeSchemaCreationState(
 // --- Data class for Edge Schema Creation ---
 data class EdgeSchemaCreationState(
     val tableName: String = "",
-    val srcTable: String? = null,
-    val dstTable: String? = null,
+    val connections: List<ConnectionPair> = emptyList(),
     val properties: List<Property> = emptyList(),
     val allNodeSchemas: List<SchemaNode> = emptyList()
 )
