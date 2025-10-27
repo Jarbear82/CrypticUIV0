@@ -2,7 +2,9 @@ package com.tau.cryptic_ui_v0.notegraph.graph
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // Default values (could also be constants in DrawingUtils)
 val DEFAULT_NODE_RADIUS_DP = 25.dp
@@ -30,6 +32,36 @@ data class EdgeStyleOptions(
     val labelFontSizeSp: Float = 12f // Default font size
 )
 
-// InteractionOptions is already defined in InteractionHandler.kt
+data class SelectionStyleOptions(
+    val nodeSelectedBorderColor: Color = Color.Blue,
+    val nodeSelectedStrokeWidthMultiplier: Float = 2.5f,
+    val edgeSelectedColor: Color = Color.Blue,
+    val edgeSelectedStrokeWidthMultiplier: Float = 2.0f
+)
+
+data class TooltipOptions(
+    val backgroundColor: Color = Color.DarkGray.copy(alpha = 0.8f),
+    val textColor: Color = Color.White,
+    val fontSizeSp: TextUnit = 12.sp,
+    val padding: Dp = 8.dp
+)
+
+data class NavigationOptions(
+    val showNavigationUI: Boolean = true,
+    val showZoomButtons: Boolean = true,
+    val showPanButtons: Boolean = false, // Panning is usually easier with drag
+    val showFitButton: Boolean = true
+)
+
+// InteractionOptions is now updated
+data class InteractionOptions(
+    val dragNodes: Boolean = true,
+    val dragView: Boolean = true, // Panning
+    val zoomView: Boolean = true, // Pinch-to-zoom
+    val selectionEnabled: Boolean = true,
+    val multiSelectEnabled: Boolean = true, // e.g., with Ctrl/Shift (keyboard only)
+    val tooltipsEnabled: Boolean = true, // Show on long press
+    val keyboardNavigationEnabled: Boolean = true
+)
 
 // PhysicsOptions is already defined in PhysicsEngine.kt
