@@ -13,6 +13,7 @@ import com.tau.cryptic_ui_v0.NodeSchemaEditState
 import com.tau.cryptic_ui_v0.SchemaNode
 import com.tau.cryptic_ui_v0.EdgeSchemaEditState
 import com.tau.cryptic_ui_v0.SchemaEdge
+import com.tau.cryptic_ui_v0.notegraph.graph.GraphView
 import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
 import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
 import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
@@ -148,7 +149,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     }
                     ViewTabs.GRAPH -> {
                         // Pass the collected nodes and edges to the GraphView
-                        GraphView(nodes = nodes, edges = edges)
+                        GraphView(nodes = nodes, edges = edges, modifier = Modifier.fillMaxSize())
                     }
                 }
             }
