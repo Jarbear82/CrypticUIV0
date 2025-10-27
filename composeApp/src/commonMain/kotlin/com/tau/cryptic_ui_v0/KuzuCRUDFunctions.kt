@@ -298,6 +298,16 @@ suspend fun updateEdgeSchemaRenameTable(dbService: KuzuDBService, oldName: Strin
     dbService.executeQuery(query)
 }
 
+suspend fun updateEdgeSchemaAddConnection(dbService: KuzuDBService, label: String, connection: ConnectionPair){
+    val query = "ALTER TABLE ${label.withBackticks()} ADD FROM ${connection.src.withBackticks()} TO ${connection.dst.withBackticks()};"
+    dbService.executeQuery(query);
+}
+
+suspend fun updateEdgeSchemaDropConnection(dbService: KuzuDBService, label: String, connection: ConnectionPair) {
+    val query = "ALTER TABLE ${label.withBackticks()} DROP FROM ${connection.src.withBackticks()} TO ${connection.dst.withBackticks()};"
+    dbService.executeQuery(query);
+}
+
 
 // --- Delete Functions ---
 suspend fun deleteNode(dbService: KuzuDBService, item: NodeDisplayItem) {

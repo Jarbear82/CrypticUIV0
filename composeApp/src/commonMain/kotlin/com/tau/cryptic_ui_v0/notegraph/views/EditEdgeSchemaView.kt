@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ConnectionPair
 import com.tau.cryptic_ui_v0.EditableSchemaProperty
 import com.tau.cryptic_ui_v0.EdgeSchemaEditState
 
@@ -20,6 +21,8 @@ import com.tau.cryptic_ui_v0.EdgeSchemaEditState
 fun EditEdgeSchemaView(
     state: EdgeSchemaEditState,
     onLabelChange: (String) -> Unit,
+    onAddConnection: (String) -> Unit,
+    onDropConnection: (ConnectionPair) -> Unit,
     onPropertyChange: (Int, EditableSchemaProperty) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
