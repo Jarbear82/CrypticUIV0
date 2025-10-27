@@ -1,7 +1,6 @@
 package com.tau.cryptic_ui_v0.views
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,12 +18,20 @@ import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
 import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
 import kotlinx.coroutines.launch
 
+// Import the NEW ListView
+import com.tau.cryptic_ui_v0.views.ListView
+// Import the RESTORED QueryView
+import com.tau.cryptic_ui_v0.views.QueryView
+
+
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
     val schema by viewModel.schemaViewModel.schema.collectAsState()
+    // --- RE-ADD queryResult and query ---
     val queryResult by viewModel.queryViewModel.queryResult.collectAsState()
-    val metaData by viewModel.metadataViewModel.dbMetaData.collectAsState()
     val query by viewModel.queryViewModel.query
+    // ---
+    val metaData by viewModel.metadataViewModel.dbMetaData.collectAsState()
     val scope = rememberCoroutineScope() // Get a coroutine scope
 
     // Collect the state for the MetadataView
@@ -102,50 +109,38 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (selectedViewTab) {
-                    ViewTabs.QUERY -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            item {
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Button(onClick = {
-                                        scope.launch { // Launch a coroutine to call the suspend function
-                                            viewModel.schemaViewModel.showSchema()
-                                        }
-                                    }) {
-                                        Text("Show Schema")
-                                    }
-
-                                    Button(onClick = { viewModel.metadataViewModel.listNodes() }) {
-                                        Text("List Nodes")
-                                    }
-
-                                    Button(onClick = { viewModel.metadataViewModel.listEdges() }) {
-                                        Text("List Edges")
-                                    }
-
-                                    Button(onClick = { viewModel.metadataViewModel.listAll() }) {
-                                        Text("List All")
+                    ViewTabs.LIST -> {
+                        // --- USE THE NEW LISTVIEW ---
+                        ListView(
+                            nodes = nodes,
+                            edges = edges,
+                            primarySelectedItem = primarySelectedItem,
+                            secondarySelectedItem = secondarySelectedItem,
+                            onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
+                            onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
+                            onEditNodeClick = {
+                                scope.launch {
+                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                    if (fullItem is NodeTable) {
+                                        viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
+                                        viewModel.selectDataTab(DataViewTabs.EDIT)
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                                OutlinedTextField(
-                                    value = query,
-                                    onValueChange = { viewModel.queryViewModel.onQueryChange(it) },
-                                    label = { Text("Cypher Query") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = { viewModel.queryViewModel.executeQuery() },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Execute")
+                            },
+                            onEditEdgeClick = {
+                                scope.launch {
+                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                    if (fullItem is EdgeTable) {
+                                        viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
+                                        viewModel.selectDataTab(DataViewTabs.EDIT)
+                                    }
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
+                            },
+                            onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                            onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                            onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                            onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        )
                     }
                     ViewTabs.GRAPH -> {
                         // Pass the collected nodes and edges to the GraphView
@@ -175,34 +170,16 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 when (selectedDataTab) {
                     DataViewTabs.METADATA -> MetadataView(
                         dbMetaData = metaData,
-                        nodes = nodes,
-                        edges = edges,
                         primarySelectedItem = primarySelectedItem,
                         secondarySelectedItem = secondarySelectedItem,
-                        onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                        onEditNodeClick = {
-                            scope.launch {
-                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                if (fullItem is NodeTable) {
-                                    viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
-                                    viewModel.selectDataTab(DataViewTabs.EDIT)
-                                }
-                            }
-                        },
-                        onEditEdgeClick = {
-                            scope.launch {
-                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                if (fullItem is EdgeTable) {
-                                    viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
-                                    viewModel.selectDataTab(DataViewTabs.EDIT)
-                                }
-                            }
-                        },
-                        onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                        onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                        onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        // --- PASS QUERY PROPS ---
+                        query = query,
+                        onQueryChange = { viewModel.queryViewModel.onQueryChange(it) },
+                        onExecuteQuery = { viewModel.queryViewModel.executeQuery() },
+                        // --- PASS REFRESH CALLBACKS ---
+                        onListAll = { viewModel.metadataViewModel.listAll() },
+                        onListNodes = { viewModel.metadataViewModel.listNodes() },
+                        onListEdges = { viewModel.metadataViewModel.listEdges() }
                     )
                     DataViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -290,12 +267,15 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateEdgeSchemaEditLabel(it) },
                         onEdgeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateEdgeSchemaEditProperty(index, prop) },
                         onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
+
+                        // --- THIS IS THE FIX ---
                         onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) }
                     )
                 }
             }
         }
 
+        // --- RE-ADD Query Result Overlay ---
         queryResult?.let {
             Box(
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)

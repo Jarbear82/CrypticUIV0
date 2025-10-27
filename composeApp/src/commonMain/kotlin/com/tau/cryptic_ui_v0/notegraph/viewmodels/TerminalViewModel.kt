@@ -30,7 +30,7 @@ class TerminalViewModel(dbService: KuzuDBService) {
         _selectedDataTab.value = tab
     }
 
-    private val _selectedViewTab = MutableStateFlow(ViewTabs.QUERY)
+    private val _selectedViewTab = MutableStateFlow(ViewTabs.LIST) // Default to LIST
     val selectedViewTab = _selectedViewTab.asStateFlow()
 
     fun selectViewTab(tab: ViewTabs) {
@@ -49,6 +49,6 @@ enum class DataViewTabs(val value: Int) {
 }
 
 enum class ViewTabs(val value: Int) {
-    QUERY(0),
+    LIST(0), // Renamed from QUERY
     GRAPH(1)
 }

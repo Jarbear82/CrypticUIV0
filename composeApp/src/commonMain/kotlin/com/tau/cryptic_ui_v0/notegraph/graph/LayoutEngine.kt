@@ -49,7 +49,8 @@ class LayoutEngine(
     fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitialLoad: Boolean = false) {
         // 1. Update the physics engine's internal data representation
         // This now places new nodes intelligently and publishes on initial load
-        physicsEngine.updateData(newNodes, newEdges)
+        // FIX: Pass the isInitialLoad flag to the physics engine
+        physicsEngine.updateData(newNodes, newEdges, isInitialLoad)
 
         // 2. Decide which layout strategy to use
         if (layoutOptions.hierarchical.enabled) {

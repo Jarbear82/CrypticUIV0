@@ -6,6 +6,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+// --- ADD THIS IMPORT ---
+import androidx.compose.material3.CircularProgressIndicator
+// ---
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -150,6 +153,11 @@ fun GraphView(
                 null
             }
         }
+
+        // --- ADD THIS ---
+        // Collect the stability state from the engine
+        val isStable by layoutEngine?.isStable?.collectAsState() ?: remember { mutableStateOf(true) }
+        // ---
 
         // Update interaction handler with the current layout engine
         val interactionHandler = remember(nodeRadiusPx, layoutEngine, viewOffset, viewScale) {
@@ -424,5 +432,14 @@ fun GraphView(
                 }
             }
         }
+
+        // --- ADD THIS ---
+        // Show a loading spinner in the center if the layout is not stable
+        if (!isStable) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+        // ---
     }
 }

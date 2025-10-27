@@ -19,6 +19,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 // Internal representation for physics simulation
@@ -71,11 +73,12 @@ class PhysicsEngine(
         // LayoutEngine will call updateData
     }
 
-    fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>) {
-        updateDataInternal(newNodes, newEdges, false)
+    // FIX: Add isInitial parameter and pass it to internal function
+    fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitial: Boolean = false) {
+        updateDataInternal(newNodes, newEdges, isInitial)
     }
 
-    private fun updateDataInternal(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitial: Boolean) {
+    internal fun updateDataInternal(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitial: Boolean) {
         val currentNodes = nodes.keys.toSet()
         val newNodesMap = newNodes.associateBy { it.id() }
         val newNodesIds = newNodesMap.keys
@@ -84,14 +87,41 @@ class PhysicsEngine(
 
         val nodesAdded = (newNodesIds - currentNodes).isNotEmpty() // Check if nodes were added
 
+        // --- NEW: PRE-CALCULATE INITIAL POSITIONS ---
+        val initialPositions = mutableMapOf<String, Offset>()
+        if (isInitial) {
+            val nodeCount = newNodes.size
+            if (nodeCount > 0) {
+                // Use a "sunflower" (phyllotaxis) distribution for even spacing
+                val goldenAngle = (Math.PI * (3.0 - sqrt(5.0))).toFloat()
+                // Scale so the last node is roughly at 40% of the smallest screen dimension
+                val maxRadius = min(width, height) * 0.4f
+                // Handle division by zero if nodeCount is 1
+                val c = if (nodeCount > 1) maxRadius / sqrt(nodeCount.toFloat()) else 0f
+
+                newNodes.forEachIndexed { index, node ->
+                    // Use index + 1 for radius calculation to avoid node 0 at (0,0)
+                    // (But use index for angle)
+                    val radius = c * sqrt(index.toFloat() + 1)
+                    val angle = index * goldenAngle
+                    val x = (radius * cos(angle)).toFloat()
+                    val y = (radius * sin(angle)).toFloat()
+                    initialPositions[node.id()] = Offset(x, y)
+                }
+            }
+        }
+        // --- END PRE-CALCULATION ---
+
+
         newNodesMap.values.forEach { displayNode ->
             val id = displayNode.id()
             if (!nodes.containsKey(id)) {
 
-                // --- NEW PLACEMENT LOGIC ---
+                // --- MODIFIED PLACEMENT LOGIC ---
                 val (startX, startY) = if (isInitial) {
-                    // Initial load, use random placement (as pre-run will fix it)
-                    (Random.nextFloat() - 0.5f) * width * 0.5f to (Random.nextFloat() - 0.5f) * height * 0.5f
+                    // Initial load, use pre-calculated "sunflower" positions
+                    val pos = initialPositions[id] ?: Offset(0f, 0f) // Fallback to center
+                    pos.x to pos.y
                 } else {
                     // Node added later. Find its neighbors from the *new* edge list
                     val neighborIds = newEdges.filter { it.src.id() == id || it.dst.id() == id }
@@ -113,10 +143,11 @@ class PhysicsEngine(
                         avgX to avgY
                     } else {
                         // This is the very first node (or graph was empty)
-                        (Random.nextFloat() - 0.5f) * width * 0.1f to (Random.nextFloat() - 0.5f) * height * 0.1f
+                        // Place at center (was random before)
+                        0f to 0f
                     }
                 }
-                // --- END NEW LOGIC ---
+                // --- END MODIFIED LOGIC ---
 
                 nodes[id] = PhysicsNode(
                     id = id,
@@ -153,7 +184,7 @@ class PhysicsEngine(
 
         edgeLookup = edges.values.groupBy { it.from }
 
-        // If it's the initial load, publish the random positions
+        // If it's the initial load, publish the new calculated positions
         // so the pre-run has a starting point.
         if (isInitial) {
             publishPositions()
@@ -167,13 +198,31 @@ class PhysicsEngine(
     }
 
     fun resetNodePositions() {
-        nodes.values.forEach {
-            it.x = (Random.nextFloat() - 0.5f) * width * 0.5f
-            it.y = (Random.nextFloat() - 0.5f) * height * 0.5f
-            it.vx = 0f
-            it.vy = 0f
+        // --- FIX: Use the same sunflower logic for reset ---
+        val nodeCount = nodes.size
+        if (nodeCount == 0) {
+            publishPositions()
+            return
         }
+
+        val goldenAngle = (Math.PI * (3.0 - sqrt(5.0))).toFloat()
+        val maxRadius = min(width, height) * 0.4f
+        val c = if (nodeCount > 1) maxRadius / sqrt(nodeCount.toFloat()) else 0f
+
+        nodes.values.toList().forEachIndexed { index, node ->
+            val radius = c * sqrt(index.toFloat() + 1)
+            val angle = index * goldenAngle
+
+            node.x = (radius * cos(angle)).toFloat()
+            node.y = (radius * sin(angle)).toFloat()
+            node.vx = 0f
+            node.vy = 0f
+        }
+
         publishPositions()
+        // Start simulation after reset
+        _isStable.value = false
+        startSimulation()
     }
 
     fun updateNodeLevels(newNodeLevels: Map<String, Int>) {
