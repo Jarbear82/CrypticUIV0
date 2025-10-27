@@ -82,13 +82,48 @@ class PhysicsEngine(
 
         (currentNodes - newNodesIds).forEach { nodes.remove(it) }
 
+        val nodesAdded = (newNodesIds - currentNodes).isNotEmpty() // Check if nodes were added
+
         newNodesMap.values.forEach { displayNode ->
             val id = displayNode.id()
             if (!nodes.containsKey(id)) {
+
+                // --- NEW PLACEMENT LOGIC ---
+                val (startX, startY) = if (isInitial) {
+                    // Initial load, use random placement (as pre-run will fix it)
+                    (Random.nextFloat() - 0.5f) * width * 0.5f to (Random.nextFloat() - 0.5f) * height * 0.5f
+                } else {
+                    // Node added later. Find its neighbors from the *new* edge list
+                    val neighborIds = newEdges.filter { it.src.id() == id || it.dst.id() == id }
+                        .map { if (it.src.id() == id) it.dst.id() else it.src.id() }
+                        .toSet()
+
+                    // Get the PhysicsNode objects of neighbors that *already exist* in our map
+                    val existingNeighbors = nodes.values.filter { it.id in neighborIds }
+
+                    if (existingNeighbors.isNotEmpty()) {
+                        // Place near existing neighbors
+                        val avgX = existingNeighbors.map { it.x }.average().toFloat()
+                        val avgY = existingNeighbors.map { it.y }.average().toFloat()
+                        avgX to avgY
+                    } else if (nodes.isNotEmpty()) {
+                        // No existing neighbors, place at center of *all* existing nodes
+                        val avgX = nodes.values.map { it.x }.average().toFloat()
+                        val avgY = nodes.values.map { it.y }.average().toFloat()
+                        avgX to avgY
+                    } else {
+                        // This is the very first node (or graph was empty)
+                        (Random.nextFloat() - 0.5f) * width * 0.1f to (Random.nextFloat() - 0.5f) * height * 0.1f
+                    }
+                }
+                // --- END NEW LOGIC ---
+
                 nodes[id] = PhysicsNode(
                     id = id,
-                    x = if (isInitial) (Random.nextFloat() - 0.5f) * width * 0.5f else 0f,
-                    y = if (isInitial) (Random.nextFloat() - 0.5f) * height * 0.5f else 0f
+                    x = startX, // Use new startX
+                    y = startY,  // Use new startY
+                    vx = 0f, // Start with no velocity
+                    vy = 0f
                 )
             }
         }
@@ -118,8 +153,16 @@ class PhysicsEngine(
 
         edgeLookup = edges.values.groupBy { it.from }
 
-        if (isInitial || (currentNodes - newNodesIds).isNotEmpty()) {
+        // If it's the initial load, publish the random positions
+        // so the pre-run has a starting point.
+        if (isInitial) {
             publishPositions()
+        }
+
+        // If nodes were added, just mark as unstable.
+        // LayoutEngine will handle starting the simulation.
+        if (nodesAdded && !isInitial) {
+            _isStable.value = false
         }
     }
 
@@ -161,6 +204,34 @@ class PhysicsEngine(
 
     internal fun getCurrentNodePositions(): Map<String, Offset> {
         return nodes.mapValues { Offset(it.value.x, it.value.y) }.toList().toMutableStateMap()
+    }
+
+    /**
+     * Runs a specified number of simulation steps synchronously.
+     * This is useful for "pre-running" the layout on initial load.
+     */
+    fun preRunSimulation(steps: Int) {
+        if (steps <= 0) return
+
+        _isStable.value = false
+        var i = 0
+        var stabilized = false
+        while (i < steps) {
+            stabilized = simulateStepInternal()
+            if (stabilized) {
+                _isStable.value = true
+                break
+            }
+            i++
+        }
+
+        // After the pre-run, publish the positions immediately
+        publishPositions()
+
+        // If it didn't stabilize, start the async simulation for fine-tuning
+        if (!stabilized) {
+            startSimulation() // This will pick up where preRun left off
+        }
     }
 
     fun startSimulation() {

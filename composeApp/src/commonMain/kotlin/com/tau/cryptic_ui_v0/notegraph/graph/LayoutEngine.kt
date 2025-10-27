@@ -18,7 +18,7 @@ class LayoutEngine(
     private val width: Float,
     private val height: Float,
     private val coroutineScope: CoroutineScope,
-    private val layoutOptions: LayoutOptions,
+    private val layoutOptions: LayoutOptions, // Updated LayoutOptions
     private val physicsOptions: PhysicsOptions
 ) {
     // The physics engine is now an internal component
@@ -48,6 +48,7 @@ class LayoutEngine(
      */
     fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitialLoad: Boolean = false) {
         // 1. Update the physics engine's internal data representation
+        // This now places new nodes intelligently and publishes on initial load
         physicsEngine.updateData(newNodes, newEdges)
 
         // 2. Decide which layout strategy to use
@@ -77,12 +78,23 @@ class LayoutEngine(
             }
         } else {
             // --- Physics-Based Layout ---
-            // If it's the first load, reset positions to random
             if (isInitialLoad) {
-                physicsEngine.resetNodePositions()
+                // On first load, physicsEngine.updateData already set random positions
+                // and published them.
+
+                // NOW, perform the synchronous pre-run.
+                if (layoutOptions.preRunSteps > 0) {
+                    // Run a fixed number of steps synchronously
+                    physicsEngine.preRunSimulation(layoutOptions.preRunSteps)
+                } else {
+                    // No pre-run, just start the async simulation
+                    physicsEngine.startSimulation()
+                }
+            } else {
+                // Not initial load (e.g., node added), just start simulation
+                // The new node was placed intelligently by PhysicsEngine
+                physicsEngine.startSimulation()
             }
-            // Start (or restart) the simulation
-            physicsEngine.startSimulation()
         }
     }
 

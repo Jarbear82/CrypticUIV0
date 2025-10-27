@@ -155,5 +155,12 @@ data class HierarchicalOptions(
  * Top-level options for the LayoutEngine.
  */
 data class LayoutOptions(
-    val hierarchical: HierarchicalOptions = HierarchicalOptions()
+    val hierarchical: HierarchicalOptions = HierarchicalOptions(),
+    /**
+     * On initial load (when hierarchical is false), run this many
+     * simulation steps synchronously before displaying the graph.
+     * This provides a better initial layout than pure random.
+     * Set to 0 to disable.
+     */
+    val preRunSteps: Int = 150 // A reasonable default
 )
