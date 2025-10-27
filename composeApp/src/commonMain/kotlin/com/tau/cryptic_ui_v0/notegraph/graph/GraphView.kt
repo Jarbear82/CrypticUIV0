@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
@@ -17,6 +18,8 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
+// FIX: Add necessary import
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.sp
@@ -26,8 +29,7 @@ import com.tau.cryptic_ui_v0.views.labelToColor
 import kotlin.math.max
 import kotlin.math.min
 
-// --- Graph Composable ---
-@OptIn(ExperimentalTextApi::class) // Needed for TextMeasurer
+@OptIn(ExperimentalTextApi::class)
 @Composable
 fun GraphView(
     nodes: List<NodeDisplayItem>,
@@ -36,15 +38,17 @@ fun GraphView(
     // Pass Options
     nodeStyleOptions: NodeStyleOptions = NodeStyleOptions(),
     edgeStyleOptions: EdgeStyleOptions = EdgeStyleOptions(),
-    physicsOptions: PhysicsOptions = PhysicsOptions(),
+    layoutOptions: LayoutOptions = LayoutOptions(),
+    physicsOptions: PhysicsOptions = PhysicsOptions(), // This is now a default
     interactionOptions: InteractionOptions = InteractionOptions(),
     selectionOptions: SelectionStyleOptions = SelectionStyleOptions(),
     tooltipOptions: TooltipOptions = TooltipOptions(),
-    navigationOptions: NavigationOptions = NavigationOptions()
+    navigationOptions: NavigationOptions = NavigationOptions(),
+    // New parameter to show/hide settings
+    showSettingsUI: Boolean = true
 ) {
     val density = LocalDensity.current
 
-    // --- Node Style Values ---
     val nodeRadiusPx = remember(density, nodeStyleOptions.radiusDp) {
         with(density) { nodeStyleOptions.radiusDp.toPx() }
     }
@@ -57,8 +61,6 @@ fun GraphView(
     val nodeSelectedStrokeWidthPx = remember(density, nodeStrokeWidthPx, selectionOptions.nodeSelectedStrokeWidthMultiplier) {
         nodeStrokeWidthPx * selectionOptions.nodeSelectedStrokeWidthMultiplier
     }
-
-    // --- Edge Style Values ---
     val edgeStrokeWidthPx = remember(density, edgeStyleOptions.defaultStrokeWidthDp) {
         with(density) { edgeStyleOptions.defaultStrokeWidthDp.toPx() }
     }
@@ -66,55 +68,38 @@ fun GraphView(
         edgeStrokeWidthPx * selectionOptions.edgeSelectedStrokeWidthMultiplier
     }
 
-
-    // --- Hoisted State ---
-    var viewOffset by remember { mutableStateOf<Offset?>(null) } // Center offset
+    var viewOffset by remember { mutableStateOf<Offset?>(null) }
     var viewScale by remember { mutableStateOf(1f) }
     val focusRequester = remember { FocusRequester() }
+    // FIX: State to track if focus has been requested once
+    var focusRequested by remember { mutableStateOf(false) }
 
-    // --- State for node positions, sourced from Physics Engine ---
     val nodePositions = remember { mutableStateMapOf<String, Offset>() }
 
-    // --- Selection and Interaction State ---
     var selectedNodeIds by remember { mutableStateOf(emptySet<String>()) }
     var selectedEdgeIds by remember { mutableStateOf(emptySet<String>()) }
     var draggedNodeId by remember { mutableStateOf<String?>(null) }
     var hoveredNodeInfo by remember { mutableStateOf<Pair<String, Offset>?>(null) }
     var isShiftPressed by remember { mutableStateOf(false) }
 
-    // --- Text and Physics ---
     val textMeasurer = rememberTextMeasurer()
-    val coroutineScope = rememberCoroutineScope() // Scope for physics engine
-    val physicsEngine = remember { mutableStateOf<PhysicsEngine?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
-    // --- Initialize Interaction Handler (Now only for node drag) ---
-    val interactionHandler = remember(nodeRadiusPx, physicsEngine.value, viewOffset, viewScale) {
-        GraphInteractionHandler(
-            nodePositionsProvider = { nodePositions },
-            nodeRadiusProvider = { nodeRadiusPx },
-            viewOffsetProvider = { viewOffset ?: Offset.Zero },
-            viewScaleProvider = { viewScale },
-            physicsEngineNotifier = { nodeId, newPos, isDragging ->
-                physicsEngine.value?.notifyNodePositionUpdate(nodeId, newPos.x, newPos.y, isDragging)
-            },
-            options = interactionOptions
-        )
+    // --- STATE FOR CONFIGURABLE OPTIONS ---
+    // Hold the physics options in an internal state, initialized by the parameter.
+    // This allows the settings UI to modify this state.
+    var internalPhysicsOptions by remember(physicsOptions) { mutableStateOf(physicsOptions) }
+    // ---
+
+    // Update derived physics options when the *internal* state changes
+    val updatedPhysicsOptions = remember(internalPhysicsOptions, nodeRadiusPx) {
+        internalPhysicsOptions.copy(nodeRadius = nodeRadiusPx)
     }
 
-    // Effect to collect position updates from Physics Engine
-    LaunchedEffect(physicsEngine.value) {
-        physicsEngine.value?.nodePositionsState?.collect { positions ->
-            nodePositions.clear()
-            nodePositions.putAll(positions)
-        }
-    }
-
-    // Helper to convert screen coords to canvas coords
     fun screenToCanvas(screenPos: Offset): Offset {
         return (screenPos - (viewOffset ?: Offset.Zero)) / viewScale
     }
 
-    // --- Fit graph to view ---
     fun fitGraphToView(widthPx: Float, heightPx: Float) {
         if (nodePositions.isEmpty()) return
         var minX = Float.MAX_VALUE
@@ -136,7 +121,7 @@ fun GraphView(
 
         val scaleX = widthPx / graphWidth
         val scaleY = heightPx / graphHeight
-        viewScale = min(scaleX, scaleY) * 0.9f // Add 10% padding
+        viewScale = min(scaleX, scaleY) * 0.9f
 
         viewOffset = Offset(
             (widthPx / 2f) - (graphCenterX * viewScale),
@@ -144,37 +129,73 @@ fun GraphView(
         )
     }
 
-
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val widthPx = with(density) { maxWidth.toPx() }
         val heightPx = with(density) { maxHeight.toPx() }
 
-        // --- Initialize/Update Physics Engine ---
-        LaunchedEffect(widthPx, heightPx, nodes, edges) {
+        // Create/recreate the LayoutEngine when size or *updated* options change
+        // `updatedPhysicsOptions` now depends on `internalPhysicsOptions`
+        val layoutEngine = remember(widthPx, heightPx, layoutOptions, updatedPhysicsOptions) {
             if (widthPx > 0 && heightPx > 0) {
-                if (viewOffset == null) {
-                    viewOffset = Offset(widthPx / 2f, heightPx / 2f)
-                }
+                LayoutEngine(
+                    nodes, // Pass initial nodes
+                    edges, // Pass initial edges
+                    widthPx,
+                    heightPx,
+                    coroutineScope,
+                    layoutOptions,
+                    updatedPhysicsOptions
+                )
+            } else {
+                null
+            }
+        }
 
-                val engine = physicsEngine.value
-                if (engine == null) {
-                    physicsEngine.value = PhysicsEngine(nodes, edges, widthPx, heightPx, coroutineScope, physicsOptions)
-                    // Request focus for keyboard input
-                    focusRequester.requestFocus()
-                } else {
-                    engine.updateData(nodes, edges)
+        // Update interaction handler with the current layout engine
+        val interactionHandler = remember(nodeRadiusPx, layoutEngine, viewOffset, viewScale) {
+            GraphInteractionHandler(
+                nodePositionsProvider = { nodePositions },
+                nodeRadiusProvider = { nodeRadiusPx },
+                viewOffsetProvider = { viewOffset ?: Offset.Zero },
+                viewScaleProvider = { viewScale },
+                physicsEngineNotifier = { nodeId, newPos, isDragging ->
+                    layoutEngine?.notifyNodePositionUpdate(nodeId, newPos.x, newPos.y, isDragging)
+                },
+                options = interactionOptions
+            )
+        }
+
+        // Collect positions from the current engine
+        LaunchedEffect(layoutEngine) {
+            if (layoutEngine == null) {
+                nodePositions.clear()
+            } else {
+                layoutEngine.nodePositionsState.collect { positions ->
+                    nodePositions.clear()
+                    nodePositions.putAll(positions)
                 }
             }
         }
 
-        // --- Canvas for Drawing ---
+        // Update engine with new data when nodes/edges change
+        LaunchedEffect(layoutEngine, nodes, edges) {
+            layoutEngine?.updateData(nodes, edges)
+        }
+
+        // Set initial view offset once
+        LaunchedEffect(widthPx, heightPx) {
+            if (widthPx > 0 && heightPx > 0 && viewOffset == null) {
+                viewOffset = Offset(widthPx / 2f, heightPx / 2f)
+            }
+        }
+
         if (viewOffset != null) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
+                    // (Pointer input modifiers unchanged)
                     .pointerInput(interactionHandler, interactionOptions.selectionEnabled, interactionOptions.tooltipsEnabled) {
-                        // --- Handle Taps (Selection, Tooltips) ---
                         detectTapGestures(
                             onTap = { screenPos ->
                                 if (!interactionOptions.selectionEnabled) return@detectTapGestures
@@ -188,27 +209,24 @@ fun GraphView(
                                     } else {
                                         if (multiSelect) selectedNodeIds + nodeId else setOf(nodeId)
                                     }
-                                    selectedEdgeIds = emptySet() // Clear edge selection
+                                    selectedEdgeIds = emptySet()
                                 } else {
-                                    // Tapped on canvas
                                     selectedNodeIds = emptySet()
                                     selectedEdgeIds = emptySet()
                                 }
-                                hoveredNodeInfo = null // Hide tooltip on tap
+                                hoveredNodeInfo = null
                             },
-                            onDoubleTap = { /* TODO: e.g., fit graph on node */ },
                             onLongPress = { screenPos ->
                                 if (!interactionOptions.tooltipsEnabled) return@detectTapGestures
                                 val canvasPos = screenToCanvas(screenPos)
                                 val nodeId = interactionHandler.findNodeAt(canvasPos, nodePositions, nodeRadiusPx)
                                 if (nodeId != null) {
-                                    hoveredNodeInfo = nodeId to screenPos // Show tooltip at screen pos
+                                    hoveredNodeInfo = nodeId to screenPos
                                 }
                             }
                         )
                     }
                     .pointerInput(interactionHandler, draggedNodeId, interactionOptions.dragView, interactionOptions.zoomView) {
-                        // --- Handle Pan and Zoom (if not dragging a node) ---
                         if (draggedNodeId == null) {
                             detectTransformGestures { centroid, pan, zoom, _ ->
                                 if (interactionOptions.dragView) {
@@ -224,7 +242,6 @@ fun GraphView(
                         }
                     }
                     .pointerInput(interactionHandler) {
-                        // --- Handle Node Drag (Highest Priority) ---
                         interactionHandler.handleNodeDragGestures(
                             pointerInputScope = this,
                             onDragStart = { nodeId -> draggedNodeId = nodeId; hoveredNodeInfo = null },
@@ -233,8 +250,18 @@ fun GraphView(
                     }
                     .focusRequester(focusRequester)
                     .focusable()
+                    // FIX: Request focus once the Canvas is positioned
+                    .onGloballyPositioned {
+                        if (!focusRequested && interactionOptions.keyboardNavigationEnabled) {
+                            // Only request if keyboard nav is enabled
+                            focusRequester.requestFocus()
+                            focusRequested = true
+                        }
+                    }
                     .onKeyEvent { event ->
+                        // Only handle if keyboard nav is enabled
                         if (!interactionOptions.keyboardNavigationEnabled) return@onKeyEvent false
+
                         isShiftPressed = event.isShiftPressed
                         if (event.type == KeyEventType.KeyDown) {
                             when (event.key) {
@@ -250,11 +277,12 @@ fun GraphView(
                             if (event.key == Key.ShiftLeft || event.key == Key.ShiftRight) {
                                 isShiftPressed = false
                             }
+                            false // Don't consume Up events generally
+                        } else {
+                            false // Don't consume other event types
                         }
-                        true
                     }
             ) {
-                // --- Apply View Transformations ---
                 translate(left = viewOffset!!.x, top = viewOffset!!.y) {
                     scale(scale = viewScale, pivot = Offset.Zero) {
                         val scaledNodeStrokeWidth = nodeStrokeWidthPx / viewScale
@@ -263,7 +291,7 @@ fun GraphView(
                         val scaledEdgeStrokeWidth = edgeStrokeWidthPx / viewScale
                         val scaledEdgeSelectedStrokeWidth = edgeSelectedStrokeWidthPx / viewScale
 
-                        // --- Draw Edges ---
+                        // (Drawing logic unchanged)
                         edges.forEach { edge ->
                             val fromId = edge.src.id()
                             val toId = edge.dst.id()
@@ -308,7 +336,6 @@ fun GraphView(
                             }
                         }
 
-                        // --- Draw Nodes ---
                         nodes.forEach { node ->
                             val nodeId = node.id()
                             val position = nodePositions[nodeId]
@@ -317,7 +344,6 @@ fun GraphView(
                                 val isDragged = nodeId == draggedNodeId
                                 val isSelected = selectedNodeIds.contains(nodeId)
 
-                                // --- Draw Node Border (Selection/Drag) ---
                                 if (isDragged) {
                                     drawCircle(
                                         color = nodeStyleOptions.draggedBorderColor,
@@ -341,14 +367,12 @@ fun GraphView(
                                     )
                                 }
 
-                                // --- Draw Node Fill ---
                                 drawCircle(
                                     color = colorInfo.composeColor,
                                     radius = nodeRadiusPx,
                                     center = position
                                 )
 
-                                // --- Draw Node Label ---
                                 val labelText = "${node.label}\n(${node.primarykeyProperty.value})"
                                 drawLabelCompose(
                                     drawScope = this,
@@ -365,10 +389,10 @@ fun GraphView(
                 }
             }
 
-            // --- Draw Navigation UI ---
+            // --- NAVIGATION AND SETTINGS UI ---
             if (navigationOptions.showNavigationUI) {
                 GraphNavigationUI(
-                    modifier = Modifier,
+                    modifier = Modifier.align(Alignment.BottomStart), // Aligned to BottomStart
                     options = navigationOptions,
                     onZoomIn = { viewScale *= 1.2f },
                     onZoomOut = { viewScale *= 0.8f },
@@ -376,7 +400,17 @@ fun GraphView(
                 )
             }
 
-            // --- Draw Tooltip ---
+            if (showSettingsUI) {
+                GraphSettingsUI(
+                    modifier = Modifier.align(Alignment.TopEnd), // Aligned to TopEnd
+                    options = internalPhysicsOptions,
+                    onOptionsChange = { newOptions ->
+                        internalPhysicsOptions = newOptions
+                    }
+                )
+            }
+            // ---
+
             val (hoveredNodeId, tooltipPos) = hoveredNodeInfo ?: (null to null)
             if (hoveredNodeId != null && tooltipPos != null) {
                 val node = nodes.find { it.id() == hoveredNodeId }
@@ -385,7 +419,6 @@ fun GraphView(
                         node = node,
                         position = tooltipPos,
                         options = tooltipOptions,
-                        // Provide bounds to keep tooltip on screen
                         constraints = androidx.compose.ui.unit.Constraints(maxWidth = widthPx.toInt(), maxHeight = heightPx.toInt())
                     )
                 }
