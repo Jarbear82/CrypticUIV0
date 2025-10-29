@@ -1,3 +1,4 @@
+// jarbear82/crypticuiv0/CrypticUIV0-kotlin-graph/composeApp/src/commonMain/kotlin/com/tau/cryptic_ui_v0/notegraph/graph/ForceAtlas2BasedRepulsionSolver.kt
 package com.tau.cryptic_ui_v0.notegraph.graph.physics
 
 import kotlin.math.abs
@@ -59,16 +60,16 @@ class ForceAtlas2BasedRepulsionSolver(
             val fy = (dy / distance) * overlapForceMagnitude
 
             physicsBody.forces[node.id]?.let {
-                it.x += fx
-                it.y += fy
+                it.x -= fx // <-- MODIFIED: Subtract overlap force
+                it.y -= fy // <-- MODIFIED: Subtract overlap force
             }
             // Apply opposite force only if branch represents a single different node
             if (branch.childrenCount == 1 && branch.children.data != null) {
                 val childNodeId = branch.children.data!!.id
                 if(childNodeId != node.id) {
                     physicsBody.forces[childNodeId]?.let {
-                        it.x -= fx
-                        it.y -= fy
+                        it.x += fx // <-- MODIFIED: Add overlap force
+                        it.y += fy // <-- MODIFIED: Add overlap force
                     }
                 }
             }
@@ -87,8 +88,8 @@ class ForceAtlas2BasedRepulsionSolver(
             val fy = (dy / distance) * forceMagnitude
 
             physicsBody.forces[node.id]?.let {
-                it.x += fx
-                it.y += fy
+                it.x -= fx // <-- MODIFIED: Subtract gravitational force
+                it.y -= fy // <-- MODIFIED: Subtract gravitational force
             }
 
             // Apply opposite force only if branch represents a single different node
@@ -96,8 +97,8 @@ class ForceAtlas2BasedRepulsionSolver(
                 val childNodeId = branch.children.data!!.id
                 if(childNodeId != node.id) {
                     physicsBody.forces[childNodeId]?.let {
-                        it.x -= fx
-                        it.y -= fy
+                        it.x += fx // <-- MODIFIED: Add gravitational force
+                        it.y += fy // <-- MODIFIED: Add gravitational force
                     }
                 }
             }

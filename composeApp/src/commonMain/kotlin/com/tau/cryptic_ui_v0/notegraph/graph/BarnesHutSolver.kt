@@ -1,3 +1,4 @@
+// jarbear82/crypticuiv0/CrypticUIV0-kotlin-graph/composeApp/src/commonMain/kotlin/com/tau/cryptic_ui_v0/notegraph/graph/BarnesHutSolver.kt
 package com.tau.cryptic_ui_v0.notegraph.graph.physics
 
 import kotlin.math.*
@@ -139,8 +140,8 @@ open class BarnesHutSolver(
         val fy = rdy * randomForceMagnitude
 
         physicsBody.forces[node.id]?.let {
-            it.x += fx
-            it.y += fy
+            it.x -= fx // <-- MODIFIED: Subtract random force
+            it.y -= fy // <-- MODIFIED: Subtract random force
         }
 
         // Apply opposite force if the branch is just a single *different* node
@@ -148,8 +149,8 @@ open class BarnesHutSolver(
             val childNodeId = interactingBranch.children.data!!.id
             if (childNodeId != node.id) {
                 physicsBody.forces[childNodeId]?.let {
-                    it.x -= fx
-                    it.y -= fy
+                    it.x += fx // <-- MODIFIED: Add random force
+                    it.y += fy // <-- MODIFIED: Add random force
                 }
             }
         }
@@ -193,8 +194,8 @@ open class BarnesHutSolver(
             val fy = (dy / distance) * overlapForceMagnitude
 
             physicsBody.forces[node.id]?.let {
-                it.x += fx
-                it.y += fy
+                it.x -= fx // <-- MODIFIED: Subtract overlap force
+                it.y -= fy // <-- MODIFIED: Subtract overlap force
             }
 
             // Apply opposite force only if branch represents a single different node
@@ -202,8 +203,8 @@ open class BarnesHutSolver(
                 val childNodeId = branch.children.data!!.id
                 if(childNodeId != node.id) {
                     physicsBody.forces[childNodeId]?.let {
-                        it.x -= fx
-                        it.y -= fy
+                        it.x += fx // <-- MODIFIED: Add overlap force
+                        it.y += fy // <-- MODIFIED: Add overlap force
                     }
                 }
             }
@@ -218,8 +219,8 @@ open class BarnesHutSolver(
             val fy = dy * gravityForceFactor
 
             physicsBody.forces[node.id]?.let {
-                it.x += fx
-                it.y += fy
+                it.x -= fx // <-- MODIFIED: Subtract gravitational force
+                it.y -= fy // <-- MODIFIED: Subtract gravitational force
             }
 
             // Apply opposite force only if branch represents a single different node
@@ -227,8 +228,8 @@ open class BarnesHutSolver(
                 val childNodeId = branch.children.data!!.id
                 if(childNodeId != node.id) {
                     physicsBody.forces[childNodeId]?.let {
-                        it.x -= fx
-                        it.y -= fy
+                        it.x += fx // <-- MODIFIED: Add gravitational force
+                        it.y += fy // <-- MODIFIED: Add gravitational force
                     }
                 }
             }

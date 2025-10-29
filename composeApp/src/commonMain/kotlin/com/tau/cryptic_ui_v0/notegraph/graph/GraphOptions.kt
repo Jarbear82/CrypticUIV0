@@ -84,10 +84,10 @@ enum class SolverType {
  * Options for the PhysicsEngine.
  */
 data class PhysicsOptions(
-    val solver: SolverType = SolverType.BARNES_HUT,
+    val solver: SolverType = SolverType.FORCE_ATLAS_2,
 
     // General physics properties
-    val damping: Float = 0.09f,
+    val damping: Float = 0.4f,
     val timeStep: Float = 0.5f,
     val minVelocity: Float = 1.0f,
     val centralGravity: Float = 0.01f,
@@ -95,20 +95,20 @@ data class PhysicsOptions(
 
     // Spring properties
     val selfReferenceSpringLength: Float = 100f,
-    val defaultSpringLength: Float = 1200f,
-    val defaultSpringConstant: Float = 0.05f,
+    val defaultSpringLength: Float = 400f,
+    val defaultSpringConstant: Float = 0.02f,
 
     val nodeRadius: Float? = null,
 
-    val repulsionConstant: Float = -1000f, // This is a different model, keeping as-is
+    val repulsionConstant: Float = -1000f,
 
     // Options for the advanced solvers
     val barnesHut: BarnesHutOptions = BarnesHutOptions(
-        gravitationalConstant = -3000.0,
+        gravitationalConstant = -10000.0,
         avoidOverlap = 1.0
     ),
     val forceAtlas: ForceAtlas2BasedOptions = ForceAtlas2BasedOptions(
-        gravitationalConstant = -150.0,
+        gravitationalConstant = -150.0, // (This value will be used now)
         avoidOverlap = 1.0
     ),
     val hierarchicalRepulsion: HierarchicalRepulsionOptions = HierarchicalRepulsionOptions()
