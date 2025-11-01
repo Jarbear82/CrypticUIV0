@@ -7,18 +7,22 @@ import com.tau.cryptic_ui_v0.GraphEdge
 import kotlin.math.max
 import kotlin.math.sqrt
 
-class PhysicsEngine(private val options: PhysicsOptions) {
+// UPDATED: Constructor is now parameterless
+class PhysicsEngine() {
 
     /**
      * Updates the positions and velocities of all nodes based on physics.
      * @param nodes The current map of nodes.
      * @param edges The list of edges.
+     * @param options The *current* physics options from the settings UI.
      * @param dt The time delta (e.g., 16ms).
      * @return A new map of updated nodes.
      */
+    // UPDATED: 'options' is now passed into the update method
     fun update(
         nodes: Map<Long, GraphNode>,
         edges: List<GraphEdge>,
+        options: PhysicsOptions,
         dt: Float
     ): Map<Long, GraphNode> {
         if (nodes.isEmpty()) return emptyMap()
@@ -38,6 +42,7 @@ class PhysicsEngine(private val options: PhysicsOptions) {
             // Do not apply gravity to fixed (dragged) nodes
             if (node.isFixed) continue
 
+            // UPDATED: Using 'options' parameter
             val gravityForce = -node.pos * options.gravity * node.mass
             forces[node.id] = forces[node.id]!! + gravityForce
         }
@@ -72,6 +77,7 @@ class PhysicsEngine(private val options: PhysicsOptions) {
             // Do not apply repulsion to fixed nodes (but they still repel others)
             if (node.isFixed) continue
 
+            // UPDATED: Using 'options' parameter
             val repulsionForce = quadTree.applyRepulsion(node, options, options.barnesHutTheta)
             forces[node.id] = forces[node.id]!! + repulsionForce
         }
@@ -92,9 +98,11 @@ class PhysicsEngine(private val options: PhysicsOptions) {
                 if (dist == 0f) continue
 
                 // The "ideal" length of the spring is the sum of radii + a buffer
+                // UPDATED: Using 'options' parameter
                 val idealLength = nodeA.radius + nodeB.radius + (options.minDistance * 5)
 
                 val displacement = dist - idealLength
+                // UPDATED: Using 'options' parameter
                 val springForce = delta.normalized() * displacement * options.spring * edge.strength
 
                 forces[nodeA.id] = forces[nodeA.id]!! + springForce
@@ -130,6 +138,7 @@ class PhysicsEngine(private val options: PhysicsOptions) {
         // 3e. Calculate Global Speed
         // This is the "adaptive cooling" part from FA2 paper
         val globalSpeed = if (globalSwinging > 0) {
+            // UPDATED: Using 'options' parameter
             options.tolerance * globalTraction / globalSwinging
         } else {
             0.1f // Default speed if no movement
@@ -153,6 +162,7 @@ class PhysicsEngine(private val options: PhysicsOptions) {
             var newVel = node.vel + (acceleration * dt)
 
             // Apply damping
+            // UPDATED: Using 'options' parameter
             newVel *= options.damping
 
             // --- MODIFIED: Apply FA2 Adaptive Speed ---
@@ -195,3 +205,4 @@ private fun Offset.normalized(): Offset {
     val mag = this.getDistance()
     return if (mag == 0f) Offset.Zero else this / mag
 }
+

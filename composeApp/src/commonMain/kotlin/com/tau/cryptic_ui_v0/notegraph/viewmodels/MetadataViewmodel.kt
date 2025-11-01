@@ -66,18 +66,24 @@ class MetadataViewModel(
     // ADDED: private suspend function for node-fetching logic
     private suspend fun fetchNodes() {
         try {
+            // UPDATED: Robust schema loading
             // Ensure schema is loaded to map IDs to names
-            // FIX: Ensure schema isn't null before proceeding
-            val schema = schemaViewModel.schema.value
-            if (schema == null) {
-                println("Schema not yet loaded. Calling showSchema() first.")
+            var schemaData = schemaViewModel.schema.value
+            if (schemaData == null) {
+                println("Schema not yet loaded. Calling and awaiting showSchema() first.")
                 schemaViewModel.showSchema() // Make sure schema is loaded
+                schemaData = schemaViewModel.schema.value // Refetch the value
             }
-            val schemaMap = schemaViewModel.schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
-            if (schemaMap.isEmpty()) {
-                println("Schema not loaded, fetching nodes aborted.")
-                return
+
+            // Now schemaData might be non-null (or null if DB is empty, which is fine)
+            val schemaMap = schemaData?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
+
+            if (schemaData == null) {
+                println("Schema could not be loaded. Aborting node fetch.")
+                _nodeList.value = emptyList() // Clear list if schema is unavailable
+                return // Exit the function
             }
+            // --- END UPDATED ---
 
             val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
             println("fetchNodes: Found ${dbNodes.size} nodes.") // Added logging
@@ -103,13 +109,27 @@ class MetadataViewModel(
     // ADDED: private suspend function for edge-fetching logic
     private suspend fun fetchEdges() {
         try {
-            // Ensure schema and nodes are loaded to map IDs
-            val schemaMap = schemaViewModel.schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
+            // UPDATED: Robust schema and node loading
+            var schemaData = schemaViewModel.schema.value
+            if (schemaData == null) {
+                println("Edge fetch: Schema not yet loaded. Calling and awaiting showSchema() first.")
+                schemaViewModel.showSchema()
+                schemaData = schemaViewModel.schema.value
+            }
+
+            if (_nodeList.value.isEmpty()) {
+                println("Edge fetch: Nodes not loaded. Calling and awaiting fetchNodes() first.")
+                fetchNodes() // Await node fetch
+            }
+            // --- END UPDATED ---
+
+            val schemaMap = schemaData?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
             val nodeMap = _nodeList.value.associateBy { it.id } // Uses the now-populated node list
 
-            if (schemaMap.isEmpty()) {
-                println("Edge schema or nodes not loaded, fetching edges aborted.")
-                // Don't return if nodeMap is empty, just means no edges can be formed
+            if (schemaData == null) {
+                println("Schema could not be loaded. Aborting edge fetch.")
+                _edgeList.value = emptyList() // Clear list
+                return // Exit
             }
 
             val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
@@ -148,6 +168,7 @@ class MetadataViewModel(
     fun listEdges() {
         viewModelScope.launch {
             // Edges depend on nodes, so fetch nodes first if the list is empty
+            // This check is now redundant thanks to the check inside fetchEdges, but is harmless
             if (_nodeList.value.isEmpty()) {
                 fetchNodes()
             }
@@ -181,7 +202,13 @@ class MetadataViewModel(
         val fetchedItem = when (item) {
             is NodeDisplayItem -> {
                 val dbNode = dbService.database.appDatabaseQueries.selectNodeById(item.id).executeAsOneOrNull() ?: return null
-                val schema = schemaViewModel.schema.value?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
+                // UPDATED: Robust schema check
+                var schemaData = schemaViewModel.schema.value
+                if (schemaData == null) {
+                    schemaViewModel.showSchema()
+                    schemaData = schemaViewModel.schema.value
+                }
+                val schema = schemaData?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
                 val properties = try {
                     json.decodeFromString<Map<String, String>>(dbNode.properties_json)
                 } catch (e: Exception) {
@@ -192,7 +219,13 @@ class MetadataViewModel(
             }
             is EdgeDisplayItem -> {
                 val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
-                val schema = schemaViewModel.schema.value?.edgeSchemas?.firstOrNull { it.id == dbEdge.schema_id } ?: return null
+                // UPDATED: Robust schema check
+                var schemaData = schemaViewModel.schema.value
+                if (schemaData == null) {
+                    schemaViewModel.showSchema()
+                    schemaData = schemaViewModel.schema.value
+                }
+                val schema = schemaData?.edgeSchemas?.firstOrNull { it.id == dbEdge.schema_id } ?: return null
                 val properties = try {
                     json.decodeFromString<Map<String, String>>(dbEdge.properties_json)
                 } catch (e: Exception) {

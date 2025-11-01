@@ -11,17 +11,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
-// Helper data class to hold the schema state, replacing the old 'Schema' class
 data class SchemaData(
     val nodeSchemas: List<SchemaDefinitionItem>,
     val edgeSchemas: List<SchemaDefinitionItem>
 )
 
-// UPDATED: Constructor takes SqliteDbService
-class SchemaViewModel(private val dbService: SqliteDbService, private val viewModelScope: CoroutineScope) {
-    // UPDATED: StateFlow holds the new SchemaData class
+class SchemaViewModel(
+    private val dbService: SqliteDbService,
+    private val viewModelScope: CoroutineScope
+) {
     private val _schema = MutableStateFlow<SchemaData?>(null)
     val schema = _schema.asStateFlow()
+
+    // --- ADDED: State for managing the delete confirmation dialog ---
+    private val _schemaToDelete = MutableStateFlow<SchemaDefinitionItem?>(null)
+    val schemaToDelete = _schemaToDelete.asStateFlow()
+
+    private val _schemaDependencyCount = MutableStateFlow(0L)
+    val schemaDependencyCount = _schemaDependencyCount.asStateFlow()
+
+    private var metadataViewModel: MetadataViewModel? = null
 
     // JSON parser configuration
     private val json = Json {
@@ -36,7 +45,10 @@ class SchemaViewModel(private val dbService: SqliteDbService, private val viewMo
         }
     }
 
-    // UPDATED: Rewritten to use SqliteDbService and deserialize JSON
+    fun setDependencies(metadataViewModel: MetadataViewModel) {
+        this.metadataViewModel = metadataViewModel
+    }
+
     suspend fun showSchema() {
         println("\n\nShowing Schema...")
         try {
@@ -93,34 +105,65 @@ class SchemaViewModel(private val dbService: SqliteDbService, private val viewMo
         }
     }
 
-    // UPDATED: Takes new SchemaDefinitionItem and uses new delete query
-    fun deleteSchema(item: SchemaDefinitionItem) {
+    /**
+     * Checks for dependencies and shows a confirmation dialog if necessary.
+     */
+    fun requestDeleteSchema(item: SchemaDefinitionItem) {
         viewModelScope.launch {
             try {
-                // This single query deletes by the unique ID, regardless of type
-                dbService.database.appDatabaseQueries.deleteSchemaById(item.id)
-                showSchema() // Refresh the schema list
+                // Use new queries to check for dependencies
+                val nodeCount = dbService.database.appDatabaseQueries.countNodesForSchema(item.id).executeAsOne()
+                val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(item.id).executeAsOne()
+                val totalCount = nodeCount + edgeCount
+
+                if (totalCount == 0L) {
+                    // No dependencies, delete immediately
+                    // UPDATED: Need to set the item to delete even if count is 0
+                    _schemaToDelete.value = item
+                    confirmDeleteSchema()
+                } else {
+                    // Dependencies found, show dialog
+                    _schemaDependencyCount.value = totalCount
+                    _schemaToDelete.value = item
+                }
             } catch (e: Exception) {
-                println("Error deleting schema ${item.name}: ${e.message}")
-                // TODO: Show error to user
+                println("Error checking schema dependencies: ${e.message}")
+                // TODO: Show user-facing error
             }
         }
     }
 
-    // REMOVED: Old Kuzu-specific functions
-    /*
-    fun deleteSchemaNode(item: SchemaNode) {
+    /**
+     * Called by the dialog's "Confirm" button.
+     * Deletes the schema, relying on "ON DELETE CASCADE" to clean up nodes/edges.
+     */
+    fun confirmDeleteSchema() {
         viewModelScope.launch {
-            deleteSchemaNode(dbService, item)
-            showSchema()
+            val item = _schemaToDelete.value ?: return@launch // Get item from state
+            try {
+                // This single query deletes the schema.
+                // The DB's "ON DELETE CASCADE" will delete all associated nodes/edges.
+                dbService.database.appDatabaseQueries.deleteSchemaById(item.id)
+
+                // Refresh all data
+                showSchema()
+                metadataViewModel?.listAll()
+
+            } catch (e: Exception) {
+                println("Error deleting schema ${item.name}: ${e.message}")
+                // TODO: Show error to user
+            } finally {
+                clearDeleteSchemaRequest()
+            }
         }
     }
 
-    fun deleteSchemaEdge(item: SchemaEdge) {
-        viewModelScope.launch {
-            deleteSchemaEdge(dbService, item)
-            showSchema()
-        }
+    /**
+     * Called by the dialog's "Cancel" button.
+     */
+    fun clearDeleteSchemaRequest() {
+        _schemaToDelete.value = null
+        _schemaDependencyCount.value = 0
     }
-    */
 }
+

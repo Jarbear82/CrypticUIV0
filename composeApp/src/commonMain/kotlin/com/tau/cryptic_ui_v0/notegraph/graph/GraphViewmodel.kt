@@ -33,8 +33,12 @@ class GraphViewmodel(
     private val editCreateViewModel: EditCreateViewModel,
     private val onSwitchToEditTab: () -> Unit
 ) {
-    private val options = PhysicsOptions()
-    private val physicsEngine = PhysicsEngine(options)
+    // UPDATED: No longer passing options here
+    private val physicsEngine = PhysicsEngine()
+
+    // --- ADDED: State for physics options ---
+    private val _physicsOptions = MutableStateFlow(PhysicsOptions(gravity = 0.5f)) // Use the stronger gravity
+    val physicsOptions = _physicsOptions.asStateFlow()
 
     private val _graphNodes = MutableStateFlow<Map<Long, GraphNode>>(emptyMap())
     val graphNodes = _graphNodes.asStateFlow()
@@ -55,6 +59,10 @@ class GraphViewmodel(
     // ADDED: State for FAB menu
     private val _showFabMenu = MutableStateFlow(false)
     val showFabMenu = _showFabMenu.asStateFlow()
+
+    // --- ADDED: State for settings UI ---
+    private val _showSettings = MutableStateFlow(false)
+    val showSettings = _showSettings.asStateFlow()
 
     // We need the canvas size to correctly calculate zoom center
     private var size = Size.Zero
@@ -83,9 +91,11 @@ class GraphViewmodel(
 
             // Run one physics step
             if (_graphNodes.value.isNotEmpty()) {
+                // UPDATED: Pass the current options value to the engine
                 val updatedNodes = physicsEngine.update(
                     _graphNodes.value,
                     _graphEdges.value,
+                    _physicsOptions.value, // Pass current options
                     dt.coerceAtMost(0.032f) // Cap delta time
                 )
                 _graphNodes.value = updatedNodes
@@ -104,7 +114,8 @@ class GraphViewmodel(
             val newNodeMap = nodeList.associate { node ->
                 val id = node.id
                 val edgeCount = edgeCountByNodeId[id] ?: 0
-                val radius = options.nodeBaseRadius + (edgeCount * options.nodeRadiusEdgeFactor)
+                // UPDATED: Use radius options from the state
+                val radius = _physicsOptions.value.nodeBaseRadius + (edgeCount * _physicsOptions.value.nodeRadiusEdgeFactor)
 
                 // --- MODIFIED: ForceAtlas2 mass is (degree + 1) ---
                 val mass = (edgeCount + 1).toFloat()
@@ -291,7 +302,39 @@ class GraphViewmodel(
         onSwitchToEditTab()
     }
 
+    // --- ADDED: Physics Settings Handlers ---
+
+    fun toggleSettings() {
+        _showSettings.update { !it }
+    }
+
+    fun setGravity(value: Float) {
+        _physicsOptions.update { it.copy(gravity = value) }
+    }
+
+    fun setRepulsion(value: Float) {
+        _physicsOptions.update { it.copy(repulsion = value) }
+    }
+
+    fun setSpring(value: Float) {
+        _physicsOptions.update { it.copy(spring = value) }
+    }
+
+    fun setDamping(value: Float) {
+        _physicsOptions.update { it.copy(damping = value) }
+    }
+
+    fun setBarnesHutTheta(value: Float) {
+        _physicsOptions.update { it.copy(barnesHutTheta = value) }
+    }
+
+    fun setTolerance(value: Float) {
+        _physicsOptions.update { it.copy(tolerance = value) }
+    }
+
+
     fun onCleared() {
         _simulationRunning.value = false
     }
 }
+

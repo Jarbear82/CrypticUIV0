@@ -13,7 +13,8 @@ CREATE TABLE Node (
     schema_id INTEGER NOT NULL,
     display_label TEXT NOT NULL,
     properties_json TEXT NOT NULL,
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id)
+    -- ADDED: ON DELETE CASCADE
+    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
 );
 
 CREATE TABLE Edge (
@@ -22,7 +23,8 @@ CREATE TABLE Edge (
     from_node_id INTEGER NOT NULL,
     to_node_id INTEGER NOT NULL,
     properties_json TEXT NOT NULL,
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id),
+    -- ADDED: ON DELETE CASCADE
+    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
     FOREIGN KEY(from_node_id) REFERENCES Node(id) ON DELETE CASCADE,
     FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE
 );
@@ -55,6 +57,10 @@ SELECT * FROM Node;
 selectNodeById:
 SELECT * FROM Node WHERE id = ?;
 
+-- ADDED: Query to count nodes for a schema
+countNodesForSchema:
+SELECT COUNT(*) FROM Node WHERE schema_id = ?;
+
 insertNode:
 INSERT INTO Node(schema_id, display_label, properties_json)
 VALUES (?, ?, ?);
@@ -74,6 +80,10 @@ SELECT * FROM Edge;
 
 selectEdgeById:
 SELECT * FROM Edge WHERE id = ?;
+
+-- ADDED: Query to count edges for a schema
+countEdgesForSchema:
+SELECT COUNT(*) FROM Edge WHERE schema_id = ?;
 
 insertEdge:
 INSERT INTO Edge(schema_id, from_node_id, to_node_id, properties_json)

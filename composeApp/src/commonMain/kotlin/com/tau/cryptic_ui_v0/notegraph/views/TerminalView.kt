@@ -34,6 +34,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
     // ADDED: Get the GraphViewModel from the TerminalViewModel
     val graphViewModel = viewModel.graphViewModel
 
+    // --- ADDED: Collect state for the delete schema dialog ---
+    val schemaToDelete by viewModel.schemaViewModel.schemaToDelete.collectAsState()
+    val dependencyCount by viewModel.schemaViewModel.schemaDependencyCount.collectAsState()
+    // --- END ADDED ---
+
 
     // --- COLLECT THE NEW CONSOLIDATED STATE ---
     val editScreenState by viewModel.editCreateViewModel.editScreenState.collectAsState()
@@ -152,6 +157,23 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
             Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
 
+                // --- ADDED: Confirmation Dialog ---
+                // This dialog will appear on top of this Column when state is set
+                val itemToDelete = schemaToDelete
+                if (itemToDelete != null && selectedDataTab == DataViewTabs.SCHEMA) {
+                    DeleteSchemaConfirmationDialog(
+                        item = itemToDelete,
+                        dependencyCount = dependencyCount,
+                        onConfirm = {
+                            viewModel.schemaViewModel.confirmDeleteSchema()
+                        },
+                        onDismiss = {
+                            viewModel.schemaViewModel.clearDeleteSchemaRequest()
+                        }
+                    )
+                }
+                // --- END ADDED ---
+
 
                 TabRow(selectedTabIndex = selectedDataTab.value) {
                     DataViewTabs.entries.forEach { tab ->
@@ -228,9 +250,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
                                 }
                             }
                         },
-                        onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchema(it) },
-
-                        onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchema(it) },
+                        // UPDATED: Call the new request function
+                        onDeleteNodeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
+                        onDeleteEdgeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )

@@ -11,9 +11,19 @@ import kotlinx.coroutines.flow.asStateFlow
 class TerminalViewModel(private val dbService: SqliteDbService) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    // UPDATED: These ViewModels are now instantiated with the SqliteDbService
+    // UPDATED: Re-ordered initialization and removed circular dependency.
+    // 1. Create schemaViewModel first (it no longer depends on metadataViewModel in constructor)
     val schemaViewModel = SchemaViewModel(dbService, viewModelScope)
+
+    // 2. Create metadataViewModel, passing in schemaViewModel
     val metadataViewModel = MetadataViewModel(dbService, viewModelScope, schemaViewModel)
+
+    // 3. Set the dependency for schemaViewModel *after* metadataViewModel is created
+    init {
+        schemaViewModel.setDependencies(metadataViewModel)
+    }
+    // --- END UPDATE ---
+
 
     // REMOVED: QueryViewModel is no longer needed
     // val queryViewModel = QueryViewModel(dbService, viewModelScope, metadataViewModel)
