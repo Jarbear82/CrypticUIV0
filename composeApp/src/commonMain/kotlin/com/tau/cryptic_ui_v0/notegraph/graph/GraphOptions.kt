@@ -5,9 +5,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+// --- ADDED IMPORTS ---
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.SolverType
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.BarnesHutOptions
-import com.tau.cryptic_ui_v0.notegraph.graph.physics.ForceAtlas2BasedOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.ForceAtlas2Options
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.HierarchicalRepulsionOptions
+// ---
 
 // --- Default values ---
 val DEFAULT_NODE_RADIUS_DP = 25.dp
@@ -70,49 +74,8 @@ data class InteractionOptions(
 
 // --- Layout and Physics Options ---
 
-/**
- * Selects which repulsion solver to use in the PhysicsEngine.
- */
-enum class SolverType {
-    REPEL,
-    BARNES_HUT,
-    FORCE_ATLAS_2,
-    HIERARCHICAL
-}
-
-/**
- * Options for the PhysicsEngine.
- */
-data class PhysicsOptions(
-    val solver: SolverType = SolverType.FORCE_ATLAS_2,
-
-    // General physics properties
-    val damping: Float = 0.4f,
-    val timeStep: Float = 0.5f,
-    val minVelocity: Float = 1.0f,
-    val centralGravity: Float = 0.01f,
-    val maxVelocity: Float = 50f,
-
-    // Spring properties
-    val selfReferenceSpringLength: Float = 100f,
-    val defaultSpringLength: Float = 400f,
-    val defaultSpringConstant: Float = 0.02f,
-
-    val nodeRadius: Float? = null,
-
-    val repulsionConstant: Float = -1000f,
-
-    // Options for the advanced solvers
-    val barnesHut: BarnesHutOptions = BarnesHutOptions(
-        gravitationalConstant = -10000.0,
-        avoidOverlap = 1.0
-    ),
-    val forceAtlas: ForceAtlas2BasedOptions = ForceAtlas2BasedOptions(
-        gravitationalConstant = -150.0, // (This value will be used now)
-        avoidOverlap = 1.0
-    ),
-    val hierarchicalRepulsion: HierarchicalRepulsionOptions = HierarchicalRepulsionOptions()
-)
+// --- REMOVED: SolverType, PhysicsOptions, BarnesHutOptions, ForceAtlas2BasedOptions, HierarchicalRepulsionOptions ---
+// --- They are now imported from ...graph.physics ---
 
 /**
  * Defines the direction for hierarchical layout.
@@ -133,7 +96,12 @@ data class HierarchicalOptions(
     val levelSeparation: Float = 150f,
     val nodeSeparation: Float = 100f,
     val direction: HierarchicalDirection = HierarchicalDirection.UD,
-    val runPhysicsAfter: Boolean = true
+    val runPhysicsAfter: Boolean = true,
+    // --- ADDED: Options from vis-network.js ---
+    val parentCentralization: Boolean = true,
+    val blockShifting: Boolean = true,
+    val edgeMinimization: Boolean = true,
+    val sortMethod: String = "directed" // "hubsize" or "directed"
 )
 
 /**
@@ -141,6 +109,16 @@ data class HierarchicalOptions(
  */
 data class LayoutOptions(
     val hierarchical: HierarchicalOptions = HierarchicalOptions(),
+
+    /**
+     * --- ADDED: Flag to use KamadaKawai or similar improved layout ---
+     * If true, and hierarchical is false, the engine will try to
+     * run an improved layout algorithm before starting physics.
+     * Note: The provided KamadaKawai.kt is from an incompatible project,
+     * so this currently falls back to preRunSteps.
+     */
+    val improvedLayout: Boolean = true,
+
     /**
      * On initial load (when hierarchical is false), run this many
      * simulation steps synchronously before displaying the graph.

@@ -28,7 +28,11 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.sp
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
 import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.views.labelToColor
+// --- ADD THIS IMPORT ---
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.SimulationStatus
+// ---
+import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -42,7 +46,7 @@ fun GraphView(
     nodeStyleOptions: NodeStyleOptions = NodeStyleOptions(),
     edgeStyleOptions: EdgeStyleOptions = EdgeStyleOptions(),
     layoutOptions: LayoutOptions = LayoutOptions(),
-    physicsOptions: PhysicsOptions = PhysicsOptions(), // This is now a default
+    physicsOptions: PhysicsOptions = PhysicsOptions(), // This now correctly uses the one from ...graph.physics
     interactionOptions: InteractionOptions = InteractionOptions(),
     selectionOptions: SelectionStyleOptions = SelectionStyleOptions(),
     tooltipOptions: TooltipOptions = TooltipOptions(),
@@ -156,7 +160,8 @@ fun GraphView(
 
         // --- ADD THIS ---
         // Collect the stability state from the engine
-        val isStable by layoutEngine?.isStable?.collectAsState() ?: remember { mutableStateOf(true) }
+        val simulationStatus by layoutEngine?.status?.collectAsState() ?: remember { mutableStateOf(SimulationStatus.Stable) }
+        val isStable = simulationStatus == SimulationStatus.Stable
         // ---
 
         // Update interaction handler with the current layout engine
@@ -381,7 +386,7 @@ fun GraphView(
                                     center = position
                                 )
 
-                                val labelText = "${node.label}\n(${node.primarykeyProperty.value})"
+                                val labelText = "${node.label}\n(${node.displayProperty})"
                                 drawLabelCompose(
                                     drawScope = this,
                                     textMeasurer = textMeasurer,

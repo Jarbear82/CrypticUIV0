@@ -6,9 +6,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import com.tau.cryptic_ui_v0.db.AppDatabase
 
+// UPDATED: Constructor now takes SqliteDbService
 class EditCreateViewModel(
-    private val dbService: KuzuDBService,
+    private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
     private val schemaViewModel: SchemaViewModel,
     private val metadataViewModel: MetadataViewModel,
@@ -16,6 +20,14 @@ class EditCreateViewModel(
 
     private val _editScreenState = MutableStateFlow<EditScreenState>(EditScreenState.None)
     val editScreenState = _editScreenState.asStateFlow()
+
+    // ADDED: JSON serializer instance
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+        encodeDefaults = true // Ensure all fields are present
+    }
 
     /**
      * Returns the currently active *edited* item state (not creation state).
@@ -42,21 +54,23 @@ class EditCreateViewModel(
     // --- Node Creation ---
     fun initiateNodeCreation() {
         viewModelScope.launch {
-            val schema = schemaViewModel.schema.value ?: return@launch
+            // UPDATED: Fetches new SchemaData and filters for node schemas
+            val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
             metadataViewModel.clearSelectedItem()
             _editScreenState.value = EditScreenState.CreateNode(
-                NodeCreationState(schemas = schema.nodeTables)
+                NodeCreationState(schemas = nodeSchemas)
             )
         }
     }
 
-    fun updateNodeCreationSchema(schemaNode: SchemaNode) {
+    // UPDATED: Signature uses new SchemaDefinitionItem
+    fun updateNodeCreationSchema(schemaNode: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNode) return@update current
             current.copy(
                 state = current.state.copy(
                     selectedSchema = schemaNode,
-                    properties = emptyMap()
+                    properties = emptyMap() // Reset properties when schema changes
                 )
             )
         }
@@ -72,19 +86,33 @@ class EditCreateViewModel(
         }
     }
 
+    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
     fun createNodeFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateNode)?.state ?: return@launch
 
             if (state.selectedSchema != null) {
-                val properties = state.properties.map {
-                    TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
+                try {
+                    // Serialize properties to JSON
+                    val propertiesJson = json.encodeToString(state.properties)
+
+                    // Find the display property's value
+                    val displayKey = state.selectedSchema.properties.firstOrNull { it.isDisplayProperty }?.name
+                    val displayLabel = state.properties[displayKey] ?: "Node" // Fallback
+
+                    // Call SQLDelight insert query
+                    dbService.database.appDatabaseQueries.insertNode(
+                        schema_id = state.selectedSchema.id,
+                        display_label = displayLabel,
+                        properties_json = propertiesJson
+                    )
+                    cancelAllEditing()
+                    metadataViewModel.listNodes()
+                    onFinished()
+                } catch (e: Exception) {
+                    println("Error creating node: ${e.message}")
+                    // TODO: Show user-facing error
                 }
-                val nodeTable = NodeTable(state.selectedSchema.label, properties, false, false)
-                createNode(dbService, nodeTable)
-                cancelAllEditing()
-                metadataViewModel.listNodes()
-                onFinished()
             }
         }
     }
@@ -92,21 +120,23 @@ class EditCreateViewModel(
     // --- Edge Creation ---
     fun initiateEdgeCreation() {
         viewModelScope.launch {
-            val schema = schemaViewModel.schema.value ?: return@launch
+            // UPDATED: Fetches new SchemaData and filters for edge schemas
+            val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
             if (metadataViewModel.nodeList.value.isEmpty()) {
                 metadataViewModel.listNodes()
             }
             metadataViewModel.clearSelectedItem()
             _editScreenState.value = EditScreenState.CreateEdge(
                 EdgeCreationState(
-                    schemas = schema.edgeTables,
+                    schemas = edgeSchemas,
                     availableNodes = metadataViewModel.nodeList.value
                 )
             )
         }
     }
 
-    fun updateEdgeCreationSchema(schemaEdge: SchemaEdge) {
+    // UPDATED: Signature uses new SchemaDefinitionItem
+    fun updateEdgeCreationSchema(schemaEdge: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
             current.copy(
@@ -158,19 +188,30 @@ class EditCreateViewModel(
         }
     }
 
+    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
     fun createEdgeFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateEdge)?.state ?: return@launch
 
             if (state.selectedSchema != null && state.src != null && state.dst != null) {
-                val properties = state.properties.map {
-                    TableProperty(it.key, it.value.toLongOrNull() ?: it.value, false, false)
+                try {
+                    // Serialize properties to JSON
+                    val propertiesJson = json.encodeToString(state.properties)
+
+                    // Call SQLDelight insert query
+                    dbService.database.appDatabaseQueries.insertEdge(
+                        schema_id = state.selectedSchema.id,
+                        from_node_id = state.src.id,
+                        to_node_id = state.dst.id,
+                        properties_json = propertiesJson
+                    )
+                    cancelAllEditing() // Exit creation mode
+                    metadataViewModel.listEdges() // Refresh the edge list
+                    onFinished()
+                } catch (e: Exception) {
+                    println("Error creating edge: ${e.message}")
+                    // TODO: Show user-facing error
                 }
-                val edgeTable = EdgeTable(state.selectedSchema.label, state.src, state.dst, properties, false, false, false, false)
-                createEdge(dbService, edgeTable)
-                cancelAllEditing() // Exit creation mode
-                metadataViewModel.listEdges() // Refresh the edge list
-                onFinished()
             }
         }
     }
@@ -179,7 +220,12 @@ class EditCreateViewModel(
     fun initiateNodeSchemaCreation() {
         viewModelScope.launch {
             metadataViewModel.setItemToEdit("CreateNodeSchema") // Keep this for cancel logic
-            _editScreenState.value = EditScreenState.CreateNodeSchema(NodeSchemaCreationState())
+            // UPDATED: Uses new NodeSchemaCreationState with default SchemaProperty
+            _editScreenState.value = EditScreenState.CreateNodeSchema(
+                NodeSchemaCreationState(
+                    properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
+                )
+            )
         }
     }
 
@@ -190,7 +236,8 @@ class EditCreateViewModel(
         }
     }
 
-    fun onNodeSchemaPropertyChange(index: Int, property: Property) {
+    // UPDATED: Signature uses new SchemaProperty
+    fun onNodeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
@@ -200,10 +247,11 @@ class EditCreateViewModel(
         }
     }
 
+    // UPDATED: Adds new SchemaProperty
     fun onAddNodeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
-            current.copy(state = current.state.copy(properties = current.state.properties + Property()))
+            current.copy(state = current.state.copy(properties = current.state.properties + SchemaProperty("newProperty", "Text")))
         }
     }
 
@@ -217,19 +265,36 @@ class EditCreateViewModel(
         }
     }
 
-    fun createNodeSchemaFromState(state: NodeSchemaCreationState, onFinished: () -> Unit) {
+    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
+    fun createNodeSchemaFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
-            createNodeSchema(dbService, state)
-            onFinished()
-            cancelAllEditing()
-            schemaViewModel.showSchema()
+            val state = (_editScreenState.value as? EditScreenState.CreateNodeSchema)?.state ?: return@launch
+            try {
+                // Serialize properties
+                val propertiesJson = json.encodeToString(state.properties)
+
+                // Call SQLDelight insert query
+                dbService.database.appDatabaseQueries.insertSchema(
+                    type = "NODE",
+                    name = state.tableName,
+                    properties_json = propertiesJson,
+                    connections_json = null // Nodes don't have connections
+                )
+                onFinished()
+                cancelAllEditing()
+                schemaViewModel.showSchema()
+            } catch (e: Exception) {
+                println("Error creating node schema: ${e.message}")
+                // TODO: Show user-facing error
+            }
         }
     }
 
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
         viewModelScope.launch {
-            val nodeSchemas = schemaViewModel.schema.value?.nodeTables ?: emptyList()
+            // UPDATED: Fetches new SchemaData and filters for node schemas
+            val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
             metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic
             _editScreenState.value = EditScreenState.CreateEdgeSchema(
                 EdgeSchemaCreationState(allNodeSchemas = nodeSchemas)
@@ -244,7 +309,6 @@ class EditCreateViewModel(
         }
     }
 
-    // --- NEW ---
     fun onAddEdgeSchemaConnection(src: String, dst: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -267,7 +331,8 @@ class EditCreateViewModel(
         }
     }
 
-    fun onEdgeSchemaPropertyChange(index: Int, property: Property) {
+    // UPDATED: Signature uses new SchemaProperty
+    fun onEdgeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
@@ -277,10 +342,11 @@ class EditCreateViewModel(
         }
     }
 
+    // UPDATED: Adds new SchemaProperty
     fun onAddEdgeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
-            current.copy(state = current.state.copy(properties = current.state.properties + Property(isPrimaryKey = false)))
+            current.copy(state = current.state.copy(properties = current.state.properties + SchemaProperty("newProperty", "Text")))
         }
     }
 
@@ -294,75 +360,82 @@ class EditCreateViewModel(
         }
     }
 
-    fun createEdgeSchemaFromState(state: EdgeSchemaCreationState, onFinished: () -> Unit) {
+    // UPDATED: Rewritten to serialize properties AND connections and call SQLDelight insert query
+    fun createEdgeSchemaFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
-            createEdgeSchema(dbService, state)
-            onFinished()
-            cancelAllEditing()
-            schemaViewModel.showSchema()
+            val state = (_editScreenState.value as? EditScreenState.CreateEdgeSchema)?.state ?: return@launch
+            try {
+                // Serialize both properties and connections
+                val propertiesJson = json.encodeToString(state.properties)
+                val connectionsJson = json.encodeToString(state.connections)
+
+                // Call SQLDelight insert query
+                dbService.database.appDatabaseQueries.insertSchema(
+                    type = "EDGE",
+                    name = state.tableName,
+                    properties_json = propertiesJson,
+                    connections_json = connectionsJson
+                )
+                onFinished()
+                cancelAllEditing()
+                schemaViewModel.showSchema()
+            } catch (e: Exception) {
+                println("Error creating edge schema: ${e.message}")
+                // TODO: Show user-facing error
+            }
         }
     }
 
     // --- Node Editing ---
-    fun initiateNodeEdit(node: NodeTable) {
+    // UPDATED: Signature uses new NodeEditState
+    fun initiateNodeEdit(node: NodeEditState) {
         _editScreenState.value = EditScreenState.EditNode(node)
-        println("DEBUG: Initiated node edit for: ${node.label}")
+        println("DEBUG: Initiated node edit for: ${node.schema.name}")
     }
 
-    fun updateNodeEditProperty(index: Int, value: String) {
+    // UPDATED: Logic remains the same, but operates on NodeEditState
+    fun updateNodeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNode) return@update current
 
-            val prop = current.state.properties[index]
-            val newValue = value.toLongOrNull() ?: value
-
-            val newProperties = current.state.properties.toMutableList().apply {
-                this[index] = prop.copy(value = newValue, valueChanged = true)
+            val newProperties = current.state.properties.toMutableMap().apply {
+                this[key] = value
             }
 
-            println("DEBUG: Updated property '${prop.key}' to '$newValue'. valueChanged is now true.")
+            println("DEBUG: Updated property '$key' to '$value'.")
             current.copy(state = current.state.copy(properties = newProperties))
         }
     }
 
     // --- Edge Editing ---
-    fun initiateEdgeEdit(edge: EdgeTable) {
+    // UPDATED: Signature uses new EdgeEditState
+    fun initiateEdgeEdit(edge: EdgeEditState) {
         _editScreenState.value = EditScreenState.EditEdge(edge)
-        println("DEBUG: Initiated edge edit for: ${edge.label}")
+        println("DEBUG: Initiated edge edit for: ${edge.schema.name}")
     }
 
-    fun updateEdgeEditProperty(index: Int, value: String) {
+    // UPDATED: Logic remains the same, but operates on EdgeEditState
+    fun updateEdgeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdge) return@update current
 
-            val properties = current.state.properties ?: return@update current
-            val prop = properties[index]
-            val newValue = value.toLongOrNull() ?: value
-
-            val newProperties = properties.toMutableList().apply {
-                this[index] = prop.copy(value = newValue, valueChanged = true)
+            val newProperties = current.state.properties.toMutableMap().apply {
+                this[key] = value
             }
 
-            println("DEBUG: Updated edge property '${prop.key}' to '$newValue'. valueChanged is now true.")
+            println("DEBUG: Updated edge property '$key' to '$value'.")
             current.copy(state = current.state.copy(properties = newProperties))
         }
     }
 
     // --- Node Schema Editing ---
-    fun initiateNodeSchemaEdit(schema: SchemaNode) {
-        val editableProperties = schema.properties.map {
-            EditableSchemaProperty(
-                key = it.key,
-                valueDataType = it.valueDataType,
-                isPrimaryKey = it.isPrimaryKey,
-                originalKey = it.key
-            )
-        }
+    // UPDATED: Signature uses new SchemaDefinitionItem
+    fun initiateNodeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditNodeSchema(
             NodeSchemaEditState(
                 originalSchema = schema,
-                currentLabel = schema.label,
-                properties = editableProperties
+                currentName = schema.name,
+                properties = schema.properties // Start with the original properties
             )
         )
     }
@@ -370,19 +443,17 @@ class EditCreateViewModel(
     fun updateNodeSchemaEditLabel(label: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
-            current.copy(state = current.state.copy(currentLabel = label))
+            current.copy(state = current.state.copy(currentName = label))
         }
     }
 
     fun updateNodeSchemaEditAddProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
-            val newProperties = current.state.properties + EditableSchemaProperty(
-                key = "newProperty",
-                valueDataType = "STRING",
-                isPrimaryKey = false,
-                originalKey = "newProperty",
-                isNew = true
+            val newProperties = current.state.properties + SchemaProperty(
+                name = "newProperty",
+                type = "Text",
+                isDisplayProperty = false
             )
             current.copy(state = current.state.copy(properties = newProperties))
         }
@@ -392,13 +463,14 @@ class EditCreateViewModel(
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
-                this[index] = this[index].copy(isDeleted = true)
+                removeAt(index)
             }
             current.copy(state = current.state.copy(properties = newProperties))
         }
     }
 
-    fun updateNodeSchemaEditProperty(index: Int, property: EditableSchemaProperty) {
+    // UPDATED: Signature uses new SchemaProperty
+    fun updateNodeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
@@ -409,20 +481,14 @@ class EditCreateViewModel(
     }
 
     // --- Edge Schema Editing ---
-    fun initiateEdgeSchemaEdit(schema: SchemaEdge) {
-        val editableProperties = schema.properties.map {
-            EditableSchemaProperty(
-                key = it.key,
-                valueDataType = it.valueDataType,
-                isPrimaryKey = it.isPrimaryKey,
-                originalKey = it.key
-            )
-        }
+    // UPDATED: Signature uses new SchemaDefinitionItem
+    fun initiateEdgeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditEdgeSchema(
             EdgeSchemaEditState(
                 originalSchema = schema,
-                currentLabel = schema.label,
-                properties = editableProperties
+                currentName = schema.name,
+                connections = schema.connections ?: emptyList(),
+                properties = schema.properties
             )
         )
     }
@@ -430,19 +496,17 @@ class EditCreateViewModel(
     fun updateEdgeSchemaEditLabel(label: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
-            current.copy(state = current.state.copy(currentLabel = label))
+            current.copy(state = current.state.copy(currentName = label))
         }
     }
 
     fun updateEdgeSchemaEditAddProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
-            val newProperties = current.state.properties + EditableSchemaProperty(
-                key = "newProperty",
-                valueDataType = "STRING",
-                isPrimaryKey = false,
-                originalKey = "newProperty",
-                isNew = true
+            val newProperties = current.state.properties + SchemaProperty(
+                name = "newProperty",
+                type = "Text",
+                isDisplayProperty = false
             )
             current.copy(state = current.state.copy(properties = newProperties))
         }
@@ -452,19 +516,43 @@ class EditCreateViewModel(
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
-                this[index] = this[index].copy(isDeleted = true)
+                removeAt(index)
             }
             current.copy(state = current.state.copy(properties = newProperties))
         }
     }
 
-    fun updateEdgeSchemaEditProperty(index: Int, property: EditableSchemaProperty) {
+    // UPDATED: Signature uses new SchemaProperty
+    fun updateEdgeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
             current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    // UPDATED: Add/Remove Connections for Edge Schema Editing
+    fun updateEdgeSchemaEditAddConnection(src: String, dst: String) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditEdgeSchema) return@update current
+            val newConnection = ConnectionPair(src, dst)
+            if (!current.state.connections.contains(newConnection)) {
+                current.copy(state = current.state.copy(connections = current.state.connections + newConnection))
+            } else {
+                current
+            }
+        }
+    }
+
+    fun updateEdgeSchemaEditRemoveConnection(index: Int) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditEdgeSchema) return@update current
+            val newConnections = current.state.connections.toMutableList().apply {
+                removeAt(index)
+            }
+            current.copy(state = current.state.copy(connections = newConnections))
         }
     }
 }

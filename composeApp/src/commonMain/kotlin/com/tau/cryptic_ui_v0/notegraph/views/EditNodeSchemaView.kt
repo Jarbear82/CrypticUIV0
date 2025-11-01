@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,28 +12,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.EditableSchemaProperty
-import com.tau.cryptic_ui_v0.NodeSchemaEditState
+import com.tau.cryptic_ui_v0.NodeSchemaEditState // UPDATED: Uses new state class
+import com.tau.cryptic_ui_v0.SchemaProperty // UPDATED: Uses new property class
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditNodeSchemaView(
     state: NodeSchemaEditState,
     onLabelChange: (String) -> Unit,
-    onPropertyChange: (Int, EditableSchemaProperty) -> Unit,
+    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID", "SERIAL")
+    // UPDATED: Define your new supported types
+    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = state.currentLabel,
+            value = state.currentName, // UPDATED: Use currentName
             onValueChange = onLabelChange,
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
@@ -43,61 +44,57 @@ fun EditNodeSchemaView(
         Text("Properties", style = MaterialTheme.typography.titleMedium)
         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
             itemsIndexed(state.properties) { index, property ->
-                if (property.isDeleted) {
-                    // Don't show deleted properties
-                } else {
-                    var expanded by remember { mutableStateOf(false) }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                // Note: isDeleted logic is handled in the ViewModel, not the view
+                var expanded by remember { mutableStateOf(false) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    OutlinedTextField(
+                        value = property.name, // UPDATED: Use name
+                        onValueChange = {
+                            onPropertyChange(index, property.copy(name = it))
+                        },
+                        label = { Text("Property Name") },
+                        modifier = Modifier.weight(1f),
+                        isError = property.name.isBlank()
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = property.key,
-                            onValueChange = {
-                                onPropertyChange(index, property.copy(key = it))
-                            },
-                            label = { Text("Property Name") },
-                            modifier = Modifier.weight(1f),
-                            readOnly = property.isPrimaryKey, // PK rename not allowed
-                            isError = property.isNew && property.key.isBlank()
+                            value = property.type, // UPDATED: Use type
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.menuAnchor().width(120.dp),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        ExposedDropdownMenuBox(
+                        ExposedDropdownMenu(
                             expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
+                            onDismissRequest = { expanded = false }
                         ) {
-                            OutlinedTextField(
-                                value = property.valueDataType,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor().width(120.dp),
-                                enabled = property.isNew // Only allow type change for new properties
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                dataTypes.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = { Text(type) },
-                                        onClick = {
-                                            onPropertyChange(index, property.copy(valueDataType = type))
-                                            expanded = false
-                                        },
-                                        enabled = property.isNew
-                                    )
-                                }
+                            dataTypes.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type) },
+                                    onClick = {
+                                        onPropertyChange(index, property.copy(type = type))
+                                        expanded = false
+                                    },
+                                )
                             }
                         }
-                        if (property.isPrimaryKey) {
-                            Text("PK", modifier = Modifier.padding(horizontal = 4.dp))
+                    }
+                    Checkbox(
+                        checked = property.isDisplayProperty, // UPDATED: Use isDisplayProperty
+                        onCheckedChange = {
+                            onPropertyChange(index, property.copy(isDisplayProperty = it))
                         }
-                        if (!property.isPrimaryKey) {
-                            IconButton(onClick = { onRemoveProperty(index) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Property", tint = Color.Red)
-                            }
-                        }
+                    )
+                    Text("Display") // UPDATED: Text changed from PK
+                    IconButton(onClick = { onRemoveProperty(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Property", tint = Color.Red)
                     }
                 }
             }

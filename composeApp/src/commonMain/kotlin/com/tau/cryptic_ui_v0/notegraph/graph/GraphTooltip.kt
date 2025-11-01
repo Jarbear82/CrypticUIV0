@@ -22,7 +22,7 @@ fun GraphTooltip(
     options: TooltipOptions,
     constraints: Constraints // Screen constraints
 ) {
-    val tooltipText = "${node.label}\n(${node.primarykeyProperty.value})"
+    val tooltipText = "${node.label}\n(${node.displayProperty})"
 
     // Use layout modifier to position the tooltip, ensuring it stays on screen
     Box(

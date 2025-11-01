@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,34 +10,36 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.EdgeTable
+import com.tau.cryptic_ui_v0.EdgeEditState // UPDATED: Uses new state class
 
 @Composable
 fun EditEdgeView(
-    state: EdgeTable,
-    onPropertyChange: (Int, String) -> Unit,
+    state: EdgeEditState,
+    onPropertyChange: (String, String) -> Unit, // UPDATED: Key is now a String
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Edit Edge: ${state.label}", style = MaterialTheme.typography.headlineSmall)
+        Text("Edit Edge: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall) // UPDATED: Use schema.name
         Spacer(modifier = Modifier.height(8.dp))
-        Text("From: ${state.src.label} (${state.src.primarykeyProperty.value})", style = MaterialTheme.typography.bodyMedium)
-        Text("To: ${state.dst.label} (${state.dst.primarykeyProperty.value})", style = MaterialTheme.typography.bodyMedium)
+        // UPDATED: Use new displayProperty
+        Text("From: ${state.src.label} (${state.src.displayProperty})", style = MaterialTheme.typography.bodyMedium)
+        Text("To: ${state.dst.label} (${state.dst.displayProperty})", style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
-        if (state.properties.isNullOrEmpty()) {
+        if (state.schema.properties.isEmpty()) { // UPDATED: Check schema for properties
             Text("No properties to edit.", style = MaterialTheme.typography.bodySmall)
         } else {
             LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                itemsIndexed(state.properties!!) { index, property ->
+                // UPDATED: Iterate over schema properties, get values from state.properties map
+                itemsIndexed(state.schema.properties) { index, schemaProperty ->
                     OutlinedTextField(
-                        value = property.value?.toString() ?: "",
+                        value = state.properties[schemaProperty.name] ?: "",
                         onValueChange = {
-                            onPropertyChange(index, it)
+                            onPropertyChange(schemaProperty.name, it) // UPDATED: Pass property name (string)
                         },
-                        label = { Text(property.key) },
+                        label = { Text("${schemaProperty.name} (${schemaProperty.type})") },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     )
                 }

@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -6,15 +6,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.ConnectionPair
+import com.tau.cryptic_ui_v0.EdgeCreationState // UPDATED: Uses new state class
 import com.tau.cryptic_ui_v0.NodeDisplayItem
-import com.tau.cryptic_ui_v0.EdgeCreationState
-import com.tau.cryptic_ui_v0.SchemaEdge
+import com.tau.cryptic_ui_v0.SchemaDefinitionItem // UPDATED: Uses new schema class
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEdgeView(
     edgeCreationState: EdgeCreationState,
-    onSchemaSelected: (SchemaEdge) -> Unit,
+    onSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
     onConnectionSelected: (ConnectionPair) -> Unit,
     onSrcSelected: (NodeDisplayItem) -> Unit,
     onDstSelected: (NodeDisplayItem) -> Unit,
@@ -37,7 +37,7 @@ fun CreateEdgeView(
             onExpandedChange = { schemaExpanded = !schemaExpanded }
         ) {
             OutlinedTextField(
-                value = edgeCreationState.selectedSchema?.label ?: "Select Schema",
+                value = edgeCreationState.selectedSchema?.name ?: "Select Schema", // UPDATED: Use .name
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
@@ -49,7 +49,7 @@ fun CreateEdgeView(
             ) {
                 edgeCreationState.schemas.forEach { schema ->
                     DropdownMenuItem(
-                        text = { Text(schema.label) },
+                        text = { Text(schema.name) }, // UPDATED: Use .name
                         onClick = {
                             onSchemaSelected(schema)
                             schemaExpanded = false
@@ -79,8 +79,8 @@ fun CreateEdgeView(
                     expanded = connectionExpanded,
                     onDismissRequest = { connectionExpanded = false }
                 ) {
-                    // Populate from the selected schema connection list
-                    edgeCreationState.selectedSchema.connections.forEach { connection ->
+                    // UPDATED: Populate from the selected schema (nullable) connection list
+                    (edgeCreationState.selectedSchema.connections ?: emptyList()).forEach { connection ->
                         DropdownMenuItem(
                             text = { Text("${connection.src} -> ${connection.dst}") },
                             onClick = {
@@ -102,7 +102,8 @@ fun CreateEdgeView(
                 onExpandedChange = { srcExpanded = !srcExpanded }
             ) {
                 OutlinedTextField(
-                    value = edgeCreationState.src?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Source Node",
+                    // UPDATED: Use displayProperty
+                    value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Node",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
@@ -115,7 +116,8 @@ fun CreateEdgeView(
                     // Filter nodes based on selected connection's src
                     edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
                         DropdownMenuItem(
-                            text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
+                            // UPDATED: Use displayProperty
+                            text = { Text("${node.label} : ${node.displayProperty}") },
                             onClick = {
                                 onSrcSelected(node)
                                 srcExpanded = false
@@ -131,7 +133,8 @@ fun CreateEdgeView(
                 onExpandedChange = { dstExpanded = !dstExpanded }
             ) {
                 OutlinedTextField(
-                    value = edgeCreationState.dst?.let { "${it.label} : ${it.primarykeyProperty.value}" } ?: "Select Destination Node",
+                    // UPDATED: Use displayProperty
+                    value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Node",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
@@ -144,7 +147,8 @@ fun CreateEdgeView(
                     // Filter nodes based on selected connection's dst
                     edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
                         DropdownMenuItem(
-                            text = { Text("${node.label} : ${node.primarykeyProperty.value}") },
+                            // UPDATED: Use displayProperty
+                            text = { Text("${node.label} : ${node.displayProperty}") },
                             onClick = {
                                 onDstSelected(node)
                                 dstExpanded = false
@@ -155,11 +159,12 @@ fun CreateEdgeView(
             }
 
             // Properties
+            // UPDATED: Iterate over properties from selectedSchema
             edgeCreationState.selectedSchema?.properties?.forEach { property ->
                 OutlinedTextField(
-                    value = edgeCreationState.properties[property.key] ?: "",
-                    onValueChange = { onPropertyChanged(property.key, it) },
-                    label = { Text("${property.key}: ${property.valueDataType}") },
+                    value = edgeCreationState.properties[property.name] ?: "", // UPDATED: Use property.name
+                    onValueChange = { onPropertyChanged(property.name, it) }, // UPDATED: Use property.name
+                    label = { Text("${property.name}: ${property.type}") }, // UPDATED: Use property.name and .type
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
             }

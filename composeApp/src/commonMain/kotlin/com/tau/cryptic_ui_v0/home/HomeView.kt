@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.utils.DirectoryPicker
 import com.tau.cryptic_ui_v0.viewmodels.MainViewModel
+import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 
 @Composable
 fun HomeView(viewModel: MainViewModel) {

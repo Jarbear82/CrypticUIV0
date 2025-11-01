@@ -5,9 +5,24 @@ import androidx.compose.ui.geometry.Offset
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.*
-import com.tau.cryptic_ui_v0.notegraph.graph.physics.Node as SolverNode
-import com.tau.cryptic_ui_v0.notegraph.graph.physics.Body as SolverBody
-import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsBody as SolverPhysicsBody
+
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.Node as PhysicsSolverNode
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.Body as PhysicsSolverBody
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsBody as PhysicsSolverPhysicsBody
+
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.Edge
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.EdgeOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.EdgeType
+
+import com.tau.kt_vis_network.network.physics.solvers.BarnesHutSolver
+import com.tau.kt_vis_network.network.physics.solvers.CentralGravitySolver
+import com.tau.kt_vis_network.network.physics.solvers.ForceAtlas2BasedCentralGravitySolver
+import com.tau.kt_vis_network.network.physics.solvers.ForceAtlas2BasedRepulsionSolver
+import com.tau.kt_vis_network.network.physics.solvers.HierarchicalRepulsionSolver
+import com.tau.kt_vis_network.network.physics.solvers.HierarchicalSpringSolver
+import com.tau.kt_vis_network.network.physics.solvers.RepulsionSolver
+import com.tau.kt_vis_network.network.physics.solvers.SpringSolver
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,26 +38,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-// Internal representation for physics simulation
-data class PhysicsNode(
-    val id: String,
-    var x: Float,
-    var y: Float,
-    var vx: Float = 0f,
-    var vy: Float = 0f,
-    var isFixed: Boolean = false,
-    val mass: Float = 1f
-)
-
-data class PhysicsEdge(
-    val id: String,
-    val from: String,
-    val to: String,
-    val springLength: Float = 150f,
-    val springConstant: Float = 0.04f
-)
-
-// Options class is now in GraphOptions.kt
 
 class PhysicsEngine(
     initialNodes: List<NodeDisplayItem>,
@@ -50,30 +45,30 @@ class PhysicsEngine(
     private val width: Float,
     private val height: Float,
     private val coroutineScope: CoroutineScope,
-    private val options: PhysicsOptions = PhysicsOptions(),
+    private val options: PhysicsOptions, // Now required
     private val nodeRadius: Float = DEFAULT_NODE_RADIUS_DP.value
 ) {
-    // Make internal so LayoutEngine and HierarchicalLayoutAlgorithm can access
     internal val nodes = mutableMapOf<String, PhysicsNode>()
     internal val edges = mutableMapOf<String, PhysicsEdge>()
-    private val nodeLevels = mutableMapOf<String, Int>()
+    // --- REMOVED: nodeLevels map (level is now in PhysicsNode) ---
+    // private val nodeLevels = mutableMapOf<String, Int>()
 
     private val _nodePositions = MutableStateFlow<Map<String, Offset>>(emptyMap())
     val nodePositionsState: StateFlow<Map<String, Offset>> = _nodePositions.asStateFlow()
 
-    private val _isStable = MutableStateFlow(true)
-    val isStable: StateFlow<Boolean> = _isStable.asStateFlow()
+    // --- NEW: Simulation Status Flow ---
+    private val _status = MutableStateFlow<SimulationStatus>(SimulationStatus.Stable)
+    val status: StateFlow<SimulationStatus> = _status.asStateFlow()
 
     private var simulationJob: Job? = null
     private var isSimulationRunning = false
 
+    // --- NEW: State for adaptive timestep and stabilization ---
+    private var stabilizationCounter = 0
+    private var maxVelocityLastFrame: Float = 0f
+
     private var edgeLookup: Map<String, List<PhysicsEdge>> = emptyMap()
 
-    init {
-        // LayoutEngine will call updateData
-    }
-
-    // FIX: Add isInitial parameter and pass it to internal function
     fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitial: Boolean = false) {
         updateDataInternal(newNodes, newEdges, isInitial)
     }
@@ -85,23 +80,17 @@ class PhysicsEngine(
 
         (currentNodes - newNodesIds).forEach { nodes.remove(it) }
 
-        val nodesAdded = (newNodesIds - currentNodes).isNotEmpty() // Check if nodes were added
+        val nodesAdded = (newNodesIds - currentNodes).isNotEmpty()
 
-        // --- NEW: PRE-CALCULATE INITIAL POSITIONS ---
         val initialPositions = mutableMapOf<String, Offset>()
         if (isInitial) {
             val nodeCount = newNodes.size
             if (nodeCount > 0) {
-                // Use a "sunflower" (phyllotaxis) distribution for even spacing
                 val goldenAngle = (Math.PI * (3.0 - sqrt(5.0))).toFloat()
-                // Scale so the last node is roughly at 40% of the smallest screen dimension
                 val maxRadius = min(width, height) * 0.4f
-                // Handle division by zero if nodeCount is 1
                 val c = if (nodeCount > 1) maxRadius / sqrt(nodeCount.toFloat()) else 0f
 
                 newNodes.forEachIndexed { index, node ->
-                    // Use index + 1 for radius calculation to avoid node 0 at (0,0)
-                    // (But use index for angle)
                     val radius = c * sqrt(index.toFloat() + 1)
                     val angle = index * goldenAngle
                     val x = (radius * cos(angle)).toFloat()
@@ -110,52 +99,29 @@ class PhysicsEngine(
                 }
             }
         }
-        // --- END PRE-CALCULATION ---
-
 
         newNodesMap.values.forEach { displayNode ->
             val id = displayNode.id()
             if (!nodes.containsKey(id)) {
-
-                // --- MODIFIED PLACEMENT LOGIC ---
                 val (startX, startY) = if (isInitial) {
-                    // Initial load, use pre-calculated "sunflower" positions
-                    val pos = initialPositions[id] ?: Offset(0f, 0f) // Fallback to center
+                    val pos = initialPositions[id] ?: Offset(0f, 0f)
                     pos.x to pos.y
                 } else {
-                    // Node added later. Find its neighbors from the *new* edge list
                     val neighborIds = newEdges.filter { it.src.id() == id || it.dst.id() == id }
                         .map { if (it.src.id() == id) it.dst.id() else it.src.id() }
                         .toSet()
-
-                    // Get the PhysicsNode objects of neighbors that *already exist* in our map
                     val existingNeighbors = nodes.values.filter { it.id in neighborIds }
-
                     if (existingNeighbors.isNotEmpty()) {
-                        // Place near existing neighbors
-                        val avgX = existingNeighbors.map { it.x }.average().toFloat()
-                        val avgY = existingNeighbors.map { it.y }.average().toFloat()
-                        avgX to avgY
+                        existingNeighbors.map { it.x }.average().toFloat() to
+                                existingNeighbors.map { it.y }.average().toFloat()
                     } else if (nodes.isNotEmpty()) {
-                        // No existing neighbors, place at center of *all* existing nodes
-                        val avgX = nodes.values.map { it.x }.average().toFloat()
-                        val avgY = nodes.values.map { it.y }.average().toFloat()
-                        avgX to avgY
+                        nodes.values.map { it.x }.average().toFloat() to
+                                nodes.values.map { it.y }.average().toFloat()
                     } else {
-                        // This is the very first node (or graph was empty)
-                        // Place at center (was random before)
                         0f to 0f
                     }
                 }
-                // --- END MODIFIED LOGIC ---
-
-                nodes[id] = PhysicsNode(
-                    id = id,
-                    x = startX, // Use new startX
-                    y = startY,  // Use new startY
-                    vx = 0f, // Start with no velocity
-                    vy = 0f
-                )
+                nodes[id] = PhysicsNode(id = id, x = startX, y = startY)
             }
         }
 
@@ -184,21 +150,16 @@ class PhysicsEngine(
 
         edgeLookup = edges.values.groupBy { it.from }
 
-        // If it's the initial load, publish the new calculated positions
-        // so the pre-run has a starting point.
         if (isInitial) {
             publishPositions()
         }
 
-        // If nodes were added, just mark as unstable.
-        // LayoutEngine will handle starting the simulation.
         if (nodesAdded && !isInitial) {
-            _isStable.value = false
+            destabilize()
         }
     }
 
     fun resetNodePositions() {
-        // --- FIX: Use the same sunflower logic for reset ---
         val nodeCount = nodes.size
         if (nodeCount == 0) {
             publishPositions()
@@ -212,7 +173,6 @@ class PhysicsEngine(
         nodes.values.toList().forEachIndexed { index, node ->
             val radius = c * sqrt(index.toFloat() + 1)
             val angle = index * goldenAngle
-
             node.x = (radius * cos(angle)).toFloat()
             node.y = (radius * sin(angle)).toFloat()
             node.vx = 0f
@@ -220,14 +180,15 @@ class PhysicsEngine(
         }
 
         publishPositions()
-        // Start simulation after reset
-        _isStable.value = false
+        destabilize()
         startSimulation()
     }
 
     fun updateNodeLevels(newNodeLevels: Map<String, Int>) {
-        nodeLevels.clear()
-        nodeLevels.putAll(newNodeLevels)
+        // --- UPDATED: Set level directly on PhysicsNode ---
+        newNodeLevels.forEach { (id, level) ->
+            nodes[id]?.level = level
+        }
     }
 
     fun notifyNodePositionUpdate(id: String, x: Float, y: Float, isDragging: Boolean) {
@@ -241,7 +202,7 @@ class PhysicsEngine(
             }
         }
         if (!isDragging) {
-            _isStable.value = false
+            destabilize()
             startSimulation()
         }
         publishPositions()
@@ -255,46 +216,80 @@ class PhysicsEngine(
         return nodes.mapValues { Offset(it.value.x, it.value.y) }.toList().toMutableStateMap()
     }
 
-    /**
-     * Runs a specified number of simulation steps synchronously.
-     * This is useful for "pre-running" the layout on initial load.
-     */
+    /** Sets the simulation status to Running and resets stabilization. */
+    private fun destabilize() {
+        stabilizationCounter = 0
+        _status.value = SimulationStatus.Running
+    }
+
     fun preRunSimulation(steps: Int) {
         if (steps <= 0) return
 
-        _isStable.value = false
+        destabilize()
         var i = 0
-        var stabilized = false
-        while (i < steps) {
-            stabilized = simulateStepInternal()
-            if (stabilized) {
-                _isStable.value = true
-                break
+        while (i < steps && _status.value != SimulationStatus.Stable) {
+            // 1. Calculate timestep
+            val timeStep = if (options.adaptiveTimeStep) {
+                calculateAdaptiveTimeStep()
+            } else {
+                options.timeStep
             }
+
+            // 2. Calculate forces
+            val forces = mutableMapOf<String, Offset>()
+            nodes.values.forEach { forces[it.id] = Offset.Zero }
+            simulateStepInternal(forces) // Applies forces
+
+            // 3. Update positions and get velocity
+            val maxVelocity = updateVelocitiesAndPositions(forces, timeStep)
+            maxVelocityLastFrame = maxVelocity
+
+            // 4. Update status
+            updateSimulationStatus(maxVelocity)
             i++
         }
 
-        // After the pre-run, publish the positions immediately
         publishPositions()
 
-        // If it didn't stabilize, start the async simulation for fine-tuning
-        if (!stabilized) {
-            startSimulation() // This will pick up where preRun left off
+        if (_status.value != SimulationStatus.Stable) {
+            startSimulation() // Start async if not stable
         }
     }
 
     fun startSimulation() {
         if (isSimulationRunning && simulationJob?.isActive == true) {
-            _isStable.value = false
+            destabilize() // Reset stabilization counter if already running
             return
         }
         isSimulationRunning = true
-        _isStable.value = false
+        destabilize()
+
         simulationJob?.cancel()
         simulationJob = coroutineScope.launch {
-            while (isActive && !_isStable.value) {
-                _isStable.value = simulateStepInternal()
+            while (isActive && _status.value != SimulationStatus.Stable) {
+                // 1. Calculate timestep
+                val timeStep = if (options.adaptiveTimeStep) {
+                    calculateAdaptiveTimeStep()
+                } else {
+                    options.timeStep
+                }
+
+                // 2. Calculate forces
+                val forces = mutableMapOf<String, Offset>()
+                nodes.values.forEach { forces[it.id] = Offset.Zero }
+                simulateStepInternal(forces) // Applies forces
+
+                // 3. Update positions and get velocity
+                val maxVelocity = updateVelocitiesAndPositions(forces, timeStep)
+                maxVelocityLastFrame = maxVelocity
+
+                // 4. Publish positions
                 publishPositions()
+
+                // 5. Update status
+                updateSimulationStatus(maxVelocity)
+
+                // 6. Delay
                 delay(16)
             }
             isSimulationRunning = false
@@ -304,42 +299,161 @@ class PhysicsEngine(
     fun stopSimulation() {
         simulationJob?.cancel()
         isSimulationRunning = false
-        _isStable.value = true
+        _status.value = SimulationStatus.Stable
     }
 
-    private fun simulateStepInternal(): Boolean {
-        val forces = mutableMapOf<String, Offset>()
-        nodes.values.forEach { forces[it.id] = Offset.Zero }
+    /**
+     * NEW: Calculates an adaptive timestep based on the max velocity of the previous frame.
+     * Logic adapted from vis.js port.
+     */
+    private fun calculateAdaptiveTimeStep(): Float {
+        val velocity = maxVelocityLastFrame.coerceAtLeast(options.minVelocity)
+        val targetVelocity = 15f // Empirical value for "normal" speed
+        val scalingFactor = options.adaptiveTimeStepScaling
 
-        applyRepulsionForces(forces)
-        applySpringForces(forces)
-        applyCentralGravity(forces)
+        // Calculate dynamic timestep
+        var timeStep = (targetVelocity / velocity) * options.maxTimeStep * scalingFactor
 
-        return updateVelocitiesAndPositions(forces)
+        // Clamp it
+        return timeStep.coerceIn(options.minTimeStep, options.maxTimeStep)
     }
 
-    private fun applyRepulsionForces(forces: MutableMap<String, Offset>) {
+    /**
+     * NEW: Checks max velocity and updates the simulation status, handling
+     * the robust stabilization counter.
+     */
+    private fun updateSimulationStatus(maxVelocity: Float) {
+        if (maxVelocity < options.minVelocity) {
+            stabilizationCounter++
+            if (stabilizationCounter >= options.stabilizationIterations) {
+                _status.value = SimulationStatus.Stable
+            } else {
+                _status.value = SimulationStatus.Stabilizing(
+                    stabilizationCounter.toFloat() / options.stabilizationIterations
+                )
+            }
+        } else {
+            stabilizationCounter = 0
+            _status.value = SimulationStatus.Running
+        }
+    }
+
+    /**
+     * This step now *only* applies forces to the forces map.
+     * It no longer updates positions or returns a boolean.
+     */
+    private fun simulateStepInternal(forces: MutableMap<String, Offset>) {
+        // --- UPDATED: Prepare data once for all solvers ---
+        val (body, physicsBody) = prepareSolverData()
+
+        // --- UPDATED: Select solvers based on options ---
+        applyRepulsionForces(body, physicsBody, forces)
+        applySpringForces(body, physicsBody, forces)
+        applyGravityForces(body, physicsBody, forces)
+
+        // --- UPDATED: Apply solver forces back ---
+        applySolverForces(physicsBody.forces, forces)
+    }
+
+    // --- UPDATED: Renamed and modified to select correct solver ---
+    private fun applyRepulsionForces(
+        body: PhysicsSolverBody,
+        physicsBody: PhysicsSolverPhysicsBody,
+        forces: MutableMap<String, Offset>
+    ) {
         if (nodes.isEmpty()) return
 
         when (options.solver) {
-            SolverType.REPEL -> applyRepulsionForces_Default(forces)
-            SolverType.BARNES_HUT, SolverType.FORCE_ATLAS_2, SolverType.HIERARCHICAL -> {
-                val (body, physicsBody, physicsForces) = prepareSolverData()
-
-                when (options.solver) {
-                    SolverType.BARNES_HUT ->
-                        BarnesHutSolver(body, physicsBody, options.barnesHut).solve()
-                    SolverType.FORCE_ATLAS_2 ->
-                        ForceAtlas2BasedRepulsionSolver(body, physicsBody, options.forceAtlas).solve()
-                    SolverType.HIERARCHICAL ->
-                        HierarchicalRepulsionSolver(body, physicsBody, options.hierarchicalRepulsion).solve()
-                    else -> {}
-                }
-
-                applySolverForces(physicsForces, forces)
+            SolverType.REPEL -> {
+                // --- Pass options.repulsion, which now exists ---
+                RepulsionSolver(body, physicsBody, options.repulsion).solve()
+                // applyRepulsionForces_Default(forces) // Use lightweight default
             }
+            SolverType.BARNES_HUT ->
+                BarnesHutSolver(body, physicsBody, options.barnesHut).solve()
+            SolverType.FORCE_ATLAS_2 ->
+                ForceAtlas2BasedRepulsionSolver(body, physicsBody, options.forceAtlas).solve()
+            SolverType.HIERARCHICAL ->
+                HierarchicalRepulsionSolver(body, physicsBody, options.hierarchicalRepulsion).solve()
         }
     }
+
+    // --- NEW: Selects the correct spring solver ---
+    private fun applySpringForces(
+        body: PhysicsSolverBody,
+        physicsBody: PhysicsSolverPhysicsBody,
+        forces: MutableMap<String, Offset>
+    ) {
+        val solverOptions = when (options.solver) {
+            SolverType.HIERARCHICAL -> options.hierarchicalRepulsion
+            SolverType.BARNES_HUT -> options.barnesHut
+            SolverType.FORCE_ATLAS_2 -> options.forceAtlas
+            SolverType.REPEL -> options.repulsion
+        }
+
+        // --- UPDATED: Use imported Edge class ---
+        val solverEdges = edges.values.mapNotNull {
+            val fromNode = body.nodes[it.from]
+            val toNode = body.nodes[it.to]
+            if (fromNode != null && toNode != null) {
+                Edge(
+                    id = it.id,
+                    fromId = it.from,
+                    toId = it.to,
+                    options = EdgeOptions(length = it.springLength.toDouble()),
+                    // Stubs for data solvers expect
+                    from = fromNode,
+                    to = toNode,
+                    connected = true,
+                    edgeType = EdgeType(null)
+                )
+            } else {
+                null // One of the nodes doesn't exist, skip this edge
+            }
+        }.associateBy { it.id }
+
+        val solverBodyWithEdges = object : PhysicsSolverBody {
+            override val nodes = body.nodes
+            override val edges = solverEdges // Add edges
+        }
+
+        val solverPhysicsBodyWithEdges = object : PhysicsSolverPhysicsBody {
+            override val physicsNodeIndices = physicsBody.physicsNodeIndices
+            override val forces = physicsBody.forces
+            override val physicsEdgeIndices = solverEdges.keys.toList() // Add edge indices
+        }
+
+        when (options.solver) {
+            SolverType.HIERARCHICAL ->
+                HierarchicalSpringSolver(solverBodyWithEdges, solverPhysicsBodyWithEdges, solverOptions).solve()
+            else ->
+                SpringSolver(solverBodyWithEdges, solverPhysicsBodyWithEdges, solverOptions).solve()
+        }
+    }
+
+    // --- NEW: Selects the correct gravity solver ---
+    private fun applyGravityForces(
+        body: PhysicsSolverBody,
+        physicsBody: PhysicsSolverPhysicsBody,
+        forces: MutableMap<String, Offset>
+    ) {
+        val solverOptions = when (options.solver) {
+            SolverType.FORCE_ATLAS_2 -> options.forceAtlas
+            SolverType.HIERARCHICAL -> options.hierarchicalRepulsion
+            SolverType.BARNES_HUT -> options.barnesHut
+            SolverType.REPEL -> options.repulsion
+        }
+
+        when (options.solver) {
+            SolverType.FORCE_ATLAS_2 ->
+                ForceAtlas2BasedCentralGravitySolver(body, physicsBody, solverOptions).solve()
+            else ->
+                // barnesHut, repel, hierarchical all use central gravity
+                CentralGravitySolver(body, physicsBody, solverOptions).solve()
+        }
+    }
+
+    // ---
 
     private fun applyRepulsionForces_Default(forces: MutableMap<String, Offset>) {
         val nodeValues = nodes.values.toList()
@@ -368,49 +482,10 @@ class PhysicsEngine(
         }
     }
 
-    private fun applySpringForces(forces: MutableMap<String, Offset>) {
-        edges.values.forEach { edge ->
-            val fromNode = nodes[edge.from]
-            val toNode = nodes[edge.to]
-
-            if (fromNode != null && toNode != null) {
-                val dx = toNode.x - fromNode.x
-                val dy = toNode.y - fromNode.y
-                var distance = sqrt(dx * dx + dy * dy)
-                distance = max(0.1f, distance)
-
-                val targetLength = if (fromNode.id == toNode.id) options.selfReferenceSpringLength else edge.springLength
-                val displacement = distance - targetLength
-                val force = edge.springConstant * displacement
-
-                val fx = (force * dx / distance)
-                val fy = (force * dy / distance)
-
-                if (!fromNode.isFixed) {
-                    forces[fromNode.id] = forces.getValue(fromNode.id) + Offset(fx, fy)
-                }
-                if (!toNode.isFixed) {
-                    forces[toNode.id] = forces.getValue(toNode.id) - Offset(fx, fy)
-                }
-            }
-        }
-    }
-
-    private fun applyCentralGravity(forces: MutableMap<String, Offset>) {
-        if (options.centralGravity <= 0f) return
-
-        nodes.values.forEach { node ->
-            if (!node.isFixed) {
-                val dx = -node.x
-                val dy = -node.y
-                val fx = dx * options.centralGravity
-                val fy = dy * options.centralGravity
-                forces[node.id] = forces.getValue(node.id) + Offset(fx, fy)
-            }
-        }
-    }
-
-    private fun updateVelocitiesAndPositions(forces: MutableMap<String, Offset>): Boolean {
+    /**
+     * This function now takes timestep as a parameter and returns the max velocity.
+     */
+    private fun updateVelocitiesAndPositions(forces: MutableMap<String, Offset>, timeStep: Float): Float {
         var maxVelocitySq = 0f
         val maxVel = options.maxVelocity
 
@@ -420,10 +495,9 @@ class PhysicsEngine(
                 val ax = force.x / node.mass
                 val ay = force.y / node.mass
 
-                node.vx = (node.vx + ax * options.timeStep) * (1f - options.damping)
-                node.vy = (node.vy + ay * options.timeStep) * (1f - options.damping)
+                node.vx = (node.vx + ax * timeStep) * (1f - options.damping)
+                node.vy = (node.vy + ay * timeStep) * (1f - options.damping)
 
-                // FIX: Enforce maxVelocity
                 val velocity = sqrt(node.vx * node.vx + node.vy * node.vy)
                 if (velocity > maxVel) {
                     val ratio = maxVel / velocity
@@ -431,8 +505,8 @@ class PhysicsEngine(
                     node.vy *= ratio
                 }
 
-                node.x += node.vx * options.timeStep
-                node.y += node.vy * options.timeStep
+                node.x += node.vx * timeStep
+                node.y += node.vy * timeStep
 
                 val velocitySq = node.vx * node.vx + node.vy * node.vy
                 if (velocitySq > maxVelocitySq) {
@@ -443,16 +517,31 @@ class PhysicsEngine(
                 node.vy = 0f
             }
         }
-        // FIX: Compare against minVelocity, not minVelocity * minVelocity
-        return sqrt(maxVelocitySq) < options.minVelocity
+        return sqrt(maxVelocitySq)
     }
 
-    private fun prepareSolverData(): Triple<SolverBody, SolverPhysicsBody, MutableMap<String, Point>> {
+    // --- Data Preparation and Application for Solvers (Unchanged) ---
+
+    // --- UPDATED: Renamed return types, updated PhysicsSolverNode creation ---
+
+    private fun prepareSolverData(): Pair<PhysicsSolverBody, PhysicsSolverPhysicsBody> {
         val physicsForces = mutableMapOf<String, Point>()
+
+        // Create a single dummy node to satisfy the Edge constructor.
+        // It won't be used, but it's required by the data class.
+        val dummyNode = PhysicsSolverNode(
+            id = "dummy", x = 0.0, y = 0.0,
+            options = NodeOptions(mass = 1.0, fixed = FixedOptions(false, false)),
+            shape = Shape(),
+            level = 0,
+            edges = emptyList()
+        )
+
+        lateinit var body: PhysicsSolverBody
 
         val solverNodes = nodes.mapValues { (id, node) ->
             physicsForces[id] = Point(0.0, 0.0)
-            SolverNode(
+            PhysicsSolverNode(
                 id = id,
                 x = node.x.toDouble(),
                 y = node.y.toDouble(),
@@ -461,19 +550,43 @@ class PhysicsEngine(
                     fixed = FixedOptions(x = node.isFixed, y = node.isFixed)
                 ),
                 shape = Shape(radius = nodeRadius.toDouble()),
-                level = nodeLevels[id] ?: 0,
-                edges = (edgeLookup[id] ?: emptyList()) + edges.values.filter { it.to == id }
+                level = node.level,
+                edges = (edgeLookup[id] ?: emptyList()).map { edge ->
+                    // We are creating a *fake* Edge object here just to satisfy
+                    // the type system for the node.edges list.
+                    // This list is ONLY used for .size by ForceAtlas2.
+                    // The `from` and `to` nodes are dummies.
+                    Edge(
+                        id = edge.id,
+                        fromId = edge.from,
+                        toId = edge.to,
+                        options = EdgeOptions(length = edge.springLength.toDouble()),
+                        from = dummyNode, // Use dummy
+                        to = dummyNode,   // Use dummy
+                        connected = true,
+                        edgeType = EdgeType(null)
+                    )
+                }
             )
         }
 
         val nodeIndices = nodes.keys.toList()
-        val body = object : SolverBody { override val nodes = solverNodes }
-        val physicsBody = object : SolverPhysicsBody {
-            override val physicsNodeIndices = nodeIndices
-            override val forces = physicsForces
+
+        body = object : PhysicsSolverBody {
+            override val nodes = solverNodes
+            // This body's edges are not used by Repulsion or Gravity solvers.
+            // SpringSolver creates its own body with edges.
+            override val edges = emptyMap<String, Edge>()
         }
 
-        return Triple(body, physicsBody, physicsForces)
+        val physicsBody = object : PhysicsSolverPhysicsBody {
+            override val physicsNodeIndices = nodeIndices
+            override val forces = physicsForces
+            // SpringSolver creates its own physicsBody with edge indices.
+            override val physicsEdgeIndices = emptyList<String>()
+        }
+
+        return Pair(body, physicsBody)
     }
 
     private fun applySolverForces(
@@ -486,5 +599,8 @@ class PhysicsEngine(
     }
 }
 
-fun NodeDisplayItem.id(): String = "${this.label}_${this.primarykeyProperty.value?.toString()}"
+
+fun NodeDisplayItem.id(): String = "${this.label}_${this.displayProperty?.toString()}"
 fun EdgeDisplayItem.id(): String = "${this.src.id()}_${this.label}_${this.dst.id()}"
+
+

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
+import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +56,7 @@ fun ListView(
                     val isSelected = primarySelectedItem == node || secondarySelectedItem == node
                     val colorInfo = labelToColor(node.label)
                     ListItem(
-                        headlineContent = { Text("${node.label} : ${node.primarykeyProperty.value}", style = MaterialTheme.typography.bodyMedium) }, // Smaller text
+                        headlineContent = { Text("${node.label} : ${node.displayProperty}", style = MaterialTheme.typography.bodyMedium) }, // Smaller text
                         leadingContent = {
                             IconButton(onClick = { onEditNodeClick(node) }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Node")
@@ -103,7 +104,7 @@ fun ListView(
                     ListItem(
                         headlineContent = { Column {
                             Text(
-                                "Src: (${edge.src.label} : ${edge.src.primarykeyProperty.value})",
+                                "Src: (${edge.src.label} : ${edge.src.displayProperty})",
                                 style= MaterialTheme.typography.bodySmall
                             )
                             Text(
@@ -112,7 +113,7 @@ fun ListView(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                "Dst: (${edge.dst.label} : ${edge.dst.primarykeyProperty.value})",
+                                "Dst: (${edge.dst.label} : ${edge.dst.displayProperty})",
                                 style= MaterialTheme.typography.bodySmall
                             )
                         }},

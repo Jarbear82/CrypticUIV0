@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views
 
 import androidx.compose.ui.graphics.Color
 import com.tau.cryptic_ui_v0.ColorInfo

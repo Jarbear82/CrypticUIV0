@@ -12,8 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+// --- ADDED: Import for RepulsionOptions ---
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.RepulsionOptions
+// ---
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.BarnesHutOptions
-import com.tau.cryptic_ui_v0.notegraph.graph.physics.ForceAtlas2BasedOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.ForceAtlas2Options
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsOptions
+import com.tau.cryptic_ui_v0.notegraph.graph.physics.SolverType
 import kotlin.math.roundToInt
 
 // Opt-in for Experimental Material 3 API
@@ -70,7 +75,8 @@ fun GraphSettingsUI(
                     expanded = solverMenuExpanded,
                     onDismissRequest = { solverMenuExpanded = false }
                 ) {
-                    SolverType.values().forEach { solver ->
+                    // --- UPDATED: Use SolverType.entries ---
+                    SolverType.entries.forEach { solver ->
                         DropdownMenuItem(
                             text = { Text(solver.name) },
                             onClick = {
@@ -130,7 +136,8 @@ fun GraphSettingsUI(
                     )
                     SettingsSlider(
                         label = "Avoid Overlap",
-                        value = options.barnesHut.avoidOverlap?.toFloat() ?: 0f,
+                        // --- UPDATED: Removed safe call based on non-nullable type ---
+                        value = options.barnesHut.avoidOverlap.toFloat(),
                         onValueChange = {
                             onOptionsChange(options.copy(barnesHut = options.barnesHut.copy(avoidOverlap = it.toDouble())))
                         },
@@ -151,7 +158,8 @@ fun GraphSettingsUI(
                     )
                     SettingsSlider(
                         label = "Avoid Overlap",
-                        value = options.forceAtlas.avoidOverlap?.toFloat() ?: 0f,
+                        // --- UPDATED: Removed safe call based on non-nullable type ---
+                        value = options.forceAtlas.avoidOverlap.toFloat(),
                         onValueChange = {
                             onOptionsChange(options.copy(forceAtlas = options.forceAtlas.copy(avoidOverlap = it.toDouble())))
                         },
@@ -161,13 +169,18 @@ fun GraphSettingsUI(
                 }
                 SolverType.REPEL -> {
                     Text("Repel Options", style = MaterialTheme.typography.titleSmall)
+                    // --- FIX: This slider now correctly controls nodeDistance in RepulsionOptions ---
                     SettingsSlider(
-                        label = "Repulsion Constant",
-                        value = options.repulsionConstant,
-                        onValueChange = { onOptionsChange(options.copy(repulsionConstant = it)) },
-                        range = -20000f..-100f,
-                        steps = 100
+                        label = "Node Distance", // Changed label
+                        value = options.repulsion.nodeDistance.toFloat(), // Changed value source
+                        onValueChange = {
+                            // Changed logic to update the nested RepulsionOptions
+                            onOptionsChange(options.copy(repulsion = options.repulsion.copy(nodeDistance = it.toDouble())))
+                        },
+                        range = 50f..500f, // Changed range to be appropriate for a distance
+                        steps = 45 // Matched hierarchical steps
                     )
+                    // --- END FIX ---
                 }
                 SolverType.HIERARCHICAL -> {
                     Text("Hierarchical Options", style = MaterialTheme.typography.titleSmall)

@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.notegraph.views.TerminalView
 import com.tau.cryptic_ui_v0.viewmodels.MainViewModel
 import com.tau.cryptic_ui_v0.viewmodels.Screen
 import kotlinx.coroutines.launch
@@ -93,7 +94,7 @@ fun MainView(mainViewModel: MainViewModel) {
                     title = {
                         val title = when (selectedScreen) {
                             Screen.HOME -> "Cryptic UI"
-                            Screen.TERMINAL -> terminalViewModel?.metadataViewModel?.dbMetaData?.collectAsState()?.value?.name ?: "Terminal"
+                            Screen.TERMINAL -> "Terminal"
                         }
                         Text(title.toString())
                     },

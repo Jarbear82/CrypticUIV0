@@ -1,37 +1,27 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.NodeTable
-import com.tau.cryptic_ui_v0.EdgeTable
-import com.tau.cryptic_ui_v0.NodeSchemaEditState
-import com.tau.cryptic_ui_v0.SchemaNode
-import com.tau.cryptic_ui_v0.EdgeSchemaEditState
-import com.tau.cryptic_ui_v0.SchemaEdge
+import com.tau.cryptic_ui_v0.EdgeDisplayItem // ADD THIS
+import com.tau.cryptic_ui_v0.NodeDisplayItem // ADD THIS
+import com.tau.cryptic_ui_v0.SchemaDefinitionItem
+// UPDATED: This now points to your new custom graph view
 import com.tau.cryptic_ui_v0.notegraph.graph.GraphView
-import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
-import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
-import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
 import kotlinx.coroutines.launch
-
-// Import the NEW ListView
-import com.tau.cryptic_ui_v0.views.ListView
-// Import the RESTORED QueryView
-import com.tau.cryptic_ui_v0.views.QueryView
-
+import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
+import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
+import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
     val schema by viewModel.schemaViewModel.schema.collectAsState()
-    // --- RE-ADD queryResult and query ---
-    val queryResult by viewModel.queryViewModel.queryResult.collectAsState()
-    val query by viewModel.queryViewModel.query
-    // ---
-    val metaData by viewModel.metadataViewModel.dbMetaData.collectAsState()
+    // REMOVED: val queryResult by viewModel.queryViewModel.queryResult.collectAsState()
+    // REMOVED: val query by viewModel.queryViewModel.query
     val scope = rememberCoroutineScope() // Get a coroutine scope
 
     // Collect the state for the MetadataView
@@ -65,8 +55,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
                 // Navigate back to the correct tab
                 val targetTab = when (currentState) {
-                    is NodeTable, is EdgeTable -> DataViewTabs.METADATA
-                    is NodeSchemaEditState, is EdgeSchemaEditState -> DataViewTabs.SCHEMA
+                    // FIX: Use new EditState classes
+                    is com.tau.cryptic_ui_v0.NodeEditState, is com.tau.cryptic_ui_v0.EdgeEditState -> DataViewTabs.METADATA
+                    is com.tau.cryptic_ui_v0.NodeSchemaEditState, is com.tau.cryptic_ui_v0.EdgeSchemaEditState -> DataViewTabs.SCHEMA
                     else -> DataViewTabs.METADATA
                 }
                 viewModel.selectDataTab(targetTab)
@@ -81,9 +72,10 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
         // Navigate back to the correct tab based on what *was* being edited
         val targetTab = when (originalItem) {
-            is NodeTable, is EdgeTable -> DataViewTabs.METADATA
-            is SchemaNode, is SchemaEdge -> DataViewTabs.SCHEMA
-            is String -> DataViewTabs.SCHEMA // For "Create..." strings
+            // FIX: Use new EditState classes and SchemaDefinitionItem
+            is com.tau.cryptic_ui_v0.NodeEditState, is com.tau.cryptic_ui_v0.EdgeEditState -> DataViewTabs.METADATA
+            is SchemaDefinitionItem -> DataViewTabs.SCHEMA
+            is String -> DataViewTabs.SCHEMA
             else -> DataViewTabs.METADATA
         }
         viewModel.selectDataTab(targetTab)
@@ -109,42 +101,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (selectedViewTab) {
-                    ViewTabs.LIST -> {
-                        // --- USE THE NEW LISTVIEW ---
-                        ListView(
-                            nodes = nodes,
-                            edges = edges,
-                            primarySelectedItem = primarySelectedItem,
-                            secondarySelectedItem = secondarySelectedItem,
-                            onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
-                            onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
-                            onEditNodeClick = {
-                                scope.launch {
-                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                    if (fullItem is NodeTable) {
-                                        viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
-                                        viewModel.selectDataTab(DataViewTabs.EDIT)
-                                    }
-                                }
-                            },
-                            onEditEdgeClick = {
-                                scope.launch {
-                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                    if (fullItem is EdgeTable) {
-                                        viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
-                                        viewModel.selectDataTab(DataViewTabs.EDIT)
-                                    }
-                                }
-                            },
-                            onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                            onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
-                            onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                            onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
-                        )
+                    ViewTabs.QUERY -> {
+                        Text("Query Tab")
                     }
                     ViewTabs.GRAPH -> {
                         // Pass the collected nodes and edges to the GraphView
-                        GraphView(nodes = nodes, edges = edges, modifier = Modifier.fillMaxSize())
+                        GraphView(nodes = nodes, edges = edges)
                     }
                 }
             }
@@ -169,17 +131,37 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
                 when (selectedDataTab) {
                     DataViewTabs.METADATA -> MetadataView(
-                        dbMetaData = metaData,
+                        dbMetaData = null,
+                        nodes = nodes,
+                        edges = edges,
                         primarySelectedItem = primarySelectedItem,
                         secondarySelectedItem = secondarySelectedItem,
-                        // --- PASS QUERY PROPS ---
-                        query = query,
-                        onQueryChange = { viewModel.queryViewModel.onQueryChange(it) },
-                        onExecuteQuery = { viewModel.queryViewModel.executeQuery() },
-                        // --- PASS REFRESH CALLBACKS ---
-                        onListAll = { viewModel.metadataViewModel.listAll() },
-                        onListNodes = { viewModel.metadataViewModel.listNodes() },
-                        onListEdges = { viewModel.metadataViewModel.listEdges() }
+                        onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
+                        onEditNodeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                // FIX: Check for new EditState class
+                                if (fullItem is com.tau.cryptic_ui_v0.NodeEditState) {
+                                    viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
+                        onEditEdgeClick = {
+                            scope.launch {
+                                val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                // FIX: Check for new EditState class
+                                if (fullItem is com.tau.cryptic_ui_v0.EdgeEditState) {
+                                    viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            }
+                        },
+                        onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                        onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                        onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -190,8 +172,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEditNodeClick = {
                             scope.launch {
                                 val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                if (fullItem is SchemaNode) {
-                                    viewModel.editCreateViewModel.initiateNodeSchemaEdit(fullItem)
+                                // FIX: Check for SchemaDefinitionItem
+                                if (fullItem is SchemaDefinitionItem) {
+                                    viewModel.editCreateViewModel.initiateNodeSchemaEdit(fullItem) // FIX: Uncomment
                                     viewModel.selectDataTab(DataViewTabs.EDIT)
                                 }
                             }
@@ -199,14 +182,15 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEditEdgeClick = {
                             scope.launch {
                                 val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
-                                if (fullItem is SchemaEdge) {
-                                    viewModel.editCreateViewModel.initiateEdgeSchemaEdit(fullItem)
+                                if (fullItem is SchemaDefinitionItem) {
+                                    viewModel.editCreateViewModel.initiateEdgeSchemaEdit(fullItem) // FIX: Uncomment
                                     viewModel.selectDataTab(DataViewTabs.EDIT)
                                 }
                             }
                         },
-                        onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchemaNode(it) },
-                        onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchemaEdge(it) },
+                        onDeleteNodeClick = { viewModel.schemaViewModel.deleteSchema(it) },
+
+                        onDeleteEdgeClick = { viewModel.schemaViewModel.deleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
@@ -236,20 +220,23 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeCreationCreateClick = { viewModel.editCreateViewModel.createEdgeFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
 
                         // Node Schema Creation Handlers
-                        onNodeSchemaCreationCreateClick = { state -> viewModel.editCreateViewModel.createNodeSchemaFromState(state) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onNodeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createNodeSchemaFromState { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
                         onNodeSchemaTableNameChange = { viewModel.editCreateViewModel.onNodeSchemaTableNameChange(it) },
                         onNodeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onNodeSchemaPropertyChange(index, property) },
                         onAddNodeSchemaProperty = { viewModel.editCreateViewModel.onAddNodeSchemaProperty() },
                         onRemoveNodeSchemaProperty = { viewModel.editCreateViewModel.onRemoveNodeSchemaProperty(it) },
 
                         // Edge Schema Creation Handlers
-                        onEdgeSchemaCreationCreateClick = { state -> viewModel.editCreateViewModel.createEdgeSchemaFromState(state) { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
+                        onEdgeSchemaCreationCreateClick = { viewModel.editCreateViewModel.createEdgeSchemaFromState { viewModel.selectDataTab(DataViewTabs.SCHEMA)} },
                         onEdgeSchemaTableNameChange = { viewModel.editCreateViewModel.onEdgeSchemaTableNameChange(it) },
                         onEdgeSchemaCreationAddConnection = { src, dst -> viewModel.editCreateViewModel.onAddEdgeSchemaConnection(src, dst) },
                         onEdgeSchemaCreationRemoveConnection = { index -> viewModel.editCreateViewModel.onRemoveEdgeSchemaConnection(index) },
                         onEdgeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onEdgeSchemaPropertyChange(index, property) },
+                        onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
+                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
                         onAddEdgeSchemaProperty = { viewModel.editCreateViewModel.onAddEdgeSchemaProperty() },
                         onRemoveEdgeSchemaProperty = { viewModel.editCreateViewModel.onRemoveEdgeSchemaProperty(it) },
+                        allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList(),
 
                         // Node Edit Handlers
                         onNodeEditPropertyChange = { index, value -> viewModel.editCreateViewModel.updateNodeEditProperty(index, value) },
@@ -266,24 +253,14 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         // Edge Schema Edit Handlers
                         onEdgeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateEdgeSchemaEditLabel(it) },
                         onEdgeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateEdgeSchemaEditProperty(index, prop) },
-                        onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
+                        onEdgeSchemaEditAddConnection = { src, dst -> viewModel.editCreateViewModel.updateEdgeSchemaEditAddConnection(src, dst) },
+                        onEdgeSchemaEditRemoveConnection = { index -> viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(index) }
 
-                        // --- THIS IS THE FIX ---
-                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) }
+
                     )
                 }
             }
         }
 
-        // --- RE-ADD Query Result Overlay ---
-        queryResult?.let {
-            Box(
-                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)
-            ) {
-                QueryView(it) {
-                    viewModel.queryViewModel.clearQueryResult()
-                }
-            }
-        }
     }
 }

@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -14,8 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.ConnectionPair
-import com.tau.cryptic_ui_v0.Property
-import com.tau.cryptic_ui_v0.EdgeSchemaCreationState
+import com.tau.cryptic_ui_v0.EdgeSchemaCreationState // UPDATED: Uses new state class
+import com.tau.cryptic_ui_v0.SchemaProperty // UPDATED: Uses new property class
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,14 +26,15 @@ fun CreateEdgeSchemaView(
     onAddConnection: (src: String, dst: String) -> Unit,
     onRemoveConnection: (Int) -> Unit,
     // Callbacks for managing properties
-    onPropertyChange: (Int, Property) -> Unit,
+    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
     // Create/Cancel
     onCreate: (EdgeSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
-    val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID")
+    // UPDATED: Define your new supported types
+    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
 
     // --- Local state for the "Add Connection" UI ---
     var newSrcTable by remember { mutableStateOf<String?>(null) }
@@ -73,11 +74,12 @@ fun CreateEdgeSchemaView(
                     expanded = newSrcExpanded,
                     onDismissRequest = { newSrcExpanded = false }
                 ) {
+                    // UPDATED: Use new SchemaDefinitionItem and .name
                     state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schema.label) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newSrcTable = schema.label
+                                newSrcTable = schema.name
                                 newSrcExpanded = false
                             }
                         )
@@ -102,11 +104,12 @@ fun CreateEdgeSchemaView(
                     expanded = newDstExpanded,
                     onDismissRequest = { newDstExpanded = false }
                 ) {
+                    // UPDATED: Use new SchemaDefinitionItem and .name
                     state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schema.label) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newDstTable = schema.label
+                                newDstTable = schema.name
                                 newDstExpanded = false
                             }
                         )

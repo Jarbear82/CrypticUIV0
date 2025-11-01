@@ -2,8 +2,8 @@ package com.tau.cryptic_ui_v0.viewmodels
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.tau.cryptic_ui_v0.KuzuDBService
 import com.tau.cryptic_ui_v0.NoteGraphItem
+import com.tau.cryptic_ui_v0.SqliteDbService
 import com.tau.cryptic_ui_v0.utils.fileExists
 import com.tau.cryptic_ui_v0.utils.getFileName
 import com.tau.cryptic_ui_v0.utils.getHomeDirectoryPath
@@ -48,11 +48,12 @@ class MainViewModel {
     }
 
     /**
-     * Scans the base directory for valid KuzuDB files (.kuzu).
+     * Scans the base directory for valid SQLiteDB files (.sqlite).
      */
     fun loadNoteGraphs() {
         viewModelScope.launch(Dispatchers.IO) { // Use IO for file scanning
-            val files = listFilesWithExtension(_noteGraphBaseDirectory.value, ".kuzu")
+            // UPDATED: Look for .sqlite files
+            val files = listFilesWithExtension(_noteGraphBaseDirectory.value, ".sqlite")
             val graphs = files.map {
                 NoteGraphItem(getFileName(it), it)
             }
@@ -96,9 +97,10 @@ class MainViewModel {
         _showNameDialog.value = false
         if (name.isBlank()) return
 
-        // Sanitize the name and ENSURE it ends with .kuzu
+        // Sanitize the name and ENSURE it ends with .sqlite
         val dbName = name.trim().replace(Regex("[^a-zA-Z0-9_-]"), "_")
-        val finalName = if (dbName.endsWith(".kuzu")) dbName else "$dbName.kuzu"
+        // UPDATED: Use .sqlite
+        val finalName = if (dbName.endsWith(".sqlite")) dbName else "$dbName.sqlite"
 
         val newPath = "${_noteGraphBaseDirectory.value}/$finalName"
         val newItem = NoteGraphItem(finalName, newPath)
@@ -124,7 +126,8 @@ class MainViewModel {
         viewModelScope.launch {
             try {
                 _terminalViewModel.value?.onCleared() // Close previous one
-                val newService = KuzuDBService()
+                // UPDATED: Use new SqliteDbService
+                val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
                 _terminalViewModel.value = TerminalViewModel(newService)
                 _selectedScreen.value = Screen.TERMINAL
@@ -147,8 +150,10 @@ class MainViewModel {
     fun openInMemoryTerminal() {
         viewModelScope.launch {
             _terminalViewModel.value?.onCleared()
-            val newService = KuzuDBService()
-            newService.initialize(null) // Initialize in-memory
+            // UPDATED: Use new SqliteDbService
+            val newService = SqliteDbService()
+            // UPDATED: Pass special string for in-memory DB
+            newService.initialize(":memory:")
             _terminalViewModel.value = TerminalViewModel(newService)
             _selectedScreen.value = Screen.TERMINAL
         }

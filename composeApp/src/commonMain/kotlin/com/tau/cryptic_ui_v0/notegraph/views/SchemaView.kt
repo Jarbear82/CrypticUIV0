@@ -1,9 +1,8 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Changed package to match your new structure
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,23 +22,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import com.tau.cryptic_ui_v0.Schema
-import com.tau.cryptic_ui_v0.SchemaNode
-import com.tau.cryptic_ui_v0.SchemaEdge
-
+import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.viewmodels.SchemaData
+import com.tau.cryptic_ui_v0.SchemaDefinitionItem
+import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 @Composable
 fun SchemaView(
-    schema: Schema?,
+    schema: SchemaData?,
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
-    onNodeClick: (SchemaNode) -> Unit,
-    onEdgeClick: (SchemaEdge) -> Unit,
-    onEditNodeClick: (SchemaNode) -> Unit,
-    onEditEdgeClick: (SchemaEdge) -> Unit,
-    onDeleteNodeClick: (SchemaNode) -> Unit,
-    onDeleteEdgeClick: (SchemaEdge) -> Unit,
+    // UPDATED: All parameters use the new SchemaDefinitionItem
+    onNodeClick: (SchemaDefinitionItem) -> Unit,
+    onEdgeClick: (SchemaDefinitionItem) -> Unit,
+    onEditNodeClick: (SchemaDefinitionItem) -> Unit,
+    onEditEdgeClick: (SchemaDefinitionItem) -> Unit,
+    onDeleteNodeClick: (SchemaDefinitionItem) -> Unit,
+    onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
     onAddEdgeSchemaClick: () -> Unit
 ) {
@@ -63,11 +62,14 @@ fun SchemaView(
 
             HorizontalDivider(color = Color.Black)
             LazyColumn {
-                items(schema.nodeTables) { table ->
+                // UPDATED: Use schema.nodeSchemas
+                items(schema.nodeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    val colorInfo = labelToColor(table.label) // Get color info
+                    // UPDATED: Use table.name
+                    val colorInfo = labelToColor(table.name)
                     ListItem(
-                        headlineContent = { Text(table.label, style = MaterialTheme.typography.titleMedium) },
+                        // UPDATED: Use table.name
+                        headlineContent = { Text(table.name, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
                             .padding(bottom = 8.dp)
                             .clickable { onNodeClick(table) }
@@ -77,14 +79,12 @@ fun SchemaView(
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Node Schema")
                             }
                         },
+                        // UPDATED: Use new SchemaProperty fields
                         supportingContent = {
                             Text(
                                 text = table.properties.joinToString(separator = "\n") { prop ->
-                                    if (prop.isPrimaryKey){
-                                        "  - ${prop.key}: ${prop.valueDataType.toString()}: PK"
-                                    } else {
-                                        "  - ${prop.key}: ${prop.valueDataType.toString()}"
-                                    }
+                                    val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
+                                    "  - ${prop.name}: ${prop.type}$suffix"
                                 },
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -109,7 +109,7 @@ fun SchemaView(
         // --- Edge Schemas ---
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
             ListItem(
-                leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Node")},
+                leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Edge Schema")}, // Fixed content description
                 headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
                 trailingContent = {
                     IconButton(onClick = onAddEdgeSchemaClick) {
@@ -119,12 +119,14 @@ fun SchemaView(
             )
             HorizontalDivider(color = Color.Black)
             LazyColumn {
-                items(schema.edgeTables) { table ->
+                // UPDATED: Use schema.edgeSchemas
+                items(schema.edgeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    // Get color based on the *edge* label
-                    val colorInfo = labelToColor(table.label)
+                    // UPDATED: Use table.name
+                    val colorInfo = labelToColor(table.name)
                     ListItem(
-                        headlineContent = { Text("${table.label}", style = MaterialTheme.typography.titleMedium) },
+                        // UPDATED: Use table.name
+                        headlineContent = { Text(table.name, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
                             .padding(bottom = 8.dp)
                             .clickable { onEdgeClick(table) }
@@ -134,10 +136,10 @@ fun SchemaView(
                                 Icon(Icons.Default.Edit, contentDescription = "Edit Edge Schema")
                             }
                         },
+                        // UPDATED: Use table.connections (nullable)
                         supportingContent = {
-                            // Display all connection pairs
                             Column {
-                                table.connections.forEach {
+                                (table.connections ?: emptyList()).forEach {
                                     Text("(${it.src}) -> (${it.dst})", style = MaterialTheme.typography.bodyMedium)
                                 }
                             }

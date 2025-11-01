@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,21 +11,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.NodeSchemaCreationState
-import com.tau.cryptic_ui_v0.Property
+import com.tau.cryptic_ui_v0.NodeSchemaCreationState // UPDATED: Uses new state class
+import com.tau.cryptic_ui_v0.SchemaProperty // UPDATED: Uses new property class
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNodeSchemaView(
     state: NodeSchemaCreationState,
     onTableNameChange: (String) -> Unit,
-    onPropertyChange: (Int, Property) -> Unit,
+    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
     onCancel: () -> Unit,
     onCreate: (NodeSchemaCreationState) -> Unit
 ) {
-    val dataTypes = listOf("STRING", "INT64", "DOUBLE", "BOOL", "DATE", "TIMESTAMP", "INTERVAL", "BLOB", "UUID", "SERIAL")
+    // UPDATED: Define your new supported types
+    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Create Node Schema", style = MaterialTheme.typography.headlineSmall)
@@ -80,12 +81,12 @@ fun CreateNodeSchemaView(
                         }
                     }
                     Checkbox(
-                        checked = property.isPrimaryKey,
+                        checked = property.isDisplayProperty, // UPDATED: Use isDisplayProperty
                         onCheckedChange = {
-                            onPropertyChange(index, property.copy(isPrimaryKey = it))
+                            onPropertyChange(index, property.copy(isDisplayProperty = it))
                         }
                     )
-                    Text("PK")
+                    Text("Display") // UPDATED: Text changed from PK
                     IconButton(onClick = { onRemoveProperty(index) }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete Property")
                     }

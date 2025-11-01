@@ -1,6 +1,6 @@
 package com.tau.cryptic_ui_v0.viewmodels
 
-import com.tau.cryptic_ui_v0.*
+import com.tau.cryptic_ui_v0.* // Imports new data classes: NodeDisplayItem, EdgeDisplayItem, etc.
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -9,14 +9,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import com.tau.cryptic_ui_v0.db.AppDatabase
 
+// UPDATED: Constructor now takes SqliteDbService
 class MetadataViewModel(
-    private val dbService: KuzuDBService,
+    private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
-    private val schemaViewModel: SchemaViewModel // Added to refresh schema
+    private val schemaViewModel: SchemaViewModel // Still needed to get schema names
 ) {
-    private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
-    val dbMetaData = _dbMetaData.asStateFlow()
+    // REMOVED: DBMetaData logic. This is now handled by MainViewModel
+    // private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
+    // val dbMetaData = _dbMetaData.asStateFlow()
 
     private val _nodeList = MutableStateFlow<List<NodeDisplayItem>>(emptyList())
     val nodeList = _nodeList.asStateFlow()
@@ -34,12 +39,15 @@ class MetadataViewModel(
     private val _secondarySelectedItem = MutableStateFlow<Any?>(null)
     val secondarySelectedItem = _secondarySelectedItem.asStateFlow()
 
-
-    init {
-        viewModelScope.launch {
-            _dbMetaData.value = dbService.getDBMetaData()
-        }
+    // ADDED: JSON serializer instance
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+        encodeDefaults = true // Ensure all fields are present
     }
+
+    // REMOVED: init block that fetched Kuzu metadata
 
     fun addNodes(nodes: Set<NodeDisplayItem>) {
         if (nodes.isNotEmpty()) {
@@ -55,28 +63,80 @@ class MetadataViewModel(
         }
     }
 
+    // UPDATED: Rewritten to use SqliteDbService
     fun listNodes() {
         viewModelScope.launch {
-            _nodeList.value = listNodes(dbService)
+            try {
+                // Ensure schema is loaded to map IDs to names
+                val schemaMap = schemaViewModel.schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
+                if (schemaMap.isEmpty()) {
+                    println("Schema not loaded, fetching nodes aborted.")
+                    return@launch
+                }
+
+                val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
+                _nodeList.value = dbNodes.mapNotNull { dbNode ->
+                    val schema = schemaMap[dbNode.schema_id]
+                    if (schema == null) {
+                        println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
+                        null
+                    } else {
+                        NodeDisplayItem(
+                            id = dbNode.id,
+                            label = schema.name,
+                            displayProperty = dbNode.display_label
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error listing nodes: ${e.message}")
+                _nodeList.value = emptyList()
+            }
         }
     }
 
+    // UPDATED: Rewritten to use SqliteDbService
     fun listEdges() {
         viewModelScope.launch {
-            val edges = listEdges(dbService)
-            val nodesFromEdges = mutableSetOf<NodeDisplayItem>()
-            edges.forEach {
-                nodesFromEdges.add(it.src)
-                nodesFromEdges.add(it.dst)
+            try {
+                // Ensure schema and nodes are loaded to map IDs
+                val schemaMap = schemaViewModel.schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
+                val nodeMap = _nodeList.value.associateBy { it.id }
+
+                if (schemaMap.isEmpty() || nodeMap.isEmpty()) {
+                    println("Schema or nodes not loaded, fetching edges aborted.")
+                    return@launch
+                }
+
+                val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
+                _edgeList.value = dbEdges.mapNotNull { dbEdge ->
+                    val schema = schemaMap[dbEdge.schema_id]
+                    val srcNode = nodeMap[dbEdge.from_node_id]
+                    val dstNode = nodeMap[dbEdge.to_node_id]
+
+                    if (schema == null || srcNode == null || dstNode == null) {
+                        println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
+                        null
+                    } else {
+                        EdgeDisplayItem(
+                            id = dbEdge.id,
+                            label = schema.name,
+                            src = srcNode,
+                            dst = dstNode
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error listing edges: ${e.message}")
+                _edgeList.value = emptyList()
             }
-            _edgeList.value = edges
-            _nodeList.update { (it + nodesFromEdges).distinct() }
         }
     }
 
 
     fun listAll() {
         viewModelScope.launch {
+            // Must run sequentially: nodes first, then edges
             listNodes()
             listEdges()
         }
@@ -87,11 +147,32 @@ class MetadataViewModel(
      * This stored item is the "original" version for comparison.
      * Returns the fetched item so the caller can pass it to EditCreateViewModel.
      */
+    // UPDATED: Fetches from SQLite and deserializes JSON
     suspend fun setItemToEdit(item: Any): Any? {
         val fetchedItem = when (item) {
-            is NodeDisplayItem -> getNode(dbService, item)
-            is EdgeDisplayItem -> getEdge(dbService, item)
-            is SchemaNode, is SchemaEdge, is String -> item
+            is NodeDisplayItem -> {
+                val dbNode = dbService.database.appDatabaseQueries.selectNodeById(item.id).executeAsOneOrNull() ?: return null
+                val schema = schemaViewModel.schema.value?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
+                val properties = try {
+                    json.decodeFromString<Map<String, String>>(dbNode.properties_json)
+                } catch (e: Exception) {
+                    println("Error parsing node properties: ${e.message}")
+                    emptyMap()
+                }
+                NodeEditState(id = dbNode.id, schema = schema, properties = properties)
+            }
+            is EdgeDisplayItem -> {
+                val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
+                val schema = schemaViewModel.schema.value?.edgeSchemas?.firstOrNull { it.id == dbEdge.schema_id } ?: return null
+                val properties = try {
+                    json.decodeFromString<Map<String, String>>(dbEdge.properties_json)
+                } catch (e: Exception) {
+                    println("Error parsing edge properties: ${e.message}")
+                    emptyMap()
+                }
+                EdgeEditState(id = dbEdge.id, schema = schema, src = item.src, dst = item.dst, properties = properties)
+            }
+            is SchemaDefinitionItem -> item // Pass schema definitions directly
             else -> null
         }
         _itemToEdit.value = fetchedItem
@@ -103,145 +184,73 @@ class MetadataViewModel(
      * Saves the edited item by comparing the original (from _itemToEdit)
      * with the modified version (passed as an argument).
      */
+    // UPDATED: Serializes JSON and calls new SQLDelight update queries
     fun saveEditedItem(editedState: Any?, onFinished: () -> Unit) {
         viewModelScope.launch {
             val originalState = _itemToEdit.value
             println("DEBUG: Save button clicked.")
             println("DEBUG: Original state: $originalState")
             println("DEBUG: Edited state: $editedState")
-            when (originalState) {
-                is NodeTable -> {
-                    val editedNode = editedState as? NodeTable
-                    if (editedNode != null) {
-                        saveNodeChanges(originalState, editedNode)
+            try {
+                when (editedState) {
+                    is NodeEditState -> {
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        // Find the display property's value from the map
+                        val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
+                        val displayLabel = editedState.properties[displayKey] ?: "Node ${editedState.id}"
+
+                        dbService.database.appDatabaseQueries.updateNodeProperties(
+                            id = editedState.id,
+                            display_label = displayLabel,
+                            properties_json = propertiesJson
+                        )
                         listNodes() // Refresh list
                     }
-                }
-                is EdgeTable -> {
-                    val editedEdge = editedState as? EdgeTable
-                    if (editedEdge != null) {
-                        saveEdgeChanges(originalState, editedEdge)
+                    is EdgeEditState -> {
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        dbService.database.appDatabaseQueries.updateEdgeProperties(
+                            id = editedState.id,
+                            properties_json = propertiesJson
+                        )
                         listEdges() // Refresh list
                     }
-                }
-                is SchemaNode -> {
-                    val editedSchema = editedState as? NodeSchemaEditState
-                    if (editedSchema != null) {
-                        println("DEBUG: Original and Edited states are valid. Calling saveNodeSchemaChanges...")
-                        saveNodeSchemaChanges(originalState, editedSchema)
-                        schemaViewModel.showSchema() // Refresh schema
-                    } else {
-                        println("DEBUG: Edited state was null or not a NodeSchemaEditState.")
-                    }
-                }
-                is SchemaEdge -> {
-                    val editedSchema = editedState as? EdgeSchemaEditState
-                    if (editedSchema != null) {
-                        saveEdgeSchemaChanges(originalState, editedSchema)
+                    is NodeSchemaEditState -> {
+                        val originalSchema = originalState as? SchemaDefinitionItem ?: throw IllegalStateException("Original schema not found")
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        dbService.database.appDatabaseQueries.updateSchema(
+                            id = originalSchema.id,
+                            name = editedState.currentName,
+                            properties_json = propertiesJson,
+                            connections_json = null // Node schemas don't have connections
+                        )
                         schemaViewModel.showSchema() // Refresh schema
                     }
+                    is EdgeSchemaEditState -> {
+                        val originalSchema = originalState as? SchemaDefinitionItem ?: throw IllegalStateException("Original schema not found")
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        val connectionsJson = json.encodeToString(editedState.connections)
+                        dbService.database.appDatabaseQueries.updateSchema(
+                            id = originalSchema.id,
+                            name = editedState.currentName,
+                            properties_json = propertiesJson,
+                            connections_json = connectionsJson
+                        )
+                        schemaViewModel.showSchema() // Refresh schema
+                    }
+                    else -> {
+                        println("DEBUG: Edited state was null or of unknown type.")
+                    }
                 }
-                else -> {
-                    println("DEBUG: Original state was null or of unknown type.")
-                }
+            } catch (e: Exception) {
+                println("Error saving item: ${e.message}")
+                // TODO: Show user-facing error
             }
             clearSelectedItem() // Clear original state
             onFinished()        // Call the onFinished lambda
         }
     }
 
-    private suspend fun saveNodeChanges(original: NodeTable, edited: NodeTable) {
-        val pk = original.properties.first { it.isPrimaryKey }
-        val pkDisplay = DisplayItemProperty(pk.key, pk.value)
-        val changedProperties = edited.properties.filter { it.valueChanged && !it.isPrimaryKey }
-
-        println("DEBUG: Found ${changedProperties.size} changed properties for node '${original.label}'.")
-
-        if (changedProperties.isNotEmpty()) {
-            println("DEBUG: Executing updateNodeProperties.")
-            updateNodeProperties(dbService, original.label, pkDisplay, changedProperties)
-        }
-    }
-
-    private suspend fun saveEdgeChanges(original: EdgeTable, edited: EdgeTable) {
-        val changedProperties = edited.properties?.filter { it.valueChanged } ?: emptyList()
-        println("DEBUG: Found ${changedProperties.size} changed properties for edge '${original.label}'.")
-        if (changedProperties.isNotEmpty()) {
-            println("DEBUG: Executing updateEdgeProperties.")
-            val edgeDisplay = EdgeDisplayItem(original.label, original.src, original.dst)
-            updateEdgeProperties(dbService, edgeDisplay, changedProperties)
-        }
-    }
-
-    private suspend fun saveNodeSchemaChanges(original: SchemaNode, edited: NodeSchemaEditState) = coroutineScope {
-        val originalLabel = original.label
-        val currentLabel = edited.currentLabel
-        var activeLabel = originalLabel
-
-        // Handle table rename last, as it changes the reference
-        if (originalLabel != currentLabel) {
-            println("DEBUG: Renaming table: $originalLabel -> $currentLabel")
-            updateNodeSchemaRenameTable(dbService, originalLabel, currentLabel)
-            activeLabel = currentLabel // Use the new label for all subsequent operations
-        }
-
-        // Handle property changes first
-        val operations = edited.properties.map { prop ->
-            async {
-                when {
-                    prop.isDeleted -> {
-                        println("DEBUG: Dropping property: ${prop.originalKey} from table $activeLabel")
-                        updateNodeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
-                    }
-                    prop.isNew -> {
-                        println("DEBUG: Adding property: ${prop.key} ${prop.valueDataType} to table $activeLabel")
-                        updateNodeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
-                    }
-                    prop.originalKey != prop.key -> {
-                        println("DEBUG: Renaming property: ${prop.originalKey} -> ${prop.key} in table $activeLabel")
-                        updateNodeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
-                    }
-                    // TODO: Add data type change support when Kuzu supports it
-                }
-            }
-        }
-        operations.awaitAll()
-    }
-
-    private suspend fun saveEdgeSchemaChanges(original: SchemaEdge, edited: EdgeSchemaEditState) = coroutineScope {
-        val originalLabel = original.label
-        val currentLabel = edited.currentLabel
-        var activeLabel = originalLabel
-
-        // Rename table first
-        if (originalLabel != currentLabel) {
-            println("DEBUG: Renaming edge table: $originalLabel -> $currentLabel")
-            updateEdgeSchemaRenameTable(dbService, originalLabel, currentLabel)
-            activeLabel = currentLabel
-        }
-
-        // Handle property changes after
-        val operations = edited.properties.map { prop ->
-            async {
-                when {
-                    prop.isDeleted -> {
-                        println("DEBUG: Dropping edge property: ${prop.originalKey} from table $activeLabel")
-                        updateEdgeSchemaDropProperty(dbService, activeLabel, prop.originalKey)
-                    }
-                    prop.isNew -> {
-                        println("DEBUG: Adding edge property: ${prop.key} ${prop.valueDataType} to table $activeLabel")
-                        updateEdgeSchemaAddProperty(dbService, activeLabel, prop.key, prop.valueDataType)
-                    }
-                    prop.originalKey != prop.key -> {
-                        println("DEBUG: Renaming edge property: ${prop.originalKey} -> ${prop.key} in table $activeLabel")
-                        updateEdgeSchemaRenameProperty(dbService, activeLabel, prop.originalKey, prop.key)
-                    }
-                }
-            }
-        }
-        operations.awaitAll()
-    }
-
+    // REMOVED: Old Kuzu-based save helpers (saveNodeChanges, saveEdgeChanges, etc.)
 
     fun selectItem(item: Any) {
         val currentPrimary = _primarySelectedItem.value
@@ -249,54 +258,47 @@ class MetadataViewModel(
 
         when (item) {
             is NodeDisplayItem -> {
-                // Case 1: The clicked item is already primary -> Deselect it.
                 if (item == currentPrimary) {
                     _primarySelectedItem.value = null
-                }
-                // Case 2: The clicked item is already secondary -> Deselect it.
-                else if (item == currentSecondary) {
+                } else if (item == currentSecondary) {
                     _secondarySelectedItem.value = null
-                }
-                // Case 3: Nothing is primary yet -> Make this item primary.
-                else if (currentPrimary == null) {
+                } else if (currentPrimary == null) {
                     _primarySelectedItem.value = item
-                }
-                // Case 4: Primary is set, but secondary is empty -> Make this item secondary.
-                else if (currentSecondary == null) {
+                } else if (currentSecondary == null) {
                     _secondarySelectedItem.value = item
-                }
-                // Case 5: Both primary and secondary are already set -> Replace primary and clear secondary.
-                else {
+                } else {
                     _primarySelectedItem.value = item
                     _secondarySelectedItem.value = null
                 }
             }
             is EdgeDisplayItem -> {
-                // When an edge is selected, set its src and dst as primary and secondary.
                 _primarySelectedItem.value = item.src
                 _secondarySelectedItem.value = item.dst
             }
-            else -> {
-                // For any other type, set it as primary and clear secondary.
+            else -> { // Includes SchemaDefinitionItem
                 _primarySelectedItem.value = item
                 _secondarySelectedItem.value = null
             }
         }
     }
 
+    // UPDATED: Uses new SQLDelight delete queries
     fun deleteDisplayItem(item: Any) {
         viewModelScope.launch {
-            when (item) {
-                is NodeDisplayItem -> {
-                    deleteNode(dbService, item)
-                    _nodeList.update { list -> list.filterNot { it == item } }
-                    // Also remove any edges connected to the deleted node
-                    _edgeList.update { list -> list.filterNot { it.src == item || it.dst == item } }
+            try {
+                when (item) {
+                    is NodeDisplayItem -> {
+                        dbService.database.appDatabaseQueries.deleteNodeById(item.id)
+                        listAll() // Easiest way to refresh nodes and affected edges
+                    }
+                    is EdgeDisplayItem -> {
+                        dbService.database.appDatabaseQueries.deleteEdgeById(item.id)
+                        listEdges() // Just refresh edges
+                    }
                 }
-                is EdgeDisplayItem -> {
-                    deleteEdge(dbService, item)
-                    _edgeList.update { list -> list.filterNot { it == item } }
-                }
+            } catch (e: Exception) {
+                println("Error deleting item: ${e.message}")
+                // TODO: Show user-facing error
             }
         }
     }
@@ -315,8 +317,5 @@ class MetadataViewModel(
         _secondarySelectedItem.value = null
     }
 
-
-    fun onCleared() {
-        dbService.close()
-    }
+    // REMOVED: onCleared() is no longer handled here.
 }

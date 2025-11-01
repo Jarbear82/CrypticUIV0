@@ -1,19 +1,23 @@
 package com.tau.cryptic_ui_v0.viewmodels
 
-import com.tau.cryptic_ui_v0.KuzuDBService
+import com.tau.cryptic_ui_v0.SqliteDbService // IMPORTED: Changed from KuzuDBService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class TerminalViewModel(dbService: KuzuDBService) {
+// UPDATED: Constructor now takes SqliteDbService
+class TerminalViewModel(private val dbService: SqliteDbService) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
+    // UPDATED: These ViewModels are now instantiated with the SqliteDbService
     val schemaViewModel = SchemaViewModel(dbService, viewModelScope)
-    // MetadataViewModel now needs a reference to SchemaViewModel to refresh it after schema edits
     val metadataViewModel = MetadataViewModel(dbService, viewModelScope, schemaViewModel)
-    val queryViewModel = QueryViewModel(dbService, viewModelScope, metadataViewModel)
-    // Renamed CreationViewModel to EditCreateViewModel
+
+    // REMOVED: QueryViewModel is no longer needed
+    // val queryViewModel = QueryViewModel(dbService, viewModelScope, metadataViewModel)
+
+    // UPDATED: This ViewModel is also instantiated with the SqliteDbService
     val editCreateViewModel = EditCreateViewModel(dbService, viewModelScope, schemaViewModel, metadataViewModel)
 
 
@@ -30,7 +34,7 @@ class TerminalViewModel(dbService: KuzuDBService) {
         _selectedDataTab.value = tab
     }
 
-    private val _selectedViewTab = MutableStateFlow(ViewTabs.LIST) // Default to LIST
+    private val _selectedViewTab = MutableStateFlow(ViewTabs.GRAPH)
     val selectedViewTab = _selectedViewTab.asStateFlow()
 
     fun selectViewTab(tab: ViewTabs) {
@@ -38,7 +42,8 @@ class TerminalViewModel(dbService: KuzuDBService) {
     }
 
     fun onCleared() {
-        metadataViewModel.onCleared()
+        // UPDATED: Call close() directly on the SqliteDbService
+        dbService.close()
     }
 }
 
@@ -49,6 +54,6 @@ enum class DataViewTabs(val value: Int) {
 }
 
 enum class ViewTabs(val value: Int) {
-    LIST(0), // Renamed from QUERY
+    QUERY(0),
     GRAPH(1)
 }

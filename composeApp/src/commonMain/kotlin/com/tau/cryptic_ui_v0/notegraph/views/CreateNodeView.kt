@@ -1,18 +1,18 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.NodeCreationState
-import com.tau.cryptic_ui_v0.SchemaNode
+import com.tau.cryptic_ui_v0.NodeCreationState // UPDATED: Uses new state class
+import com.tau.cryptic_ui_v0.SchemaDefinitionItem // UPDATED: Uses new schema class
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNodeView(
     nodeCreationState: NodeCreationState,
-    onSchemaSelected: (SchemaNode) -> Unit,
+    onSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
     onPropertyChanged: (String, String) -> Unit,
     onCreateClick: () -> Unit,
     onCancelClick: () -> Unit
@@ -28,7 +28,7 @@ fun CreateNodeView(
             onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
-                value = nodeCreationState.selectedSchema?.label ?: "Select Schema",
+                value = nodeCreationState.selectedSchema?.name ?: "Select Schema", // UPDATED: Use .name
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -40,7 +40,7 @@ fun CreateNodeView(
             ) {
                 nodeCreationState.schemas.forEach { schema ->
                     DropdownMenuItem(
-                        text = { Text(schema.label) },
+                        text = { Text(schema.name) }, // UPDATED: Use .name
                         onClick = {
                             onSchemaSelected(schema)
                             expanded = false
@@ -50,11 +50,12 @@ fun CreateNodeView(
             }
         }
 
+        // UPDATED: Iterate over properties from selectedSchema
         nodeCreationState.selectedSchema?.properties?.forEach { property ->
             OutlinedTextField(
-                value = nodeCreationState.properties[property.key] ?: "",
-                onValueChange = { onPropertyChanged(property.key, it) },
-                label = { Text("${property.key}: ${property.valueDataType}") },
+                value = nodeCreationState.properties[property.name] ?: "", // UPDATED: Use property.name
+                onValueChange = { onPropertyChanged(property.name, it) }, // UPDATED: Use property.name
+                label = { Text("${property.name}: ${property.type}") }, // UPDATED: Use property.name and .type
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             )
         }

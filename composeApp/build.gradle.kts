@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -22,6 +24,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -29,8 +32,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.kuzu)
             implementation(libs.kcef)
+            implementation(libs.sqldelight.sqlite.driver)
         }
     }
 }
@@ -66,4 +69,12 @@ compose.desktop {
 
 configurations.all {
     exclude(group = "androidx.compose.ui", module = "ui-util")
+}
+
+sqldelight {
+    databases {
+        create("AppDatabase") {
+            packageName.set("com.tau.cryptic_ui_v0.db")
+        }
+    }
 }

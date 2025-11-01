@@ -1,4 +1,4 @@
-package com.tau.cryptic_ui_v0.views
+package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,37 +9,32 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.NodeTable
+import com.tau.cryptic_ui_v0.NodeEditState // UPDATED: Uses new state class
 
 @Composable
 fun EditNodeView(
-    state: NodeTable,
-    onPropertyChange: (Int, String) -> Unit,
+    state: NodeEditState,
+    onPropertyChange: (String, String) -> Unit, // UPDATED: Key is now a String
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Edit Node: ${state.label}", style = MaterialTheme.typography.headlineSmall)
+        Text("Edit Node: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall) // UPDATED: Use schema.name
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-            itemsIndexed(state.properties) { index, property ->
+            // UPDATED: Iterate over schema properties, get values from state.properties map
+            itemsIndexed(state.schema.properties) { index, schemaProperty ->
                 OutlinedTextField(
-                    value = property.value?.toString() ?: "",
+                    value = state.properties[schemaProperty.name] ?: "",
                     onValueChange = {
-                        onPropertyChange(index, it)
+                        onPropertyChange(schemaProperty.name, it) // UPDATED: Pass property name (string)
                     },
-                    label = { Text(property.key) },
+                    label = { Text("${schemaProperty.name} (${schemaProperty.type})") },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    readOnly = property.isPrimaryKey,
-                    supportingText = {
-                        if (property.isPrimaryKey) {
-                            Text("Primary Key (read-only)", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
+                    // TODO: Add logic for different property types (e.g., Image picker)
                 )
             }
         }
