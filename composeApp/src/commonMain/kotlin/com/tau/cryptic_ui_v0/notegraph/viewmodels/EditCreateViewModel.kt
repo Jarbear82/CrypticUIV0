@@ -53,14 +53,13 @@ class EditCreateViewModel(
 
     // --- Node Creation ---
     fun initiateNodeCreation() {
-        viewModelScope.launch {
-            // UPDATED: Fetches new SchemaData and filters for node schemas
-            val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
-            metadataViewModel.clearSelectedItem()
-            _editScreenState.value = EditScreenState.CreateNode(
-                NodeCreationState(schemas = nodeSchemas)
-            )
-        }
+        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
+        // UPDATED: Fetches new SchemaData and filters for node schemas
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        metadataViewModel.clearSelectedItem()
+        _editScreenState.value = EditScreenState.CreateNode(
+            NodeCreationState(schemas = nodeSchemas)
+        )
     }
 
     // UPDATED: Signature uses new SchemaDefinitionItem
@@ -119,20 +118,19 @@ class EditCreateViewModel(
 
     // --- Edge Creation ---
     fun initiateEdgeCreation() {
-        viewModelScope.launch {
-            // UPDATED: Fetches new SchemaData and filters for edge schemas
-            val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
-            if (metadataViewModel.nodeList.value.isEmpty()) {
-                metadataViewModel.listNodes()
-            }
-            metadataViewModel.clearSelectedItem()
-            _editScreenState.value = EditScreenState.CreateEdge(
-                EdgeCreationState(
-                    schemas = edgeSchemas,
-                    availableNodes = metadataViewModel.nodeList.value
-                )
-            )
+        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
+        // UPDATED: Fetches new SchemaData and filters for edge schemas
+        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
+        if (metadataViewModel.nodeList.value.isEmpty()) {
+            metadataViewModel.listNodes()
         }
+        metadataViewModel.clearSelectedItem()
+        _editScreenState.value = EditScreenState.CreateEdge(
+            EdgeCreationState(
+                schemas = edgeSchemas,
+                availableNodes = metadataViewModel.nodeList.value
+            )
+        )
     }
 
     // UPDATED: Signature uses new SchemaDefinitionItem
@@ -218,15 +216,16 @@ class EditCreateViewModel(
 
     // --- Node Schema Creation ---
     fun initiateNodeSchemaCreation() {
+        // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
             metadataViewModel.setItemToEdit("CreateNodeSchema") // Keep this for cancel logic
-            // UPDATED: Uses new NodeSchemaCreationState with default SchemaProperty
-            _editScreenState.value = EditScreenState.CreateNodeSchema(
-                NodeSchemaCreationState(
-                    properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
-                )
-            )
         }
+        // UPDATED: Uses new NodeSchemaCreationState with default SchemaProperty
+        _editScreenState.value = EditScreenState.CreateNodeSchema(
+            NodeSchemaCreationState(
+                properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
+            )
+        )
     }
 
     fun onNodeSchemaTableNameChange(name: String) {
@@ -292,14 +291,15 @@ class EditCreateViewModel(
 
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
+        // UPDATED: Fetches new SchemaData and filters for node schemas
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
-            // UPDATED: Fetches new SchemaData and filters for node schemas
-            val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
             metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic
-            _editScreenState.value = EditScreenState.CreateEdgeSchema(
-                EdgeSchemaCreationState(allNodeSchemas = nodeSchemas)
-            )
         }
+        _editScreenState.value = EditScreenState.CreateEdgeSchema(
+            EdgeSchemaCreationState(allNodeSchemas = nodeSchemas)
+        )
     }
 
     fun onEdgeSchemaTableNameChange(name: String) {
@@ -556,3 +556,4 @@ class EditCreateViewModel(
         }
     }
 }
+

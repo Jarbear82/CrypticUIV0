@@ -55,7 +55,7 @@ class GraphViewmodel(
         }
 
         // Start the physics simulation loop
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch() {
             var lastTimeNanos = withFrameNanos { it }
             while (_simulationRunning.value) {
                 val currentTimeNanos = withFrameNanos { it }
