@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -40,6 +41,12 @@ fun GraphView(viewModel: GraphViewmodel) {
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurface
     val crosshairColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+
+    // ADDED: This LaunchedEffect will start the physics simulation
+    // in a coroutine context that has a MonotonicFrameClock.
+    LaunchedEffect(Unit) {
+        viewModel.runSimulationLoop()
+    }
 
     Box(
         modifier = Modifier
@@ -156,4 +163,3 @@ private fun DrawScope.drawNodes(
         }
     }
 }
-

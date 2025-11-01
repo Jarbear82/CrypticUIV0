@@ -54,28 +54,32 @@ class GraphViewmodel(
             }
         }
 
-        // Start the physics simulation loop
-        viewModelScope.launch() {
-            var lastTimeNanos = withFrameNanos { it }
-            while (_simulationRunning.value) {
-                val currentTimeNanos = withFrameNanos { it }
-                // delta time in seconds
-                val dt = (currentTimeNanos - lastTimeNanos) / 1_000_000_000.0f
-                lastTimeNanos = currentTimeNanos
+        // REMOVED: The physics simulation loop was moved to runSimulationLoop()
+        // to be called from a Composable's LaunchedEffect.
+    }
 
-                // Run one physics step
-                if (_graphNodes.value.isNotEmpty()) {
-                    val updatedNodes = physicsEngine.update(
-                        _graphNodes.value,
-                        _graphEdges.value,
-                        // Cap delta time to prevent physics "explosions" if frame rate drops
-                        dt.coerceAtMost(0.032f)
-                    )
-                    _graphNodes.value = updatedNodes
-                }
+    // ADDED: This function will be called from a LaunchedEffect in the UI
+    suspend fun runSimulationLoop() {
+        var lastTimeNanos = withFrameNanos { it }
+        while (_simulationRunning.value) {
+            val currentTimeNanos = withFrameNanos { it }
+            // delta time in seconds
+            val dt = (currentTimeNanos - lastTimeNanos) / 1_000_000_000.0f
+            lastTimeNanos = currentTimeNanos
+
+            // Run one physics step
+            if (_graphNodes.value.isNotEmpty()) {
+                val updatedNodes = physicsEngine.update(
+                    _graphNodes.value,
+                    _graphEdges.value,
+                    // Cap delta time to prevent physics "explosions" if frame rate drops
+                    dt.coerceAtMost(0.032f)
+                )
+                _graphNodes.value = updatedNodes
             }
         }
     }
+
 
     /**
      * Updates the internal graph state based on the latest lists from MetadataViewModel.
@@ -176,4 +180,3 @@ class GraphViewmodel(
         _simulationRunning.value = false
     }
 }
-

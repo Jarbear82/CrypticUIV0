@@ -63,82 +63,111 @@ class MetadataViewModel(
         }
     }
 
-    // UPDATED: Rewritten to use SqliteDbService
+    // ADDED: private suspend function for node-fetching logic
+    private suspend fun fetchNodes() {
+        try {
+            // Ensure schema is loaded to map IDs to names
+            // FIX: Ensure schema isn't null before proceeding
+            val schema = schemaViewModel.schema.value
+            if (schema == null) {
+                println("Schema not yet loaded. Calling showSchema() first.")
+                schemaViewModel.showSchema() // Make sure schema is loaded
+            }
+            val schemaMap = schemaViewModel.schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
+            if (schemaMap.isEmpty()) {
+                println("Schema not loaded, fetching nodes aborted.")
+                return
+            }
+
+            val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
+            println("fetchNodes: Found ${dbNodes.size} nodes.") // Added logging
+            _nodeList.value = dbNodes.mapNotNull { dbNode ->
+                val nodeSchema = schemaMap[dbNode.schema_id]
+                if (nodeSchema == null) {
+                    println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
+                    null
+                } else {
+                    NodeDisplayItem(
+                        id = dbNode.id,
+                        label = nodeSchema.name,
+                        displayProperty = dbNode.display_label
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            println("Error listing nodes: ${e.message}")
+            _nodeList.value = emptyList()
+        }
+    }
+
+    // ADDED: private suspend function for edge-fetching logic
+    private suspend fun fetchEdges() {
+        try {
+            // Ensure schema and nodes are loaded to map IDs
+            val schemaMap = schemaViewModel.schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
+            val nodeMap = _nodeList.value.associateBy { it.id } // Uses the now-populated node list
+
+            if (schemaMap.isEmpty()) {
+                println("Edge schema or nodes not loaded, fetching edges aborted.")
+                // Don't return if nodeMap is empty, just means no edges can be formed
+            }
+
+            val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
+            println("fetchEdges: Found ${dbEdges.size} edges.") // Added logging
+            _edgeList.value = dbEdges.mapNotNull { dbEdge ->
+                val schema = schemaMap[dbEdge.schema_id]
+                val srcNode = nodeMap[dbEdge.from_node_id]
+                val dstNode = nodeMap[dbEdge.to_node_id]
+
+                if (schema == null || srcNode == null || dstNode == null) {
+                    println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
+                    null
+                } else {
+                    EdgeDisplayItem(
+                        id = dbEdge.id,
+                        label = schema.name,
+                        src = srcNode,
+                        dst = dstNode
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            println("Error listing edges: ${e.message}")
+            _edgeList.value = emptyList()
+        }
+    }
+
+    // UPDATED: listNodes now uses fetchNodes
     fun listNodes() {
         viewModelScope.launch {
-            try {
-                // Ensure schema is loaded to map IDs to names
-                val schemaMap = schemaViewModel.schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
-                if (schemaMap.isEmpty()) {
-                    println("Schema not loaded, fetching nodes aborted.")
-                    return@launch
-                }
-
-                val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
-                _nodeList.value = dbNodes.mapNotNull { dbNode ->
-                    val schema = schemaMap[dbNode.schema_id]
-                    if (schema == null) {
-                        println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
-                        null
-                    } else {
-                        NodeDisplayItem(
-                            id = dbNode.id,
-                            label = schema.name,
-                            displayProperty = dbNode.display_label
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                println("Error listing nodes: ${e.message}")
-                _nodeList.value = emptyList()
-            }
+            fetchNodes()
         }
     }
 
-    // UPDATED: Rewritten to use SqliteDbService
+    // UPDATED: listEdges now uses fetchEdges
     fun listEdges() {
         viewModelScope.launch {
-            try {
-                // Ensure schema and nodes are loaded to map IDs
-                val schemaMap = schemaViewModel.schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
-                val nodeMap = _nodeList.value.associateBy { it.id }
-
-                if (schemaMap.isEmpty() || nodeMap.isEmpty()) {
-                    println("Schema or nodes not loaded, fetching edges aborted.")
-                    return@launch
-                }
-
-                val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
-                _edgeList.value = dbEdges.mapNotNull { dbEdge ->
-                    val schema = schemaMap[dbEdge.schema_id]
-                    val srcNode = nodeMap[dbEdge.from_node_id]
-                    val dstNode = nodeMap[dbEdge.to_node_id]
-
-                    if (schema == null || srcNode == null || dstNode == null) {
-                        println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
-                        null
-                    } else {
-                        EdgeDisplayItem(
-                            id = dbEdge.id,
-                            label = schema.name,
-                            src = srcNode,
-                            dst = dstNode
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                println("Error listing edges: ${e.message}")
-                _edgeList.value = emptyList()
+            // Edges depend on nodes, so fetch nodes first if the list is empty
+            if (_nodeList.value.isEmpty()) {
+                fetchNodes()
             }
+            fetchEdges()
         }
     }
 
 
+    // UPDATED: listAll now sequentially awaits fetchNodes and fetchEdges
     fun listAll() {
         viewModelScope.launch {
-            // Must run sequentially: nodes first, then edges
-            listNodes()
-            listEdges()
+            try {
+                println("listAll: Fetching nodes...") // Added logging
+                fetchNodes()
+                println("listAll: Fetching edges...") // Added logging
+                fetchEdges()
+                println("listAll: Finished.") // Added logging
+            } catch (e: Exception) {
+                println("Error in listAll: ${e.message}")
+            }
         }
     }
 

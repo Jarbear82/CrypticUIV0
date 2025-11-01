@@ -78,7 +78,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
             // FIX: Use new EditState classes and SchemaDefinitionItem
             is com.tau.cryptic_ui_v0.NodeEditState, is com.tau.cryptic_ui_v0.EdgeEditState -> DataViewTabs.METADATA
             is SchemaDefinitionItem -> DataViewTabs.SCHEMA
-            is String -> DataViewTabs.SCHEMA
+            is String -> DataViewTabs.SCHEMA // For "Create..." states
             else -> DataViewTabs.METADATA
         }
         viewModel.selectDataTab(targetTab)
@@ -272,17 +272,16 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeSchemaCreationAddConnection = { src, dst -> viewModel.editCreateViewModel.onAddEdgeSchemaConnection(src, dst) },
                         onEdgeSchemaCreationRemoveConnection = { index -> viewModel.editCreateViewModel.onRemoveEdgeSchemaConnection(index) },
                         onEdgeSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onEdgeSchemaPropertyChange(index, property) },
-                        onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
-                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
                         onAddEdgeSchemaProperty = { viewModel.editCreateViewModel.onAddEdgeSchemaProperty() },
                         onRemoveEdgeSchemaProperty = { viewModel.editCreateViewModel.onRemoveEdgeSchemaProperty(it) },
-                        allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList(),
 
                         // Node Edit Handlers
-                        onNodeEditPropertyChange = { index, value -> viewModel.editCreateViewModel.updateNodeEditProperty(index, value) },
+                        // UPDATED: Renamed 'index' to 'key' for clarity
+                        onNodeEditPropertyChange = { key, value -> viewModel.editCreateViewModel.updateNodeEditProperty(key, value) },
 
                         // Edge Edit Handlers
-                        onEdgeEditPropertyChange = { index, value -> viewModel.editCreateViewModel.updateEdgeEditProperty(index, value) },
+                        // UPDATED: Renamed 'index' to 'key' for clarity
+                        onEdgeEditPropertyChange = { key, value -> viewModel.editCreateViewModel.updateEdgeEditProperty(key, value) },
 
                         // Node Schema Edit Handlers
                         onNodeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateNodeSchemaEditLabel(it) },
@@ -293,8 +292,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         // Edge Schema Edit Handlers
                         onEdgeSchemaEditLabelChange = { viewModel.editCreateViewModel.updateEdgeSchemaEditLabel(it) },
                         onEdgeSchemaEditPropertyChange = { index, prop -> viewModel.editCreateViewModel.updateEdgeSchemaEditProperty(index, prop) },
+                        onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
+                        onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
                         onEdgeSchemaEditAddConnection = { src, dst -> viewModel.editCreateViewModel.updateEdgeSchemaEditAddConnection(src, dst) },
-                        onEdgeSchemaEditRemoveConnection = { index -> viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(index) }
+                        onEdgeSchemaEditRemoveConnection = { index -> viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(index) },
+                        allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList()
 
 
                     )
@@ -303,4 +305,3 @@ fun TerminalView(viewModel: TerminalViewModel) {
         }
     }
 }
-
