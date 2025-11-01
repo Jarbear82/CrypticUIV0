@@ -97,26 +97,13 @@ fun GraphSettingsUI(
                 range = 0f..1f,
                 steps = 100
             )
-            SettingsSlider(
-                label = "Central Gravity",
-                value = options.centralGravity,
-                onValueChange = { onOptionsChange(options.copy(centralGravity = it)) },
-                range = 0f..2f,
-                steps = 100
-            )
+
             SettingsSlider(
                 label = "Spring Length",
                 value = options.defaultSpringLength,
                 onValueChange = { onOptionsChange(options.copy(defaultSpringLength = it)) },
                 range = 10f..500f,
                 steps = 49
-            )
-            SettingsSlider(
-                label = "Spring Constant",
-                value = options.defaultSpringConstant,
-                onValueChange = { onOptionsChange(options.copy(defaultSpringConstant = it)) },
-                range = 0.001f..0.2f,
-                steps = 100
             )
 
             Divider(Modifier.padding(vertical = 16.dp))
@@ -135,8 +122,25 @@ fun GraphSettingsUI(
                         steps = 100
                     )
                     SettingsSlider(
+                        label = "Central Gravity",
+                        value = options.barnesHut.centralGravity.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(barnesHut = options.barnesHut.copy(centralGravity = it.toDouble())))
+                        },
+                        range = 0f..2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
+                        label = "Spring Constant",
+                        value = options.barnesHut.springConstant.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(barnesHut = options.barnesHut.copy(springConstant = it.toDouble())))
+                        },
+                        range = 0.001f..0.2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
                         label = "Avoid Overlap",
-                        // --- UPDATED: Removed safe call based on non-nullable type ---
                         value = options.barnesHut.avoidOverlap.toFloat(),
                         onValueChange = {
                             onOptionsChange(options.copy(barnesHut = options.barnesHut.copy(avoidOverlap = it.toDouble())))
@@ -157,8 +161,25 @@ fun GraphSettingsUI(
                         steps = 100
                     )
                     SettingsSlider(
+                        label = "Central Gravity",
+                        value = options.forceAtlas.centralGravity.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(forceAtlas = options.forceAtlas.copy(centralGravity = it.toDouble())))
+                        },
+                        range = 0f..2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
+                        label = "Spring Constant",
+                        value = options.forceAtlas.springConstant.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(forceAtlas = options.forceAtlas.copy(springConstant = it.toDouble())))
+                        },
+                        range = 0.001f..0.2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
                         label = "Avoid Overlap",
-                        // --- UPDATED: Removed safe call based on non-nullable type ---
                         value = options.forceAtlas.avoidOverlap.toFloat(),
                         onValueChange = {
                             onOptionsChange(options.copy(forceAtlas = options.forceAtlas.copy(avoidOverlap = it.toDouble())))
@@ -169,18 +190,43 @@ fun GraphSettingsUI(
                 }
                 SolverType.REPEL -> {
                     Text("Repel Options", style = MaterialTheme.typography.titleSmall)
-                    // --- FIX: This slider now correctly controls nodeDistance in RepulsionOptions ---
                     SettingsSlider(
-                        label = "Node Distance", // Changed label
-                        value = options.repulsion.nodeDistance.toFloat(), // Changed value source
+                        label = "Node Distance",
+                        value = options.repulsion.nodeDistance.toFloat(),
                         onValueChange = {
-                            // Changed logic to update the nested RepulsionOptions
                             onOptionsChange(options.copy(repulsion = options.repulsion.copy(nodeDistance = it.toDouble())))
                         },
-                        range = 50f..500f, // Changed range to be appropriate for a distance
-                        steps = 45 // Matched hierarchical steps
+                        range = 50f..500f,
+                        steps = 45
                     )
-                    // --- END FIX ---
+                    SettingsSlider(
+                        label = "Central Gravity",
+                        value = options.repulsion.centralGravity.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(repulsion = options.repulsion.copy(centralGravity = it.toDouble())))
+                        },
+                        range = 0f..2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
+                        label = "Spring Constant",
+                        value = options.repulsion.springConstant.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(repulsion = options.repulsion.copy(springConstant = it.toDouble())))
+                        },
+                        range = 0.001f..0.2f,
+                        steps = 100
+                    )
+                    // --- FIX: ADDED MISSING SLIDER ---
+                    SettingsSlider(
+                        label = "Avoid Overlap",
+                        value = options.repulsion.avoidOverlap.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(repulsion = options.repulsion.copy(avoidOverlap = it.toDouble())))
+                        },
+                        range = 0f..1f,
+                        steps = 20
+                    )
                 }
                 SolverType.HIERARCHICAL -> {
                     Text("Hierarchical Options", style = MaterialTheme.typography.titleSmall)
@@ -192,6 +238,34 @@ fun GraphSettingsUI(
                         },
                         range = 50f..500f,
                         steps = 45
+                    )
+                    SettingsSlider(
+                        label = "Central Gravity",
+                        value = options.hierarchicalRepulsion.centralGravity.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(hierarchicalRepulsion = options.hierarchicalRepulsion.copy(centralGravity = it.toDouble())))
+                        },
+                        range = 0f..2f,
+                        steps = 100
+                    )
+                    SettingsSlider(
+                        label = "Spring Constant",
+                        value = options.hierarchicalRepulsion.springConstant.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(hierarchicalRepulsion = options.hierarchicalRepulsion.copy(springConstant = it.toDouble())))
+                        },
+                        range = 0.001f..0.2f,
+                        steps = 100
+                    )
+                    // --- FIX: ADDED MISSING SLIDER ---
+                    SettingsSlider(
+                        label = "Avoid Overlap",
+                        value = options.hierarchicalRepulsion.avoidOverlap.toFloat(),
+                        onValueChange = {
+                            onOptionsChange(options.copy(hierarchicalRepulsion = options.hierarchicalRepulsion.copy(avoidOverlap = it.toDouble())))
+                        },
+                        range = 0f..1f,
+                        steps = 20
                     )
                 }
             }

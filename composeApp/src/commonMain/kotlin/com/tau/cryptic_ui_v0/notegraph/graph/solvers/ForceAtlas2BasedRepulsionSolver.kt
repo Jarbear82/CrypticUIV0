@@ -76,7 +76,7 @@ class ForceAtlas2BasedRepulsionSolver(
 
         // JS `node.shape.radius` check implies it could be 0 or null.
         // Assuming `radius` is a non-negative Double, checking > 0.0 is equivalent.
-        if (this.overlapAvoidanceFactor < 1.0 && node.shape.radius > 0.0) {
+        if (this.overlapAvoidanceFactor > 0.0 && node.shape.radius > 0.0) {
             localDistance = max(
                 0.1 + this.overlapAvoidanceFactor * node.shape.radius,
                 localDistance - node.shape.radius
@@ -85,11 +85,15 @@ class ForceAtlas2BasedRepulsionSolver(
 
         val degree = node.edges.size + 1
 
-        // Use Kotlin's pow() extension function for powers
+        // ---
+        // --- FIX: This must be pow(3), not pow(2). ---
+        // ---
+        // The force is F/d^2, but the component fx = F * (dx/d), which
+        // leads to a d^3 in the denominator.
         val gravityForce = (this.options.gravitationalConstant *
                 parentBranch.mass *
                 node.options.mass *
-                degree) / localDistance.pow(2)
+                degree) / localDistance.pow(3) // <-- WAS pow(2)
 
         val fx = localDx * gravityForce
 
@@ -104,10 +108,5 @@ class ForceAtlas2BasedRepulsionSolver(
             x += fx
             y += fy
         }
-
-        // If you need to ensure the entry exists, you could use:
-        // val force = this.physicsBody.forces.getOrPut(node.id) { ForceVector() }
-        // force.x += fx
-        // force.y += fy
     }
 }

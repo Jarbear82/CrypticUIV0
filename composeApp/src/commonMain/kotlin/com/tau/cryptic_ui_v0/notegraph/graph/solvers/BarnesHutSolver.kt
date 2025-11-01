@@ -71,7 +71,8 @@ open class BarnesHutSolver(
     fun setOptions(options: BarnesHutOptions) {
         this.options = options
         this.thetaInversed = 1.0 / this.options.theta
-        this.overlapAvoidanceFactor = 1.0 - max(0.0, min(1.0, this.options.avoidOverlap))
+        // --- FIX: Removed inversion. Now 0.0 is no avoidance, 1.0 is max avoidance. ---
+        this.overlapAvoidanceFactor = max(0.0, min(1.0, this.options.avoidOverlap))
     }
 
     /**
@@ -163,13 +164,19 @@ open class BarnesHutSolver(
             dx = distance // Replicate JS behavior to apply a small push
         }
 
+        // --- FIX: Corrected overlap logic ---
         // Apply overlap avoidance
-        if (this.overlapAvoidanceFactor < 1.0 && node.shape.radius > 0.0) {
+        // We check > 0.0 because factor is no longer inverted
+        if (this.overlapAvoidanceFactor > 0.0 && node.shape.radius > 0.0) {
+            // Reduce the distance by the node's radius, scaled by the factor.
+            // This makes the (negative) gravitational force much stronger at close range.
+            // Ensure distance never goes below 0.1
             distance = max(
-                0.1 + this.overlapAvoidanceFactor * node.shape.radius,
-                distance - node.shape.radius
+                0.1,
+                distance - this.overlapAvoidanceFactor * node.shape.radius
             )
         }
+        // --- END FIX ---
 
         // The dividing by the distance cubed instead of squared allows us to get the
         // fx and fy components without sines and cosines.

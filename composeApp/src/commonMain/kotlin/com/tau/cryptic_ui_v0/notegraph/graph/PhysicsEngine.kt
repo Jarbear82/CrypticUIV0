@@ -201,11 +201,18 @@ class PhysicsEngine(
                 this.vy = 0f
             }
         }
-        if (!isDragging) {
+
+        // --- FIX: Run the simulation on drag, not just on drop ---
+        // If we start dragging, we must destabilize and start the simulation
+        // so other nodes can react.
+        if (isDragging) {
             destabilize()
             startSimulation()
         }
+        // No 'else' needed, if we stop dragging, the simulation is already running
+        // and will stabilize on its own.
         publishPositions()
+        // --- END FIX ---
     }
 
     fun publishPositions() {
@@ -602,5 +609,3 @@ class PhysicsEngine(
 
 fun NodeDisplayItem.id(): String = "${this.label}_${this.displayProperty?.toString()}"
 fun EdgeDisplayItem.id(): String = "${this.src.id()}_${this.label}_${this.dst.id()}"
-
-

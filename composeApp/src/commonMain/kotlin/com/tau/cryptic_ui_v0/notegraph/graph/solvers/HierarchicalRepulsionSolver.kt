@@ -73,9 +73,10 @@ class HierarchicalRepulsionSolver(
                 // Nodes only affect nodes on their level
                 if (node1.level == node2.level) {
 
-                    // Use shape.radius, assuming 0.0 default if not present
+                    // --- FIX: Use full radius, not radius / 2.0 ---
                     val theseNodesDistance = nodeDistance +
-                            overlapAvoidanceFactor * (node1.shape.radius / 2.0 + node2.shape.radius / 2.0)
+                            overlapAvoidanceFactor * (node1.shape.radius + node2.shape.radius)
+                    // --- END FIX ---
 
                     val dx = node2.x - node1.x
                     val dy = node2.y - node1.y

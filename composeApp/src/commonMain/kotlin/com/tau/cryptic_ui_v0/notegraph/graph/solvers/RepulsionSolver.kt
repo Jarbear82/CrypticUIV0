@@ -62,8 +62,7 @@ class RepulsionSolver(
         }
 
         // Approximation constants from the original JS logic
-        val a = -2.0 / 3.0 / nodeDistance
-        val b = 4.0 / 3.0
+        // --- MOVED: a and b are now calculated inside the loop based on effectiveNodeDistance ---
 
         // We loop from i over all but the last entree in the array
         // j loops from i+1 to the last. This way we do not double count any of the indices, nor i === j
@@ -87,10 +86,23 @@ class RepulsionSolver(
                     effectiveDx = distance
                 }
 
-                if (distance < 2 * nodeDistance) {
-                    val repulsingForce = if (distance < 0.5 * nodeDistance) {
+                // --- FIX: Add Overlap Avoidance ---
+                val overlapFactor = (options.avoidOverlap).coerceIn(0.0, 1.0)
+                val effectiveNodeDistance = if (overlapFactor > 0.0) {
+                    nodeDistance + overlapFactor * (node1.shape.radius + node2.shape.radius)
+                } else {
+                    nodeDistance
+                }
+                // --- END FIX ---
+
+
+                if (distance < 2 * effectiveNodeDistance) { // <-- Use effectiveNodeDistance
+                    val repulsingForce = if (distance < 0.5 * effectiveNodeDistance) { // <-- Use effectiveNodeDistance
                         1.0
                     } else {
+                        // --- FIX: Recalculate a and b based on the new effective distance ---
+                        val a = -2.0 / 3.0 / effectiveNodeDistance
+                        val b = 4.0 / 3.0
                         a * distance + b // linear approx
                     }
 
