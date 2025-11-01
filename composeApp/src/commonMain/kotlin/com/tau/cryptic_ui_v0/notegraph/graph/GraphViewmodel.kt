@@ -105,7 +105,11 @@ class GraphViewmodel(
                 val id = node.id
                 val edgeCount = edgeCountByNodeId[id] ?: 0
                 val radius = options.nodeBaseRadius + (edgeCount * options.nodeRadiusEdgeFactor)
-                val mass = radius
+
+                // --- MODIFIED: ForceAtlas2 mass is (degree + 1) ---
+                val mass = (edgeCount + 1).toFloat()
+                // --- END MODIFICATION ---
+
                 val existingNode = currentNodes[id]
 
                 val newNode = if (existingNode != null) {
@@ -115,7 +119,7 @@ class GraphViewmodel(
                         mass = mass,
                         radius = radius,
                         colorInfo = labelToColor(node.label)
-                        // Note: We preserve existing pos, vel, and isFixed
+                        // Note: We preserve existing pos, vel, isFixed, and physics state
                     )
                 } else {
                     GraphNode(
@@ -128,6 +132,7 @@ class GraphViewmodel(
                         radius = radius,
                         colorInfo = labelToColor(node.label),
                         isFixed = false // New nodes are not fixed
+                        // oldForce, swinging, traction default to 0/Zero
                     )
                 }
                 id to newNode
@@ -290,4 +295,3 @@ class GraphViewmodel(
         _simulationRunning.value = false
     }
 }
-

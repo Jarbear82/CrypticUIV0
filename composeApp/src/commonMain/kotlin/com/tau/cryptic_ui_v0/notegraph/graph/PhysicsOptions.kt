@@ -10,6 +10,10 @@ package com.tau.cryptic_ui_v0.notegraph.graph
  * @param nodeBaseRadius The minimum radius of a node with zero edges.
  * @param nodeRadiusEdgeFactor How much to increase the radius for each attached edge.
  * @param minDistance The minimum pixel buffer to maintain between node edges.
+ * @param barnesHutTheta The approximation parameter for Barnes-Hut.
+ * Higher values are faster but less accurate. (Default: 1.2)
+ * @param tolerance The "Tolerance (speed)" parameter for ForceAtlas2 adaptive speed.
+ * Controls how much node "swinging" is allowed. (Default: 1.0)
  */
 data class PhysicsOptions(
     val gravity: Float = 0.05f,
@@ -18,5 +22,8 @@ data class PhysicsOptions(
     val damping: Float = 0.9f,
     val nodeBaseRadius: Float = 15f,
     val nodeRadiusEdgeFactor: Float = 2.0f,
-    val minDistance: Float = 5.0f // Extra buffer between nodes
+    val minDistance: Float = 5.0f, // Extra buffer between nodes
+    // --- ADDED: Parameters for ForceAtlas2 optimizations ---
+    val barnesHutTheta: Float = 1.2f,
+    val tolerance: Float = 1.0f
 )

@@ -2,6 +2,8 @@ package com.tau.cryptic_ui_v0
 
 import androidx.compose.ui.graphics.Color
 import kotlinx.serialization.Serializable
+// ADDED: Import for Offset
+import androidx.compose.ui.geometry.Offset
 
 /**
  * Represents an on-disk notegraph database.
@@ -185,6 +187,9 @@ sealed interface EditScreenState {
  * @param radius The visual radius of the node.
  * @param colorInfo The color for drawing.
  * @param isFixed True if the node is being dragged by the user.
+ * @param oldForce The net force applied to this node in the *previous* frame.
+ * @param swinging The magnitude of the change in force between frames.
+ * @param traction The magnitude of the consistent force between frames.
  */
 data class GraphNode(
     val id: Long,
@@ -195,7 +200,11 @@ data class GraphNode(
     val mass: Float,
     val radius: Float,
     val colorInfo: ColorInfo,
-    var isFixed: Boolean = false // ADDED: Flag for dragging
+    var isFixed: Boolean = false,
+    // --- ADDED: State for ForceAtlas2 Adaptive Speed ---
+    var oldForce: Offset = Offset.Zero,
+    var swinging: Float = 0f,
+    var traction: Float = 0f
 )
 
 /**
