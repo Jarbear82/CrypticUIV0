@@ -54,6 +54,6 @@ enum class DataViewTabs(val value: Int) {
 }
 
 enum class ViewTabs(val value: Int) {
-    QUERY(0),
+    LIST(0),
     GRAPH(1)
 }

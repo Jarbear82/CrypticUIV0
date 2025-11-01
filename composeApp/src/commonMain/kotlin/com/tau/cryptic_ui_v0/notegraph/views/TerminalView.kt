@@ -1,14 +1,11 @@
 package com.tau.cryptic_ui_v0.notegraph.views
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.cryptic_ui_v0.EdgeDisplayItem // ADD THIS
-import com.tau.cryptic_ui_v0.NodeDisplayItem // ADD THIS
+import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.SchemaDefinitionItem
 // UPDATED: This now points to your new custom graph view
 import com.tau.cryptic_ui_v0.notegraph.graph.GraphView
@@ -16,6 +13,7 @@ import kotlinx.coroutines.launch
 import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
 import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
 import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
+import com.tau.cryptic_ui_v0.views.ListView
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
@@ -101,12 +99,42 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when (selectedViewTab) {
-                    ViewTabs.QUERY -> {
-                        Text("Query Tab")
+                    ViewTabs.LIST -> { // Changed from QUERY
+                        // Added ListView
+                        ListView(
+                            nodes = nodes,
+                            edges = edges,
+                            primarySelectedItem = primarySelectedItem,
+                            secondarySelectedItem = secondarySelectedItem,
+                            onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
+                            onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
+                            onEditNodeClick = {
+                                scope.launch {
+                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                    if (fullItem is com.tau.cryptic_ui_v0.NodeEditState) {
+                                        viewModel.editCreateViewModel.initiateNodeEdit(fullItem)
+                                        viewModel.selectDataTab(DataViewTabs.EDIT)
+                                    }
+                                }
+                            },
+                            onEditEdgeClick = {
+                                scope.launch {
+                                    val fullItem = viewModel.metadataViewModel.setItemToEdit(it)
+                                    if (fullItem is com.tau.cryptic_ui_v0.EdgeEditState) {
+                                        viewModel.editCreateViewModel.initiateEdgeEdit(fullItem)
+                                        viewModel.selectDataTab(DataViewTabs.EDIT)
+                                    }
+                                }
+                            },
+                            onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                            onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
+                            onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                            onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        )
                     }
                     ViewTabs.GRAPH -> {
                         // Pass the collected nodes and edges to the GraphView
-                        GraphView(nodes = nodes, edges = edges)
+                        GraphView()
                     }
                 }
             }
