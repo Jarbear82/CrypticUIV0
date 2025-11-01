@@ -21,8 +21,13 @@ class TerminalViewModel(private val dbService: SqliteDbService) {
     // UPDATED: This ViewModel is also instantiated with the SqliteDbService
     val editCreateViewModel = EditCreateViewModel(dbService, viewModelScope, schemaViewModel, metadataViewModel)
 
-    // ADDED: Create the GraphViewModel, passing the scope and metadata VM
-    val graphViewModel = GraphViewmodel(viewModelScope, metadataViewModel)
+    // ADDED: Create the GraphViewModel, passing the scope, metadata VM, edit VM, and tab switch lambda
+    val graphViewModel = GraphViewmodel(
+        viewModelScope = viewModelScope,
+        metadataViewModel = metadataViewModel,
+        editCreateViewModel = editCreateViewModel,
+        onSwitchToEditTab = { selectDataTab(DataViewTabs.EDIT) }
+    )
 
 
     private val _selectedDataTab = MutableStateFlow(DataViewTabs.METADATA)

@@ -34,6 +34,9 @@ class PhysicsEngine(private val options: PhysicsOptions) {
         // 2. Apply forces
         // 2a. Gravity (pull to center 0,0)
         for (node in newNodes.values) {
+            // Do not apply gravity to fixed (dragged) nodes
+            if (node.isFixed) continue
+
             val gravityForce = -node.pos * options.gravity * node.mass
             forces[node.id] = forces[node.id]!! + gravityForce
         }
@@ -41,24 +44,42 @@ class PhysicsEngine(private val options: PhysicsOptions) {
         // 2b. Repulsion (from other nodes)
         val nodePairs = newNodes.values.toList().combinations(2)
         for ((nodeA, nodeB) in nodePairs) {
+            // UPDATED: This block is modified to allow fixed nodes to repel others.
+
             val delta = nodeB.pos - nodeA.pos
             var dist = delta.getDistance()
             if (dist == 0f) dist = 0.1f // Avoid division by zero
 
             val minAllowableDist = nodeA.radius + nodeB.radius + options.minDistance
+            var collisionForce = Offset.Zero
 
             // Strong repulsion if overlapping (collision)
             if (dist < minAllowableDist) {
                 val overlap = minAllowableDist - dist
-                val collisionForce = -delta.normalized() * overlap * options.repulsion * 10f
-                forces[nodeA.id] = forces[nodeA.id]!! + collisionForce
-                forces[nodeB.id] = forces[nodeB.id]!! - collisionForce
+                // Force vector from B to A (pushes A away)
+                collisionForce = -delta.normalized() * overlap * options.repulsion * 10f
             }
 
             // Standard repulsion (Coulomb's Law)
+            // Force vector from B to A (pushes A away)
             val repulsionForce = -delta.normalized() * (options.repulsion * nodeA.mass * nodeB.mass) / (dist * dist)
-            forces[nodeA.id] = forces[nodeA.id]!! + repulsionForce
-            forces[nodeB.id] = forces[nodeB.id]!! - repulsionForce
+
+            // This is the total force applied ON node A
+            val totalForceOnA = collisionForce + repulsionForce
+
+            // Apply forces based on fixed state
+            if (!nodeA.isFixed && !nodeB.isFixed) {
+                // Both are free, split the force
+                forces[nodeA.id] = forces[nodeA.id]!! + totalForceOnA
+                forces[nodeB.id] = forces[nodeB.id]!! - totalForceOnA // Apply opposite force to B
+            } else if (!nodeA.isFixed && nodeB.isFixed) {
+                // A is free, B is fixed. Apply full force to A.
+                forces[nodeA.id] = forces[nodeA.id]!! + totalForceOnA * 2f
+            } else if (nodeA.isFixed && !nodeB.isFixed) {
+                // A is fixed, B is free. Apply full (opposite) force to B.
+                forces[nodeB.id] = forces[nodeB.id]!! - totalForceOnA * 2f
+            }
+            // If both are fixed, no force is applied
         }
 
         // 2c. Spring (from edges) (Hooke's Law)
@@ -67,6 +88,9 @@ class PhysicsEngine(private val options: PhysicsOptions) {
             val nodeB = newNodes[edge.targetId]
 
             if (nodeA != null && nodeB != null) {
+                // Do not apply spring forces if *either* node is fixed
+                if (nodeA.isFixed || nodeB.isFixed) continue
+
                 val delta = nodeB.pos - nodeA.pos
                 val dist = delta.getDistance()
                 if (dist == 0f) continue
@@ -84,6 +108,12 @@ class PhysicsEngine(private val options: PhysicsOptions) {
 
         // 3. Update velocities and positions (Euler integration)
         for (node in newNodes.values) {
+            // If node is fixed, set velocity to zero and skip position update
+            if (node.isFixed) {
+                node.vel = Offset.Zero
+                continue
+            }
+
             val force = forces[node.id]!!
 
             // F = ma -> a = F/m
@@ -124,3 +154,4 @@ private fun Offset.normalized(): Offset {
     val mag = this.getDistance()
     return if (mag == 0f) Offset.Zero else this / mag
 }
+

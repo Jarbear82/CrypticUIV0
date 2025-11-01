@@ -5,12 +5,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
 import com.tau.cryptic_ui_v0.GraphEdge
 import com.tau.cryptic_ui_v0.GraphNode
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.TransformState
 import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
+import com.tau.cryptic_ui_v0.viewmodels.EditCreateViewModel
 import com.tau.cryptic_ui_v0.viewmodels.MetadataViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,11 +22,16 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 class GraphViewmodel(
     private val viewModelScope: CoroutineScope,
-    private val metadataViewModel: MetadataViewModel
+    // UPDATED: Made metadataViewModel public
+    val metadataViewModel: MetadataViewModel,
+    // ADDED: ViewModels for handling creation
+    private val editCreateViewModel: EditCreateViewModel,
+    private val onSwitchToEditTab: () -> Unit
 ) {
     private val options = PhysicsOptions()
     private val physicsEngine = PhysicsEngine(options)
@@ -41,6 +48,17 @@ class GraphViewmodel(
     // Ticker for the physics simulation
     private val _simulationRunning = MutableStateFlow(true)
 
+    // ADDED: State for node dragging
+    private val _draggedNodeId = MutableStateFlow<Long?>(null)
+    private val _dragVelocity = MutableStateFlow(Offset.Zero)
+
+    // ADDED: State for FAB menu
+    private val _showFabMenu = MutableStateFlow(false)
+    val showFabMenu = _showFabMenu.asStateFlow()
+
+    // We need the canvas size to correctly calculate zoom center
+    private var size = Size.Zero
+
     init {
         // Observe changes in the metadata view model
         viewModelScope.launch {
@@ -53,12 +71,8 @@ class GraphViewmodel(
                 updateGraphData(nodeList, edgeList)
             }
         }
-
-        // REMOVED: The physics simulation loop was moved to runSimulationLoop()
-        // to be called from a Composable's LaunchedEffect.
     }
 
-    // ADDED: This function will be called from a LaunchedEffect in the UI
     suspend fun runSimulationLoop() {
         var lastTimeNanos = withFrameNanos { it }
         while (_simulationRunning.value) {
@@ -72,21 +86,14 @@ class GraphViewmodel(
                 val updatedNodes = physicsEngine.update(
                     _graphNodes.value,
                     _graphEdges.value,
-                    // Cap delta time to prevent physics "explosions" if frame rate drops
-                    dt.coerceAtMost(0.032f)
+                    dt.coerceAtMost(0.032f) // Cap delta time
                 )
                 _graphNodes.value = updatedNodes
             }
         }
     }
 
-
-    /**
-     * Updates the internal graph state based on the latest lists from MetadataViewModel.
-     * It preserves existing node positions and velocities.
-     */
     private fun updateGraphData(nodeList: List<NodeDisplayItem>, edgeList: List<EdgeDisplayItem>) {
-        // Calculate edge counts to determine node size/mass
         val edgeCountByNodeId = mutableMapOf<Long, Int>()
         edgeList.forEach { edge ->
             edgeCountByNodeId[edge.src.id] = (edgeCountByNodeId[edge.src.id] ?: 0) + 1
@@ -97,24 +104,20 @@ class GraphViewmodel(
             val newNodeMap = nodeList.associate { node ->
                 val id = node.id
                 val edgeCount = edgeCountByNodeId[id] ?: 0
-
-                // Size and mass are proportional to edge count
                 val radius = options.nodeBaseRadius + (edgeCount * options.nodeRadiusEdgeFactor)
                 val mass = radius
-
-                // Check if node exists, if not, create it with a random position
                 val existingNode = currentNodes[id]
+
                 val newNode = if (existingNode != null) {
-                    // Update properties but keep position/velocity
                     existingNode.copy(
                         label = node.label,
                         displayProperty = node.displayProperty,
                         mass = mass,
                         radius = radius,
                         colorInfo = labelToColor(node.label)
+                        // Note: We preserve existing pos, vel, and isFixed
                     )
                 } else {
-                    // New node, place it near the center
                     GraphNode(
                         id = id,
                         label = node.label,
@@ -123,12 +126,12 @@ class GraphViewmodel(
                         vel = Offset.Zero,
                         mass = mass,
                         radius = radius,
-                        colorInfo = labelToColor(node.label)
+                        colorInfo = labelToColor(node.label),
+                        isFixed = false // New nodes are not fixed
                     )
                 }
                 id to newNode
             }
-            // Prune nodes that are no longer in the list
             newNodeMap.filterKeys { it in nodeList.map { n -> n.id }.toSet() }
         }
 
@@ -138,15 +141,31 @@ class GraphViewmodel(
                 sourceId = edge.src.id,
                 targetId = edge.dst.id,
                 label = edge.label,
-                strength = 1.0f, // You could customize this later
+                strength = 1.0f,
                 colorInfo = labelToColor(edge.label)
             )
         }
     }
 
+    // --- Coordinate Conversion ---
+
+    /** Converts screen coordinates (e.g., from a tap) to world coordinates */
+    private fun screenToWorld(screenPos: Offset): Offset {
+        val pan = _transform.value.pan
+        val zoom = _transform.value.zoom
+        val center = Offset(size.width / 2f, size.height / 2f)
+        return (screenPos - center - pan * zoom) / zoom
+    }
+
+    /** Converts a screen *delta* (e.g., from a drag) to a world *delta* */
+    private fun screenDeltaToWorldDelta(screenDelta: Offset): Offset {
+        return screenDelta / _transform.value.zoom
+    }
+
+    // --- Gesture Handlers ---
+
     fun onPan(delta: Offset) {
         _transform.update {
-            // Pan is relative to the current zoom level
             it.copy(pan = it.pan + (delta / it.zoom))
         }
     }
@@ -155,28 +174,120 @@ class GraphViewmodel(
         _transform.update { state ->
             val oldZoom = state.zoom
             val newZoom = (oldZoom * zoomFactor).coerceIn(0.1f, 10.0f)
-
-            // FIXED: Get center of size via Offset(width/2, height/2)
             val sizeCenter = Offset(size.width / 2f, size.height / 2f)
-
-            // Calculate the world position under the cursor before zoom
             val worldPos = (zoomCenterScreen - state.pan * oldZoom - sizeCenter) / oldZoom
-
-            // Calculate the new pan to keep the world position under the cursor
-            // FIXED: Get center of size via Offset(width/2, height/2)
             val newPan = (zoomCenterScreen - worldPos * newZoom - sizeCenter) / newZoom
-
             state.copy(pan = newPan, zoom = newZoom)
         }
     }
 
-    // We need the canvas size to correctly calculate zoom center
-    private var size = androidx.compose.ui.geometry.Size.Zero
+    /** Finds the node at a given world position, if any */
+    private fun findNodeAt(worldPos: Offset): GraphNode? {
+        // Iterate in reverse so nodes drawn on top are found first
+        return _graphNodes.value.values.reversed().find { node ->
+            val distance = (worldPos - node.pos).getDistance()
+            distance < node.radius
+        }
+    }
+
+    /**
+     * Called when a drag gesture starts.
+     * Checks if it's on a node or the canvas.
+     * @return true if a node was grabbed, false if it's a pan gesture.
+     */
+    fun onDragStart(screenPos: Offset): Boolean {
+        val worldPos = screenToWorld(screenPos)
+        val tappedNode = findNodeAt(worldPos)
+
+        return if (tappedNode != null) {
+            _draggedNodeId.value = tappedNode.id
+            _dragVelocity.value = Offset.Zero
+            _graphNodes.update { allNodes ->
+                val newNodes = allNodes.toMutableMap()
+                val node = newNodes[tappedNode.id]
+                if (node != null) {
+                    newNodes[tappedNode.id] = node.copy(isFixed = true)
+                }
+                newNodes
+            }
+            true // It's a node drag
+        } else {
+            false // It's a pan
+        }
+    }
+
+    /** Called when dragging a node */
+    fun onDrag(screenDelta: Offset) {
+        val nodeId = _draggedNodeId.value ?: return
+        val worldDelta = screenDeltaToWorldDelta(screenDelta)
+        _dragVelocity.value = worldDelta // Store velocity for when we release
+
+        _graphNodes.update { allNodes ->
+            val newNodes = allNodes.toMutableMap()
+            val node = newNodes[nodeId]
+            if (node != null) {
+                newNodes[nodeId] = node.copy(pos = node.pos + worldDelta)
+            }
+            newNodes
+        }
+    }
+
+    /** Called when the drag gesture ends */
+    fun onDragEnd() {
+        val nodeId = _draggedNodeId.value ?: return
+        _graphNodes.update { allNodes ->
+            val newNodes = allNodes.toMutableMap()
+            val node = newNodes[nodeId]
+            if (node != null) {
+                newNodes[nodeId] = node.copy(
+                    isFixed = false,
+                    vel = _dragVelocity.value / (1f / 60f) // Apply velocity
+                )
+            }
+            newNodes
+        }
+        _draggedNodeId.value = null
+        _dragVelocity.value = Offset.Zero
+    }
+
+    /** Called when the canvas is tapped */
+    fun onTap(screenPos: Offset) {
+        val worldPos = screenToWorld(screenPos)
+        val tappedNode = findNodeAt(worldPos)
+
+        if (tappedNode != null) {
+            // Find the corresponding NodeDisplayItem to pass to the metadataViewModel
+            val displayItem = metadataViewModel.nodeList.value.find { it.id == tappedNode.id }
+            if (displayItem != null) {
+                metadataViewModel.selectItem(displayItem)
+            }
+        }
+    }
+
+    // --- UI Handlers ---
+
     fun onResize(newSize: androidx.compose.ui.unit.IntSize) {
-        size = androidx.compose.ui.geometry.Size(newSize.width.toFloat(), newSize.height.toFloat())
+        size = Size(newSize.width.toFloat(), newSize.height.toFloat())
+    }
+
+    fun onFabClick() {
+        _showFabMenu.update { !it }
+    }
+
+    fun onFabCreateNodeClick() {
+        _showFabMenu.value = false
+        editCreateViewModel.initiateNodeCreation()
+        onSwitchToEditTab()
+    }
+
+    fun onFabCreateEdgeClick() {
+        _showFabMenu.value = false
+        editCreateViewModel.initiateEdgeCreation()
+        onSwitchToEditTab()
     }
 
     fun onCleared() {
         _simulationRunning.value = false
     }
 }
+

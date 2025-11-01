@@ -184,6 +184,7 @@ sealed interface EditScreenState {
  * @param mass The mass of the node (influences physics).
  * @param radius The visual radius of the node.
  * @param colorInfo The color for drawing.
+ * @param isFixed True if the node is being dragged by the user.
  */
 data class GraphNode(
     val id: Long,
@@ -193,7 +194,8 @@ data class GraphNode(
     var vel: androidx.compose.ui.geometry.Offset,
     val mass: Float,
     val radius: Float,
-    val colorInfo: ColorInfo
+    val colorInfo: ColorInfo,
+    var isFixed: Boolean = false // ADDED: Flag for dragging
 )
 
 /**
