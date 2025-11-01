@@ -32,7 +32,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
 
     // ADDED: Get the GraphViewModel from the TerminalViewModel
-    val graphViewModel by viewModel.graphViewModel.collectAsState()
+    val graphViewModel = viewModel.graphViewModel
 
 
     // --- COLLECT THE NEW CONSOLIDATED STATE ---

@@ -120,8 +120,9 @@ private fun DrawScope.drawNodes(
     zoom: Float
 ) {
     // Scale font size based on zoom, but clamp it
-    // FIXED: Correctly divide float by float, create TextUnit, then coerce
-    val fontSize = (12.sp / zoom).coerceIn<TextUnit>(8.sp..14.sp)
+    val minSize = 8.sp
+    val maxSize = 14.sp
+    val fontSize = ((12.sp.value / zoom).coerceIn(minSize.value, maxSize.value)).sp
     val style = TextStyle(fontSize = fontSize, color = labelColor)
 
     for (node in nodes.values) {
