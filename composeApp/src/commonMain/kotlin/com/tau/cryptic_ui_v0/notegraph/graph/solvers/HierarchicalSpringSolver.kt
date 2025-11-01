@@ -13,6 +13,10 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
+
 /**
  * Calculates hierarchical spring forces for a physics simulation in pure Kotlin.
  *
@@ -37,6 +41,12 @@ class HierarchicalSpringSolver(
      * This function calculates the spring forces on the nodes, accounting for the hierarchical levels.
      */
     fun solve() {
+        if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+            println("[HierarchicalSpringSolver] Solving... (Frame ${solveCount++}). SpringConst: ${options.springConstant}")
+        } else {
+            solveCount++
+        }
+
         val edges = body.edges
         val factor = 0.5
         val edgeIndices = physicsBody.physicsEdgeIndices
@@ -72,6 +82,10 @@ class HierarchicalSpringSolver(
                 val springForce = (options.springConstant * (edgeLength - distance)) / distance
                 val fx = dx * springForce
                 val fy = dy * springForce
+
+                if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+                    println("[HierarchicalSpringSolver] WARNING: NaN force for edge ${edge.id}. Dist: $distance, F: $springForce")
+                }
 
                 // This is the core hierarchical logic:
                 if (edge.to.level != edge.from.level) {
@@ -109,6 +123,10 @@ class HierarchicalSpringSolver(
                 val springFx = min(springForceLimit, max(-springForceLimit, sForce.x))
                 val springFy = min(springForceLimit, max(-springForceLimit, sForce.y))
 
+                if (DEBUG && solveCount % 300 == 0 && nodeId == nodeIndices.first()) {
+                    println("[HierarchicalSpringSolver] Node $nodeId: Hierarchical spring force ($springFx, $springFy)")
+                }
+
                 // Add the limited hierarchical force to the main force
                 mainForce.x += springFx
                 mainForce.y += springFy
@@ -128,6 +146,10 @@ class HierarchicalSpringSolver(
         if (nodeIndices.isNotEmpty()) {
             val correctionFx = totalFx / nodeIndices.size
             val correctionFy = totalFy / nodeIndices.size
+
+            if (DEBUG && solveCount % 300 == 0) {
+                println("[HierarchicalSpringSolver] Total F ($totalFx, $totalFy). Correction ($correctionFx, $correctionFy)")
+            }
 
             for (nodeId in nodeIndices) {
                 forces[nodeId]?.let {

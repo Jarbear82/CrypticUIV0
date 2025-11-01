@@ -6,6 +6,10 @@ import com.tau.cryptic_ui_v0.notegraph.graph.physics.SolverOptions
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
+
 /**
  * Solves hierarchical repulsion forces between nodes.
  *
@@ -51,6 +55,12 @@ class HierarchicalRepulsionSolver(
      * This field is linearly approximated.
      */
     fun solve() {
+        if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+            println("[HierarchicalRepulsionSolver] Solving... (Frame ${solveCount++}). NodeDist: ${options.nodeDistance}, Overlap: $overlapAvoidanceFactor")
+        } else {
+            solveCount++
+        }
+
         val nodes = body.nodes
         val nodeIndices = physicsBody.physicsNodeIndices
         val forces = physicsBody.forces
@@ -103,6 +113,10 @@ class HierarchicalRepulsionSolver(
 
                     val fx = dx * normalizedForce
                     val fy = dy * normalizedForce
+
+                    if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+                        println("[HierarchicalRepulsionSolver] WARNING: NaN force between ${node1.id} and ${node2.id}. Dist: $distance, F: $repulsingForce")
+                    }
 
                     // Get the mutable Force objects from the map.
                     // Skip if a node doesn't have a corresponding force entry.

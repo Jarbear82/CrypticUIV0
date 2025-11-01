@@ -16,6 +16,10 @@ import com.tau.cryptic_ui_v0.notegraph.graph.physics.Node
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsBody
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.Range
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
+
 /**
  * Barnes Hut Solver
  *
@@ -73,6 +77,7 @@ open class BarnesHutSolver(
         this.thetaInversed = 1.0 / this.options.theta
         // --- FIX: Removed inversion. Now 0.0 is no avoidance, 1.0 is max avoidance. ---
         this.overlapAvoidanceFactor = max(0.0, min(1.0, this.options.avoidOverlap))
+        if (DEBUG) println("[BarnesHut] Options set. ThetaInv: $thetaInversed, OverlapFactor: $overlapAvoidanceFactor")
     }
 
     /**
@@ -84,9 +89,18 @@ open class BarnesHutSolver(
             val nodeIds = this.physicsBody.physicsNodeIndices
             val nodeCount = nodeIds.size
 
+            if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+                println("[BarnesHut] Solving... (Frame ${solveCount++}). $nodeCount nodes. GravConst: ${options.gravitationalConstant}")
+            } else {
+                solveCount++
+            }
+
+
             // Create the tree
             val treeRoot = _formBarnesHutTree(nodes, nodeIds)
             this.barnesHutTree = treeRoot // for debugging
+            if (DEBUG && solveCount % 60 == 0) println("[BarnesHut] Tree created. Root mass: ${treeRoot.mass}, Center: ${treeRoot.centerOfMass.x}, ${treeRoot.centerOfMass.y}")
+
 
             // Calculate forces for each node
             for (i in 0 until nodeCount) {
@@ -96,6 +110,8 @@ open class BarnesHutSolver(
                     _getForceContributions(treeRoot, node)
                 }
             }
+        } else if (DEBUG && options.gravitationalConstant == 0.0) {
+            println("[BarnesHut] Skipping solve, gravitationalConstant is 0.")
         }
     }
 
@@ -127,7 +143,11 @@ open class BarnesHutSolver(
             val distance = sqrt(dx * dx + dy * dy)
 
             // BarnesHutSolver condition: s/d < theta  ===  d/s > 1/theta
-            if (distance * parentBranch.calcSize > this.thetaInversed) {
+            val sOverD = parentBranch.size / distance // More intuitive: s/d
+            if (sOverD < options.theta) { // if (distance * parentBranch.calcSize > this.thetaInversed) {
+                if (DEBUG && solveCount % 300 == 0 && node.id == physicsBody.physicsNodeIndices.first()) {
+                    println("[BarnesHut] Node ${node.id}: Approximating branch (mass ${parentBranch.mass}). s/d ${sOverD} < ${options.theta}")
+                }
                 _calculateForces(distance, dx, dy, node, parentBranch)
             } else {
                 // Did not pass the condition, go into children if available
@@ -137,6 +157,9 @@ open class BarnesHutSolver(
                     // parentBranch must have only one node (childrenCount == 1)
                     val childNode = (parentBranch.children as BranchChildren.Data).node
                     if (childNode != null && childNode.id != node.id) {
+                        if (DEBUG && solveCount % 300 == 0 && node.id == physicsBody.physicsNodeIndices.first()) {
+                            println("[BarnesHut] Node ${node.id}: Calculating against leaf node ${childNode.id}.")
+                        }
                         // if it is not self
                         _calculateForces(distance, dx, dy, node, parentBranch)
                     }
@@ -186,6 +209,10 @@ open class BarnesHutSolver(
 
         val fx = dx * gravityForce
         val fy = dy * gravityForce
+
+        if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+            println("[BarnesHut] WARNING: NaN force calculated for node ${node.id}. Dist: $distanceIn, dx: $dxIn, dy: $dyIn, gravForce: $gravityForce")
+        }
 
         // Safely update the forces map
         physicsBody.forces[node.id]?.let {
@@ -351,6 +378,7 @@ open class BarnesHutSolver(
                 // Check for exact overlap
                 // Note: removed (* 0.1) from _rng.nextDouble()
                 if (existingNode != null && existingNode.x == node.x && existingNode.y == node.y) {
+                    if (DEBUG) println("[BarnesHut] Node overlap detected! Jiggling ${node.id}")
                     // Jiggle the new node slightly
                     node.x += _rng.nextDouble()
                     node.y += _rng.nextDouble()
@@ -382,6 +410,9 @@ open class BarnesHutSolver(
             parentBranch.centerOfMass.y = 0.0
         }
 
+        if (DEBUG && solveCount % 300 == 0) println("[BarnesHut] Splitting branch at level ${parentBranch.level}.")
+
+
         parentBranch.childrenCount = 4
 
         // Create the 4 new sub-regions
@@ -393,6 +424,7 @@ open class BarnesHutSolver(
         parentBranch.children = BranchChildren.SubBranches(nw, ne, sw, se)
 
         if (containedNode != null) {
+            if (DEBUG && solveCount % 300 == 0) println("[BarnesHut] Re-placing node ${containedNode.id} after split.")
             // Re-place the node that was previously in this branch
             _placeInTree(parentBranch, containedNode)
         }

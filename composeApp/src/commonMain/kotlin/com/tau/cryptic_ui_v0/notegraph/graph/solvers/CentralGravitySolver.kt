@@ -9,6 +9,10 @@ import com.tau.cryptic_ui_v0.notegraph.graph.physics.SolverOptions
 
 import kotlin.math.sqrt
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
+
 /**
  * Central Gravity Solver
  *
@@ -24,12 +28,18 @@ open class CentralGravitySolver(
     protected var physicsBody: PhysicsBody,
     protected var options: SolverOptions
 ) {
-    
+
 
     /**
      * Calculates and applies the central gravity forces to each node.
      */
     fun solve() {
+        if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+            println("[CentralGravitySolver] Solving... (Frame ${solveCount++}). Gravity: ${options.centralGravity}")
+        } else {
+            solveCount++
+        }
+
         val nodes = this.body.nodes
         val nodeIndices = this.physicsBody.physicsNodeIndices
         val forces = this.physicsBody.forces
@@ -73,8 +83,16 @@ open class CentralGravitySolver(
             this.options.centralGravity / distance
         }
 
+        if (DEBUG && solveCount % 300 == 0 && node.id == physicsBody.physicsNodeIndices.first()) {
+            println("[CentralGravitySolver] Node ${node.id}: dist $distance, gravForce $gravityForce")
+        }
+
         // Apply the calculated force by mutating the force vector
         forceVector.x = dx * gravityForce
         forceVector.y = dy * gravityForce
+
+        if (DEBUG && (forceVector.x.isNaN() || forceVector.y.isNaN())) {
+            println("[CentralGravitySolver] WARNING: NaN force for node ${node.id}. Dist: $distance, gravForce: $gravityForce")
+        }
     }
 }

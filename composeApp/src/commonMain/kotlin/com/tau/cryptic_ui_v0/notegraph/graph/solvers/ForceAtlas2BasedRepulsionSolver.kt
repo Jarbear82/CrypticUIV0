@@ -12,6 +12,10 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlin.random.Random
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0 // Note: This will be separate from other solvers
+
 /**
  * Kotlin translation of the ForceAtlas2BasedRepulsionSolver.
  *
@@ -65,6 +69,11 @@ class ForceAtlas2BasedRepulsionSolver(
         // --- FIXED: Changed ParentBranch typo to Branch ---
         parentBranch: Branch
     ) {
+        if (DEBUG && solveCount == 0) { // Log once
+            println("[ForceAtlas2Repulsion] Solving... (using BarnesHut base)")
+            solveCount++
+        }
+
         // Use local vars since parameters are vals
         var localDistance = distance
         var localDx = dx
@@ -100,6 +109,10 @@ class ForceAtlas2BasedRepulsionSolver(
         // Note: The original JS code only reassigned `dx`, not `dy`.
         // `fy` is calculated with the original `dy` parameter.
         val fy = dy * gravityForce
+
+        if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+            println("[ForceAtlas2Repulsion] WARNING: NaN force for node ${node.id}. Dist: $localDistance, gravForce: $gravityForce")
+        }
 
         // Safely access and update the forces map.
         // The ?.apply {} block will only execute if the node.id exists in the map.

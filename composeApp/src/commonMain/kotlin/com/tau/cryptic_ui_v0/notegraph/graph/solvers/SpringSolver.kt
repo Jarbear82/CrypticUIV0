@@ -10,6 +10,9 @@ import kotlin.collections.MutableMap
 import kotlin.math.max
 import kotlin.math.sqrt
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
 
 /**
  * Calculates spring forces for a physics simulation in pure Kotlin.
@@ -35,6 +38,12 @@ class SpringSolver(
      * This function calculates the spring forces on the nodes.
      */
     fun solve() {
+        if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+            println("[SpringSolver] Solving... (Frame ${solveCount++}). SpringConst: ${options.springConstant}, Length: ${options.springLength}")
+        } else {
+            solveCount++
+        }
+
         val edgeIds = physicsBody.physicsEdgeIndices // This is now List<String>
         val edges = body.edges // This is now Map<String, Edge>
 
@@ -54,6 +63,8 @@ class SpringSolver(
                         val node2 = viaNode
                         val node3 = edge.from
 
+                        if (DEBUG && solveCount % 300 == 0) println("[SpringSolver] Solving smooth edge ${edge.id}")
+
                         calculateSpringForce(node1, node2, 0.5 * edgeLength)
                         calculateSpringForce(node2, node3, 0.5 * edgeLength)
                     } else {
@@ -62,6 +73,7 @@ class SpringSolver(
                         // appear similar in length to smooth edges (which are pushed apart
                         // by the repulsion on the 'via' node).
                         val edgeLength = edge.options.length ?: (options.springLength * 1.5)
+                        if (DEBUG && solveCount % 300 == 0) println("[SpringSolver] Solving direct edge ${edge.id}")
                         calculateSpringForce(edge.from, edge.to, edgeLength)
                     }
                 }
@@ -86,6 +98,10 @@ class SpringSolver(
         val springForce = (options.springConstant * (edgeLength - distance)) / distance
         val fx = dx * springForce
         val fy = dy * springForce
+
+        if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+            println("[SpringSolver] WARNING: NaN force between ${node1.id} and ${node2.id}. Dist: $distance, F: $springForce")
+        }
 
         // Apply forces to nodes that are part of the physics simulation
         physicsBody.forces[node1.id]?.let {

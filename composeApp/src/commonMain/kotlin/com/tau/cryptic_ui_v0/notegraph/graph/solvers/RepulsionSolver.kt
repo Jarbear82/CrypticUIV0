@@ -7,6 +7,10 @@ import com.tau.cryptic_ui_v0.notegraph.graph.physics.Body
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.PhysicsBody
 import com.tau.cryptic_ui_v0.notegraph.graph.physics.RepulsionOptions
 
+// ADDED: Debug flag
+private const val DEBUG = true
+private var solveCount = 0
+
 /**
  * Calculates repulsion forces between nodes in a physics simulation.
  *
@@ -50,6 +54,12 @@ class RepulsionSolver(
      * This field is linearly approximated.
      */
     fun solve() {
+        if (DEBUG && solveCount % 60 == 0) { // Log every 60 frames
+            println("[RepulsionSolver] Solving... (Frame ${solveCount++}). NodeDist: ${options.nodeDistance}, Overlap: ${options.avoidOverlap}")
+        } else {
+            solveCount++
+        }
+
         val nodes = body.nodes
         val nodeIndices = physicsBody.physicsNodeIndices
         val forces = physicsBody.forces
@@ -58,6 +68,7 @@ class RepulsionSolver(
         // If nodeDistance is zero or negative, repulsion is undefined or infinite.
         // We skip calculation to avoid division by zero and nonsensical forces.
         if (nodeDistance <= 0) {
+            if (DEBUG) println("[RepulsionSolver] Skipping solve, nodeDistance <= 0")
             return
         }
 
@@ -84,6 +95,7 @@ class RepulsionSolver(
                 if (distance == 0.0) {
                     distance = 0.1 * rng.nextDouble() // Use Kotlin's RNG
                     effectiveDx = distance
+                    if (DEBUG) println("[RepulsionSolver] Node overlap detected! Jiggling distance to $distance")
                 }
 
                 // --- FIX: Add Overlap Avoidance ---
@@ -109,6 +121,10 @@ class RepulsionSolver(
                     val forceMagnitude = repulsingForce / distance
                     val fx = effectiveDx * forceMagnitude
                     val fy = dy * forceMagnitude
+
+                    if (DEBUG && (fx.isNaN() || fy.isNaN())) {
+                        println("[RepulsionSolver] WARNING: NaN force between ${node1.id} and ${node2.id}. Dist: $distance, F: $repulsingForce")
+                    }
 
                     // Get the force vectors from the map.
                     // If a node is in physicsNodeIndices, it MUST have a force vector.

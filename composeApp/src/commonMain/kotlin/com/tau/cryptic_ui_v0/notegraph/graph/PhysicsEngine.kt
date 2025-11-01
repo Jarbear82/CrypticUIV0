@@ -38,6 +38,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
+// ADDED: Debug flag
+private const val DEBUG = true
 
 class PhysicsEngine(
     initialNodes: List<NodeDisplayItem>,
@@ -70,6 +72,7 @@ class PhysicsEngine(
     private var edgeLookup: Map<String, List<PhysicsEdge>> = emptyMap()
 
     fun updateData(newNodes: List<NodeDisplayItem>, newEdges: List<EdgeDisplayItem>, isInitial: Boolean = false) {
+        if (DEBUG) println("[PhysicsEngine] updateData called. isInitial: $isInitial. New Nodes: ${newNodes.size}, New Edges: ${newEdges.size}")
         updateDataInternal(newNodes, newEdges, isInitial)
     }
 
@@ -78,14 +81,20 @@ class PhysicsEngine(
         val newNodesMap = newNodes.associateBy { it.id() }
         val newNodesIds = newNodesMap.keys
 
-        (currentNodes - newNodesIds).forEach { nodes.remove(it) }
+        val removedNodeIds = currentNodes - newNodesIds
+        if (removedNodeIds.isNotEmpty()) {
+            if (DEBUG) println("[PhysicsEngine] Removing ${removedNodeIds.size} nodes.")
+            removedNodeIds.forEach { nodes.remove(it) }
+        }
 
         val nodesAdded = (newNodesIds - currentNodes).isNotEmpty()
+        if (DEBUG && nodesAdded) println("[PhysicsEngine] Nodes will be added.")
 
         val initialPositions = mutableMapOf<String, Offset>()
         if (isInitial) {
             val nodeCount = newNodes.size
             if (nodeCount > 0) {
+                if (DEBUG) println("[PhysicsEngine] Calculating initial spiral positions for $nodeCount nodes.")
                 val goldenAngle = (Math.PI * (3.0 - sqrt(5.0))).toFloat()
                 val maxRadius = min(width, height) * 0.4f
                 val c = if (nodeCount > 1) maxRadius / sqrt(nodeCount.toFloat()) else 0f
@@ -112,15 +121,19 @@ class PhysicsEngine(
                         .toSet()
                     val existingNeighbors = nodes.values.filter { it.id in neighborIds }
                     if (existingNeighbors.isNotEmpty()) {
+                        if (DEBUG) println("[PhysicsEngine] New node $id placing near ${existingNeighbors.size} neighbors.")
                         existingNeighbors.map { it.x }.average().toFloat() to
                                 existingNeighbors.map { it.y }.average().toFloat()
                     } else if (nodes.isNotEmpty()) {
+                        if (DEBUG) println("[PhysicsEngine] New node $id placing near center of mass.")
                         nodes.values.map { it.x }.average().toFloat() to
                                 nodes.values.map { it.y }.average().toFloat()
                     } else {
+                        if (DEBUG) println("[PhysicsEngine] New node $id placing at origin.")
                         0f to 0f
                     }
                 }
+                if (DEBUG) println("[PhysicsEngine] Adding new node $id at ($startX, $startY)")
                 nodes[id] = PhysicsNode(id = id, x = startX, y = startY)
             }
         }
@@ -129,7 +142,11 @@ class PhysicsEngine(
         val newEdgesMap = newEdges.associateBy { it.id() }
         val newEdgesIds = newEdgesMap.keys
 
-        (currentEdges - newEdgesIds).forEach { edges.remove(it) }
+        val removedEdgeIds = currentEdges - newEdgesIds
+        if (removedEdgeIds.isNotEmpty()) {
+            if (DEBUG) println("[PhysicsEngine] Removing ${removedEdgeIds.size} edges.")
+            removedEdgeIds.forEach { edges.remove(it) }
+        }
 
         newEdgesMap.values.forEach { displayEdge ->
             val edgeId = displayEdge.id()
@@ -137,6 +154,7 @@ class PhysicsEngine(
                 val fromId = displayEdge.src.id()
                 val toId = displayEdge.dst.id()
                 if (nodes.containsKey(fromId) && nodes.containsKey(toId)) {
+                    if (DEBUG) println("[PhysicsEngine] Adding new edge $edgeId from $fromId to $toId")
                     edges[edgeId] = PhysicsEdge(
                         id = edgeId,
                         from = fromId,
@@ -144,6 +162,8 @@ class PhysicsEngine(
                         springLength = options.defaultSpringLength,
                         springConstant = options.defaultSpringConstant
                     )
+                } else {
+                    if (DEBUG) println("[PhysicsEngine] WARNING: Could not add edge $edgeId, missing node $fromId or $toId.")
                 }
             }
         }
@@ -151,15 +171,18 @@ class PhysicsEngine(
         edgeLookup = edges.values.groupBy { it.from }
 
         if (isInitial) {
+            if (DEBUG) println("[PhysicsEngine] Initial data load. Publishing positions.")
             publishPositions()
         }
 
         if (nodesAdded && !isInitial) {
+            if (DEBUG) println("[PhysicsEngine] Nodes added incrementally. Destabilizing.")
             destabilize()
         }
     }
 
     fun resetNodePositions() {
+        if (DEBUG) println("[PhysicsEngine] resetNodePositions called.")
         val nodeCount = nodes.size
         if (nodeCount == 0) {
             publishPositions()
@@ -185,6 +208,7 @@ class PhysicsEngine(
     }
 
     fun updateNodeLevels(newNodeLevels: Map<String, Int>) {
+        if (DEBUG) println("[PhysicsEngine] updateNodeLevels called with ${newNodeLevels.size} levels.")
         // --- UPDATED: Set level directly on PhysicsNode ---
         newNodeLevels.forEach { (id, level) ->
             nodes[id]?.level = level
@@ -192,6 +216,7 @@ class PhysicsEngine(
     }
 
     fun notifyNodePositionUpdate(id: String, x: Float, y: Float, isDragging: Boolean) {
+        if (DEBUG && isDragging) println("[PhysicsEngine] notifyNodePositionUpdate: Node $id DRAGGING to ($x, $y)")
         nodes[id]?.apply {
             this.x = x
             this.y = y
@@ -208,6 +233,8 @@ class PhysicsEngine(
         if (isDragging) {
             destabilize()
             startSimulation()
+        } else {
+            if (DEBUG) println("[PhysicsEngine] notifyNodePositionUpdate: Node $id DROPPED at ($x, $y)")
         }
         // No 'else' needed, if we stop dragging, the simulation is already running
         // and will stabilize on its own.
@@ -225,12 +252,14 @@ class PhysicsEngine(
 
     /** Sets the simulation status to Running and resets stabilization. */
     private fun destabilize() {
+        if (DEBUG && _status.value != SimulationStatus.Running) println("[PhysicsEngine] Destabilizing simulation.")
         stabilizationCounter = 0
         _status.value = SimulationStatus.Running
     }
 
     fun preRunSimulation(steps: Int) {
         if (steps <= 0) return
+        if (DEBUG) println("[PhysicsEngine] preRunSimulation: $steps steps.")
 
         destabilize()
         var i = 0
@@ -256,6 +285,7 @@ class PhysicsEngine(
             i++
         }
 
+        if (DEBUG) println("[PhysicsEngine] preRunSimulation finished. Status: ${_status.value}")
         publishPositions()
 
         if (_status.value != SimulationStatus.Stable) {
@@ -265,9 +295,11 @@ class PhysicsEngine(
 
     fun startSimulation() {
         if (isSimulationRunning && simulationJob?.isActive == true) {
+            if (DEBUG) println("[PhysicsEngine] startSimulation: Already running, just destabilizing.")
             destabilize() // Reset stabilization counter if already running
             return
         }
+        if (DEBUG) println("[PhysicsEngine] startSimulation: Starting new simulation job.")
         isSimulationRunning = true
         destabilize()
 
@@ -295,15 +327,18 @@ class PhysicsEngine(
 
                 // 5. Update status
                 updateSimulationStatus(maxVelocity)
+                if (DEBUG && _status.value != SimulationStatus.Running) println("[PhysicsEngine] Simulation status: ${_status.value}")
 
                 // 6. Delay
                 delay(16)
             }
+            if (DEBUG) println("[PhysicsEngine] Simulation loop finished. Status: ${_status.value}")
             isSimulationRunning = false
         }
     }
 
     fun stopSimulation() {
+        if (DEBUG) println("[PhysicsEngine] stopSimulation called.")
         simulationJob?.cancel()
         isSimulationRunning = false
         _status.value = SimulationStatus.Stable
@@ -352,13 +387,18 @@ class PhysicsEngine(
     private fun simulateStepInternal(forces: MutableMap<String, Offset>) {
         // --- UPDATED: Prepare data once for all solvers ---
         val (body, physicsBody) = prepareSolverData()
+        if (DEBUG) println("[PhysicsEngine] Simulating step with ${body.nodes.size} nodes. Solver: ${options.solver}")
 
         // --- UPDATED: Select solvers based on options ---
+        if (DEBUG) println("[PhysicsEngine] 1. Applying Repulsion...")
         applyRepulsionForces(body, physicsBody, forces)
+        if (DEBUG) println("[PhysicsEngine] 2. Applying Springs...")
         applySpringForces(body, physicsBody, forces)
+        if (DEBUG) println("[PhysicsEngine] 3. Applying Gravity...")
         applyGravityForces(body, physicsBody, forces)
 
         // --- UPDATED: Apply solver forces back ---
+        if (DEBUG) println("[PhysicsEngine] 4. Applying Solver Forces...")
         applySolverForces(physicsBody.forces, forces)
     }
 
@@ -373,15 +413,22 @@ class PhysicsEngine(
         when (options.solver) {
             SolverType.REPEL -> {
                 // --- Pass options.repulsion, which now exists ---
+                if (DEBUG) println("[PhysicsEngine] Using RepulsionSolver")
                 RepulsionSolver(body, physicsBody, options.repulsion).solve()
                 // applyRepulsionForces_Default(forces) // Use lightweight default
             }
-            SolverType.BARNES_HUT ->
+            SolverType.BARNES_HUT -> {
+                if (DEBUG) println("[PhysicsEngine] Using BarnesHutSolver")
                 BarnesHutSolver(body, physicsBody, options.barnesHut).solve()
-            SolverType.FORCE_ATLAS_2 ->
+            }
+            SolverType.FORCE_ATLAS_2 -> {
+                if (DEBUG) println("[PhysicsEngine] Using ForceAtlas2BasedRepulsionSolver")
                 ForceAtlas2BasedRepulsionSolver(body, physicsBody, options.forceAtlas).solve()
-            SolverType.HIERARCHICAL ->
+            }
+            SolverType.HIERARCHICAL -> {
+                if (DEBUG) println("[PhysicsEngine] Using HierarchicalRepulsionSolver")
                 HierarchicalRepulsionSolver(body, physicsBody, options.hierarchicalRepulsion).solve()
+            }
         }
     }
 
@@ -419,6 +466,8 @@ class PhysicsEngine(
             }
         }.associateBy { it.id }
 
+        if (DEBUG) println("[PhysicsEngine] Prepared ${solverEdges.size} edges for spring solver.")
+
         val solverBodyWithEdges = object : PhysicsSolverBody {
             override val nodes = body.nodes
             override val edges = solverEdges // Add edges
@@ -431,10 +480,14 @@ class PhysicsEngine(
         }
 
         when (options.solver) {
-            SolverType.HIERARCHICAL ->
+            SolverType.HIERARCHICAL -> {
+                if (DEBUG) println("[PhysicsEngine] Using HierarchicalSpringSolver")
                 HierarchicalSpringSolver(solverBodyWithEdges, solverPhysicsBodyWithEdges, solverOptions).solve()
-            else ->
+            }
+            else -> {
+                if (DEBUG) println("[PhysicsEngine] Using SpringSolver")
                 SpringSolver(solverBodyWithEdges, solverPhysicsBodyWithEdges, solverOptions).solve()
+            }
         }
     }
 
@@ -452,11 +505,15 @@ class PhysicsEngine(
         }
 
         when (options.solver) {
-            SolverType.FORCE_ATLAS_2 ->
+            SolverType.FORCE_ATLAS_2 -> {
+                if (DEBUG) println("[PhysicsEngine] Using ForceAtlas2BasedCentralGravitySolver")
                 ForceAtlas2BasedCentralGravitySolver(body, physicsBody, solverOptions).solve()
-            else ->
+            }
+            else -> {
+                if (DEBUG) println("[PhysicsEngine] Using CentralGravitySolver")
                 // barnesHut, repel, hierarchical all use central gravity
                 CentralGravitySolver(body, physicsBody, solverOptions).solve()
+            }
         }
     }
 
@@ -496,11 +553,15 @@ class PhysicsEngine(
         var maxVelocitySq = 0f
         val maxVel = options.maxVelocity
 
+        if (DEBUG) println("[PhysicsEngine] updateVelocitiesAndPositions: timeStep $timeStep")
+
         nodes.values.forEach { node ->
             if (!node.isFixed) {
                 val force = forces.getValue(node.id)
                 val ax = force.x / node.mass
                 val ay = force.y / node.mass
+                if (DEBUG && (force.x.isNaN() || force.y.isNaN())) println("[PhysicsEngine] WARNING: NaN force for node ${node.id}")
+
 
                 node.vx = (node.vx + ax * timeStep) * (1f - options.damping)
                 node.vy = (node.vy + ay * timeStep) * (1f - options.damping)
@@ -515,6 +576,14 @@ class PhysicsEngine(
                 node.x += node.vx * timeStep
                 node.y += node.vy * timeStep
 
+                if (DEBUG && (node.x.isNaN() || node.y.isNaN())) {
+                    println("[PhysicsEngine] WARNING: NaN position for node ${node.id} after update. Resetting to 0,0.")
+                    node.x = 0f
+                    node.y = 0f
+                    node.vx = 0f
+                    node.vy = 0f
+                }
+
                 val velocitySq = node.vx * node.vx + node.vy * node.vy
                 if (velocitySq > maxVelocitySq) {
                     maxVelocitySq = velocitySq
@@ -524,7 +593,9 @@ class PhysicsEngine(
                 node.vy = 0f
             }
         }
-        return sqrt(maxVelocitySq)
+        val maxV = sqrt(maxVelocitySq)
+        if (DEBUG) println("[PhysicsEngine] Max velocity this frame: $maxV")
+        return maxV
     }
 
     // --- Data Preparation and Application for Solvers (Unchanged) ---
@@ -601,6 +672,7 @@ class PhysicsEngine(
         forces: MutableMap<String, Offset>
     ) {
         physicsForces.forEach { (id, force) ->
+            if (DEBUG && (force.x.isNaN() || force.y.isNaN())) println("[PhysicsEngine] WARNING: NaN force from solver for node $id")
             forces[id] = forces.getValue(id) + Offset(force.x.toFloat(), force.y.toFloat())
         }
     }
