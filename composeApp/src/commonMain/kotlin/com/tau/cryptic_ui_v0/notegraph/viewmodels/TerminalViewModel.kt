@@ -1,6 +1,7 @@
 package com.tau.cryptic_ui_v0.viewmodels
 
 import com.tau.cryptic_ui_v0.SqliteDbService // IMPORTED: Changed from KuzuDBService
+import com.tau.cryptic_ui_v0.notegraph.graph.GraphViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,9 @@ class TerminalViewModel(private val dbService: SqliteDbService) {
 
     // UPDATED: This ViewModel is also instantiated with the SqliteDbService
     val editCreateViewModel = EditCreateViewModel(dbService, viewModelScope, schemaViewModel, metadataViewModel)
+
+    // ADDED: Create the GraphViewModel, passing the scope and metadata VM
+    val graphViewModel = GraphViewmodel(viewModelScope, metadataViewModel)
 
 
     private val _selectedDataTab = MutableStateFlow(DataViewTabs.METADATA)
@@ -42,6 +46,8 @@ class TerminalViewModel(private val dbService: SqliteDbService) {
     }
 
     fun onCleared() {
+        // ADDED: Clear the graph view model to stop its simulation loop
+        graphViewModel.onCleared()
         // UPDATED: Call close() directly on the SqliteDbService
         dbService.close()
     }

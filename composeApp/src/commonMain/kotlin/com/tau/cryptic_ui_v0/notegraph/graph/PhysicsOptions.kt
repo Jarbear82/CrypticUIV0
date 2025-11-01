@@ -1,4 +1,22 @@
 package com.tau.cryptic_ui_v0.notegraph.graph
 
-class PhysicsOptions {
-}
+/**
+ * Data class to hold all the constants for the physics simulation.
+ *
+ * @param gravity The strength of the pull towards the center (0,0).
+ * @param repulsion The base strength of the force pushing nodes away from each other.
+ * @param spring The base stiffness of the edges (springs).
+ * @param damping The multiplier applied to velocity each frame to simulate friction.
+ * @param nodeBaseRadius The minimum radius of a node with zero edges.
+ * @param nodeRadiusEdgeFactor How much to increase the radius for each attached edge.
+ * @param minDistance The minimum pixel buffer to maintain between node edges.
+ */
+data class PhysicsOptions(
+    val gravity: Float = 0.05f,
+    val repulsion: Float = 2000f,
+    val spring: Float = 0.1f,
+    val damping: Float = 0.9f,
+    val nodeBaseRadius: Float = 15f,
+    val nodeRadiusEdgeFactor: Float = 2.0f,
+    val minDistance: Float = 5.0f // Extra buffer between nodes
+)

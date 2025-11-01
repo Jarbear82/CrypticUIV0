@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -26,7 +25,6 @@ import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetadataView(
-    dbMetaData: DBMetaData?, // This is nullable in your TerminalView
     nodes: List<NodeDisplayItem>,
     edges: List<EdgeDisplayItem>,
     primarySelectedItem: Any?,
@@ -38,69 +36,79 @@ fun MetadataView(
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
-    onAddEdgeClick: () -> Unit
+    onAddEdgeClick: () -> Unit,
+    // ADDED: Refresh handlers
+    onListAllClick: () -> Unit,
+    onListNodesClick: () -> Unit,
+    onListEdgesClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        dbMetaData?.let {
-            ListItem(
-                leadingContent = { Icon(imageVector = Icons.Default.Storage, "Database") },
-                headlineContent = { Text("Database Info", style = MaterialTheme.typography.headlineSmall) },
-                supportingContent = {
-                    Text("Name: ${it.name}\n" +
-                            "Kuzu Version: ${it.version}\n" + // This property might not exist on your new DBMetaData
-                            "Storage: ${it.storage}"
-                    )
-                }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
 
-        // Display selected items
+        // --- Selection Details ---
+        Text("Selection Details", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+
         val primaryNode = primarySelectedItem as? NodeDisplayItem
         val secondaryNode = secondarySelectedItem as? NodeDisplayItem
 
         if (primaryNode != null && secondaryNode != null) {
-            ListItem(
-                // leadingContent = {  },
-                headlineContent = {
-                    // UPDATED: Use displayProperty
-                    Text("Selected Nodes (Source -> Destination):\n" +
-                            "Source: ${primaryNode.label} : ${primaryNode.displayProperty}\n" +
-                            "Destination: ${secondaryNode.label} : ${secondaryNode.displayProperty}"
-                    )
-                },
-                /// supportingContent = {  }
+            Text(
+                "Source: ${primaryNode.label} : ${primaryNode.displayProperty}\n" +
+                        "Destination: ${secondaryNode.label} : ${secondaryNode.displayProperty}",
+                style = MaterialTheme.typography.bodyMedium
             )
-
-
         } else if (primaryNode != null) {
-            ListItem(
-                // leadingContent = {  },
-                headlineContent = {
-                    // UPDATED: Use displayProperty
-                    Text("Selected Node:\n" +
-                            "${primaryNode.label} : ${primaryNode.displayProperty}"
-                    )
-                },
-                // supportingContent = {  }
+            Text(
+                "Selected Node:\n" +
+                        "${primaryNode.label} : ${primaryNode.displayProperty}",
+                style = MaterialTheme.typography.bodyMedium
             )
-
         } else if (primarySelectedItem != null) {
-            ListItem(
-                // leadingContent = {  },
-                headlineContent = {
-                    Text("Selected Item: $primarySelectedItem", style = MaterialTheme.typography.titleMedium)
-                },
-                /// supportingContent = {  }
+            Text(
+                "Selected Item: $primarySelectedItem",
+                style = MaterialTheme.typography.bodyMedium
             )
-
+        } else {
+            Text("No item selected.", style = MaterialTheme.typography.bodyMedium)
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
+        // --- Data Refresh ---
+        Text("Data Refresh", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onListAllClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("List All Nodes & Edges")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onListNodesClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("List Nodes")
+            }
+            Button(
+                onClick = onListEdgesClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("List Edges")
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        // --- Node and Edge Lists (from original design) ---
         Column(modifier = Modifier.fillMaxSize()) {
             // Nodes List
-            Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
                     headlineContent = { Text("Nodes:", style = MaterialTheme.typography.headlineSmall) } ,
@@ -108,7 +116,7 @@ fun MetadataView(
                         IconButton(onClick = onAddNodeClick) {
                             Icon(Icons.Default.Add, contentDescription = "New Node")
                         }
-                    }
+                    },
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {
@@ -144,7 +152,7 @@ fun MetadataView(
             }
 
             // Edges List
-            Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+            Column(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
                     headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
@@ -152,7 +160,7 @@ fun MetadataView(
                         IconButton(onClick = onAddEdgeClick) {
                             Icon(Icons.Default.Add, contentDescription = "New Edge")
                         }
-                    }
+                    },
                 )
                 HorizontalDivider(color = Color.Black)
                 LazyColumn {

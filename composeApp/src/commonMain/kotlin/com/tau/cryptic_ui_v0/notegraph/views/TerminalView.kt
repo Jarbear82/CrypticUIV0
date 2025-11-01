@@ -14,6 +14,8 @@ import com.tau.cryptic_ui_v0.viewmodels.DataViewTabs
 import com.tau.cryptic_ui_v0.viewmodels.TerminalViewModel
 import com.tau.cryptic_ui_v0.viewmodels.ViewTabs
 import com.tau.cryptic_ui_v0.views.ListView
+// ADDED: Import for GraphViewModel
+import com.tau.cryptic_ui_v0.notegraph.graph.GraphViewmodel
 
 @Composable
 fun TerminalView(viewModel: TerminalViewModel) {
@@ -28,6 +30,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
     val itemToEdit by viewModel.metadataViewModel.itemToEdit.collectAsState()
     val primarySelectedItem by viewModel.metadataViewModel.primarySelectedItem.collectAsState()
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
+
+    // ADDED: Get the GraphViewModel from the TerminalViewModel
+    val graphViewModel by viewModel.graphViewModel.collectAsState()
 
 
     // --- COLLECT THE NEW CONSOLIDATED STATE ---
@@ -134,7 +139,10 @@ fun TerminalView(viewModel: TerminalViewModel) {
                     }
                     ViewTabs.GRAPH -> {
                         // Pass the collected nodes and edges to the GraphView
-                        GraphView()
+                        // UPDATED: Pass the GraphViewModel
+                        graphViewModel?.let {
+                            GraphView(graphViewModel)
+                        } ?: Text("Loading Graph...")
                     }
                 }
             }
@@ -159,7 +167,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
 
                 when (selectedDataTab) {
                     DataViewTabs.METADATA -> MetadataView(
-                        dbMetaData = null,
+                        // REMOVED: dbMetaData = null,
                         nodes = nodes,
                         edges = edges,
                         primarySelectedItem = primarySelectedItem,
@@ -189,7 +197,11 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                         onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        // ADDED: Pass refresh handlers
+                        onListAllClick = { viewModel.metadataViewModel.listAll() },
+                        onListNodesClick = { viewModel.metadataViewModel.listNodes() },
+                        onListEdgesClick = { viewModel.metadataViewModel.listEdges() }
                     )
                     DataViewTabs.SCHEMA -> SchemaView(
                         schema = schema,
@@ -289,6 +301,6 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 }
             }
         }
-
     }
 }
+
