@@ -1,6 +1,6 @@
 package com.tau.cryptic_ui_v0.viewmodels
 
-import com.tau.cryptic_ui_v0.* // Imports new data classes: NodeDisplayItem, EdgeDisplayItem, etc.
+import com.tau.cryptic_ui_v0.* // Imports new data classes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -13,18 +13,17 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.tau.cryptic_ui_v0.db.AppDatabase
 
-// UPDATED: Constructor now takes SqliteDbService
 class MetadataViewModel(
     private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
     private val schemaViewModel: SchemaViewModel // Still needed to get schema names
 ) {
-    // REMOVED: DBMetaData logic. This is now handled by MainViewModel
-    // private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
-    // val dbMetaData = _dbMetaData.asStateFlow()
-
     private val _nodeList = MutableStateFlow<List<NodeDisplayItem>>(emptyList())
     val nodeList = _nodeList.asStateFlow()
+
+    // ADDED
+    private val _clusterList = MutableStateFlow<List<ClusterDisplayItem>>(emptyList())
+    val clusterList = _clusterList.asStateFlow()
 
     private val _edgeList = MutableStateFlow<List<EdgeDisplayItem>>(emptyList())
     val edgeList = _edgeList.asStateFlow()
@@ -39,54 +38,32 @@ class MetadataViewModel(
     private val _secondarySelectedItem = MutableStateFlow<Any?>(null)
     val secondarySelectedItem = _secondarySelectedItem.asStateFlow()
 
-    // ADDED: JSON serializer instance
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true
-        encodeDefaults = true // Ensure all fields are present
+        encodeDefaults = true
     }
 
-    // REMOVED: init block that fetched Kuzu metadata
-
-    fun addNodes(nodes: Set<NodeDisplayItem>) {
-        if (nodes.isNotEmpty()) {
-            println("Updating Nodes")
-            _nodeList.update { (it + nodes).distinct() }
-        }
-    }
-
-    fun addEdges(edges: Set<EdgeDisplayItem>) {
-        if (edges.isNotEmpty()) {
-            println("Updating Edges")
-            _edgeList.update { (it + edges).distinct() }
-        }
-    }
-
-    // ADDED: private suspend function for node-fetching logic
     private suspend fun fetchNodes() {
         try {
-            // UPDATED: Robust schema loading
-            // Ensure schema is loaded to map IDs to names
             var schemaData = schemaViewModel.schema.value
             if (schemaData == null) {
                 println("Schema not yet loaded. Calling and awaiting showSchema() first.")
-                schemaViewModel.showSchema() // Make sure schema is loaded
-                schemaData = schemaViewModel.schema.value // Refetch the value
+                schemaViewModel.showSchema()
+                schemaData = schemaViewModel.schema.value
             }
 
-            // Now schemaData might be non-null (or null if DB is empty, which is fine)
             val schemaMap = schemaData?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
 
             if (schemaData == null) {
                 println("Schema could not be loaded. Aborting node fetch.")
-                _nodeList.value = emptyList() // Clear list if schema is unavailable
-                return // Exit the function
+                _nodeList.value = emptyList()
+                return
             }
-            // --- END UPDATED ---
 
             val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
-            println("fetchNodes: Found ${dbNodes.size} nodes.") // Added logging
+            println("fetchNodes: Found ${dbNodes.size} nodes.")
             _nodeList.value = dbNodes.mapNotNull { dbNode ->
                 val nodeSchema = schemaMap[dbNode.schema_id]
                 if (nodeSchema == null) {
@@ -106,48 +83,103 @@ class MetadataViewModel(
         }
     }
 
-    // ADDED: private suspend function for edge-fetching logic
-    private suspend fun fetchEdges() {
+    // ADDED
+    private suspend fun fetchClusters() {
         try {
-            // UPDATED: Robust schema and node loading
             var schemaData = schemaViewModel.schema.value
             if (schemaData == null) {
-                println("Edge fetch: Schema not yet loaded. Calling and awaiting showSchema() first.")
+                println("Schema not yet loaded. Calling and awaiting showSchema() first.")
+                schemaViewModel.showSchema()
+                schemaData = schemaViewModel.schema.value
+            }
+
+            val schemaMap = schemaData?.clusterSchemas?.associateBy { it.id } ?: emptyMap()
+
+            if (schemaData == null) {
+                println("Schema could not be loaded. Aborting cluster fetch.")
+                _clusterList.value = emptyList()
+                return
+            }
+
+            val dbClusters = dbService.database.appDatabaseQueries.selectAllClusters().executeAsList()
+            println("fetchClusters: Found ${dbClusters.size} clusters.")
+            _clusterList.value = dbClusters.mapNotNull { dbCluster ->
+                val clusterSchema = schemaMap[dbCluster.schema_id]
+                if (clusterSchema == null) {
+                    println("Warning: Found cluster with unknown schema ID ${dbCluster.schema_id}")
+                    null
+                } else {
+                    ClusterDisplayItem(
+                        id = dbCluster.id,
+                        label = clusterSchema.name,
+                        displayProperty = dbCluster.display_label
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            println("Error listing clusters: ${e.message}")
+            _clusterList.value = emptyList()
+        }
+    }
+
+    // UPDATED: Rewritten to handle new Edge table and GraphEntityDisplayItem
+    private suspend fun fetchEdges() {
+        try {
+            var schemaData = schemaViewModel.schema.value
+            if (schemaData == null) {
+                println("Edge fetch: Schema not loaded. Calling and awaiting showSchema() first.")
                 schemaViewModel.showSchema()
                 schemaData = schemaViewModel.schema.value
             }
 
             if (_nodeList.value.isEmpty()) {
                 println("Edge fetch: Nodes not loaded. Calling and awaiting fetchNodes() first.")
-                fetchNodes() // Await node fetch
+                fetchNodes()
             }
-            // --- END UPDATED ---
+            // ADDED: Fetch clusters if list is empty
+            if (_clusterList.value.isEmpty()) {
+                println("Edge fetch: Clusters not loaded. Calling and awaiting fetchClusters() first.")
+                fetchClusters()
+            }
 
             val schemaMap = schemaData?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
-            val nodeMap = _nodeList.value.associateBy { it.id } // Uses the now-populated node list
+            // Create a combined map of all graph entities
+            val entityMap: Map<String, GraphEntityDisplayItem> =
+                _nodeList.value.associateBy { "node_${it.id}" } +
+                        _clusterList.value.associateBy { "cluster_${it.id}" }
 
             if (schemaData == null) {
                 println("Schema could not be loaded. Aborting edge fetch.")
-                _edgeList.value = emptyList() // Clear list
-                return // Exit
+                _edgeList.value = emptyList()
+                return
             }
 
             val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
-            println("fetchEdges: Found ${dbEdges.size} edges.") // Added logging
+            println("fetchEdges: Found ${dbEdges.size} edges.")
             _edgeList.value = dbEdges.mapNotNull { dbEdge ->
                 val schema = schemaMap[dbEdge.schema_id]
-                val srcNode = nodeMap[dbEdge.from_node_id]
-                val dstNode = nodeMap[dbEdge.to_node_id]
 
-                if (schema == null || srcNode == null || dstNode == null) {
-                    println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
+                // Determine src and dst entities
+                val srcEntity = when {
+                    dbEdge.from_node_id != null -> entityMap["node_${dbEdge.from_node_id}"]
+                    dbEdge.from_cluster_id != null -> entityMap["cluster_${dbEdge.from_cluster_id}"]
+                    else -> null
+                }
+                val dstEntity = when {
+                    dbEdge.to_node_id != null -> entityMap["node_${dbEdge.to_node_id}"]
+                    dbEdge.to_cluster_id != null -> entityMap["cluster_${dbEdge.to_cluster_id}"]
+                    else -> null
+                }
+
+                if (schema == null || srcEntity == null || dstEntity == null) {
+                    println("Warning: Skipping edge ${dbEdge.id} due to missing schema or entity link.")
                     null
                 } else {
                     EdgeDisplayItem(
                         id = dbEdge.id,
                         label = schema.name,
-                        src = srcNode,
-                        dst = dstNode
+                        src = srcEntity,
+                        dst = dstEntity
                     )
                 }
             }
@@ -157,35 +189,43 @@ class MetadataViewModel(
         }
     }
 
-    // UPDATED: listNodes now uses fetchNodes
     fun listNodes() {
         viewModelScope.launch {
             fetchNodes()
         }
     }
 
-    // UPDATED: listEdges now uses fetchEdges
+    // ADDED
+    fun listClusters() {
+        viewModelScope.launch {
+            fetchClusters()
+        }
+    }
+
     fun listEdges() {
         viewModelScope.launch {
-            // Edges depend on nodes, so fetch nodes first if the list is empty
-            // This check is now redundant thanks to the check inside fetchEdges, but is harmless
             if (_nodeList.value.isEmpty()) {
                 fetchNodes()
+            }
+            if (_clusterList.value.isEmpty()) { // ADDED
+                fetchClusters()
             }
             fetchEdges()
         }
     }
 
 
-    // UPDATED: listAll now sequentially awaits fetchNodes and fetchEdges
+    // UPDATED: listAll now calls fetchClusters
     fun listAll() {
         viewModelScope.launch {
             try {
-                println("listAll: Fetching nodes...") // Added logging
+                println("listAll: Fetching nodes...")
                 fetchNodes()
-                println("listAll: Fetching edges...") // Added logging
+                println("listAll: Fetching clusters...") // ADDED
+                fetchClusters() // ADDED
+                println("listAll: Fetching edges...")
                 fetchEdges()
-                println("listAll: Finished.") // Added logging
+                println("listAll: Finished.")
             } catch (e: Exception) {
                 println("Error in listAll: ${e.message}")
             }
@@ -197,12 +237,11 @@ class MetadataViewModel(
      * This stored item is the "original" version for comparison.
      * Returns the fetched item so the caller can pass it to EditCreateViewModel.
      */
-    // UPDATED: Fetches from SQLite and deserializes JSON
+    // UPDATED: Handles ClusterDisplayItem and ClusterEditState
     suspend fun setItemToEdit(item: Any): Any? {
         val fetchedItem = when (item) {
             is NodeDisplayItem -> {
                 val dbNode = dbService.database.appDatabaseQueries.selectNodeById(item.id).executeAsOneOrNull() ?: return null
-                // UPDATED: Robust schema check
                 var schemaData = schemaViewModel.schema.value
                 if (schemaData == null) {
                     schemaViewModel.showSchema()
@@ -217,9 +256,25 @@ class MetadataViewModel(
                 }
                 NodeEditState(id = dbNode.id, schema = schema, properties = properties)
             }
+            // ADDED
+            is ClusterDisplayItem -> {
+                val dbCluster = dbService.database.appDatabaseQueries.selectClusterById(item.id).executeAsOneOrNull() ?: return null
+                var schemaData = schemaViewModel.schema.value
+                if (schemaData == null) {
+                    schemaViewModel.showSchema()
+                    schemaData = schemaViewModel.schema.value
+                }
+                val schema = schemaData?.clusterSchemas?.firstOrNull { it.id == dbCluster.schema_id } ?: return null
+                val properties = try {
+                    json.decodeFromString<Map<String, String>>(dbCluster.properties_json)
+                } catch (e: Exception) {
+                    println("Error parsing cluster properties: ${e.message}")
+                    emptyMap()
+                }
+                ClusterEditState(id = dbCluster.id, schema = schema, properties = properties)
+            }
             is EdgeDisplayItem -> {
                 val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
-                // UPDATED: Robust schema check
                 var schemaData = schemaViewModel.schema.value
                 if (schemaData == null) {
                     schemaViewModel.showSchema()
@@ -246,7 +301,7 @@ class MetadataViewModel(
      * Saves the edited item by comparing the original (from _itemToEdit)
      * with the modified version (passed as an argument).
      */
-    // UPDATED: Serializes JSON and calls new SQLDelight update queries
+    // UPDATED: Handles ClusterEditState
     fun saveEditedItem(editedState: Any?, onFinished: () -> Unit) {
         viewModelScope.launch {
             val originalState = _itemToEdit.value
@@ -257,7 +312,6 @@ class MetadataViewModel(
                 when (editedState) {
                     is NodeEditState -> {
                         val propertiesJson = json.encodeToString(editedState.properties)
-                        // Find the display property's value from the map
                         val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
                         val displayLabel = editedState.properties[displayKey] ?: "Node ${editedState.id}"
 
@@ -267,6 +321,19 @@ class MetadataViewModel(
                             properties_json = propertiesJson
                         )
                         listNodes() // Refresh list
+                    }
+                    // ADDED
+                    is ClusterEditState -> {
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
+                        val displayLabel = editedState.properties[displayKey] ?: "Cluster ${editedState.id}"
+
+                        dbService.database.appDatabaseQueries.updateClusterProperties(
+                            id = editedState.id,
+                            display_label = displayLabel,
+                            properties_json = propertiesJson
+                        )
+                        listClusters() // Refresh list
                     }
                     is EdgeEditState -> {
                         val propertiesJson = json.encodeToString(editedState.properties)
@@ -283,7 +350,19 @@ class MetadataViewModel(
                             id = originalSchema.id,
                             name = editedState.currentName,
                             properties_json = propertiesJson,
-                            connections_json = null // Node schemas don't have connections
+                            connections_json = null
+                        )
+                        schemaViewModel.showSchema()
+                    }
+                    // ADDED
+                    is ClusterSchemaEditState -> {
+                        val originalSchema = originalState as? SchemaDefinitionItem ?: throw IllegalStateException("Original schema not found")
+                        val propertiesJson = json.encodeToString(editedState.properties)
+                        dbService.database.appDatabaseQueries.updateSchema(
+                            id = originalSchema.id,
+                            name = editedState.currentName,
+                            properties_json = propertiesJson,
+                            connections_json = null // Clusters don't have connections
                         )
                         schemaViewModel.showSchema() // Refresh schema
                     }
@@ -297,7 +376,7 @@ class MetadataViewModel(
                             properties_json = propertiesJson,
                             connections_json = connectionsJson
                         )
-                        schemaViewModel.showSchema() // Refresh schema
+                        schemaViewModel.showSchema()
                     }
                     else -> {
                         println("DEBUG: Edited state was null or of unknown type.")
@@ -312,14 +391,13 @@ class MetadataViewModel(
         }
     }
 
-    // REMOVED: Old Kuzu-based save helpers (saveNodeChanges, saveEdgeChanges, etc.)
-
     fun selectItem(item: Any) {
         val currentPrimary = _primarySelectedItem.value
         val currentSecondary = _secondarySelectedItem.value
 
         when (item) {
-            is NodeDisplayItem -> {
+            // UPDATED: Merged NodeDisplayItem and ClusterDisplayItem logic
+            is GraphEntityDisplayItem -> {
                 if (item == currentPrimary) {
                     _primarySelectedItem.value = null
                 } else if (item == currentSecondary) {
@@ -344,7 +422,7 @@ class MetadataViewModel(
         }
     }
 
-    // UPDATED: Uses new SQLDelight delete queries
+    // UPDATED: Handles ClusterDisplayItem
     fun deleteDisplayItem(item: Any) {
         viewModelScope.launch {
             try {
@@ -352,6 +430,10 @@ class MetadataViewModel(
                     is NodeDisplayItem -> {
                         dbService.database.appDatabaseQueries.deleteNodeById(item.id)
                         listAll() // Easiest way to refresh nodes and affected edges
+                    }
+                    is ClusterDisplayItem -> { // ADDED
+                        dbService.database.appDatabaseQueries.deleteClusterById(item.id)
+                        listAll() // Easiest way to refresh clusters and affected edges
                     }
                     is EdgeDisplayItem -> {
                         dbService.database.appDatabaseQueries.deleteEdgeById(item.id)
@@ -369,6 +451,11 @@ class MetadataViewModel(
         _nodeList.value = emptyList()
     }
 
+    // ADDED
+    fun clearClusterList() {
+        _clusterList.value = emptyList()
+    }
+
     fun clearEdgeList() {
         _edgeList.value = emptyList()
     }
@@ -378,6 +465,4 @@ class MetadataViewModel(
         _primarySelectedItem.value = null
         _secondarySelectedItem.value = null
     }
-
-    // REMOVED: onCleared() is no longer handled here.
 }

@@ -13,7 +13,8 @@ import kotlinx.serialization.json.Json
 
 data class SchemaData(
     val nodeSchemas: List<SchemaDefinitionItem>,
-    val edgeSchemas: List<SchemaDefinitionItem>
+    val edgeSchemas: List<SchemaDefinitionItem>,
+    val clusterSchemas: List<SchemaDefinitionItem> // ADDED
 )
 
 class SchemaViewModel(
@@ -56,6 +57,7 @@ class SchemaViewModel(
 
             val nodeSchemas = mutableListOf<SchemaDefinitionItem>()
             val edgeSchemas = mutableListOf<SchemaDefinitionItem>()
+            val clusterSchemas = mutableListOf<SchemaDefinitionItem>() // ADDED
 
             dbSchemas.forEach { dbSchema ->
                 // Deserialize properties
@@ -96,12 +98,22 @@ class SchemaViewModel(
                             connections = connections
                         )
                     )
+                } else if (dbSchema.type == "CLUSTER") { // ADDED
+                    clusterSchemas.add(
+                        SchemaDefinitionItem(
+                            id = dbSchema.id,
+                            type = dbSchema.type,
+                            name = dbSchema.name,
+                            properties = properties,
+                            connections = null // Clusters don't have connections
+                        )
+                    )
                 }
             }
-            _schema.value = SchemaData(nodeSchemas, edgeSchemas)
+            _schema.value = SchemaData(nodeSchemas, edgeSchemas, clusterSchemas) // UPDATED
         } catch (e: Exception) {
             println("Error fetching schema: ${e.message}")
-            _schema.value = SchemaData(emptyList(), emptyList()) // Set to empty on error
+            _schema.value = SchemaData(emptyList(), emptyList(), emptyList()) // Set to empty on error
         }
     }
 
@@ -114,7 +126,8 @@ class SchemaViewModel(
                 // Use new queries to check for dependencies
                 val nodeCount = dbService.database.appDatabaseQueries.countNodesForSchema(item.id).executeAsOne()
                 val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(item.id).executeAsOne()
-                val totalCount = nodeCount + edgeCount
+                val clusterCount = dbService.database.appDatabaseQueries.countClustersForSchema(item.id).executeAsOne() // ADDED
+                val totalCount = nodeCount + edgeCount + clusterCount // UPDATED
 
                 if (totalCount == 0L) {
                     // No dependencies, delete immediately
@@ -142,7 +155,7 @@ class SchemaViewModel(
             val item = _schemaToDelete.value ?: return@launch // Get item from state
             try {
                 // This single query deletes the schema.
-                // The DB's "ON DELETE CASCADE" will delete all associated nodes/edges.
+                // The DB's "ON DELETE CASCADE" will delete all associated nodes/edges/clusters.
                 dbService.database.appDatabaseQueries.deleteSchemaById(item.id)
 
                 // Refresh all data
@@ -166,4 +179,3 @@ class SchemaViewModel(
         _schemaDependencyCount.value = 0
     }
 }
-

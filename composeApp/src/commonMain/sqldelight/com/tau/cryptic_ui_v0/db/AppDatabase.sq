@@ -1,11 +1,18 @@
--- AppDatabase.sq
-
 CREATE TABLE SchemaDefinition (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
+    type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE', 'CLUSTER')), -- MODIFIED
     name TEXT NOT NULL UNIQUE,
     properties_json TEXT NOT NULL,
     connections_json TEXT
+);
+
+-- NEW TABLE
+CREATE TABLE Cluster (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    schema_id INTEGER NOT NULL,
+    display_label TEXT NOT NULL,
+    properties_json TEXT NOT NULL,
+    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
 );
 
 CREATE TABLE Node (
@@ -13,20 +20,35 @@ CREATE TABLE Node (
     schema_id INTEGER NOT NULL,
     display_label TEXT NOT NULL,
     properties_json TEXT NOT NULL,
-    -- ADDED: ON DELETE CASCADE
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
+    cluster_id INTEGER, -- ADDED
+    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
+    FOREIGN KEY(cluster_id) REFERENCES Cluster(id) ON DELETE SET NULL -- ADDED
 );
 
+-- REPLACED TABLE
 CREATE TABLE Edge (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     schema_id INTEGER NOT NULL,
-    from_node_id INTEGER NOT NULL,
-    to_node_id INTEGER NOT NULL,
     properties_json TEXT NOT NULL,
-    -- ADDED: ON DELETE CASCADE
+
+    -- 'From' entity
+    from_node_id INTEGER,
+    from_cluster_id INTEGER,
+
+    -- 'To' entity
+    to_node_id INTEGER,
+    to_cluster_id INTEGER,
+
+    -- Foreign Keys
     FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
     FOREIGN KEY(from_node_id) REFERENCES Node(id) ON DELETE CASCADE,
-    FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE
+    FOREIGN KEY(from_cluster_id) REFERENCES Cluster(id) ON DELETE CASCADE,
+    FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE,
+    FOREIGN KEY(to_cluster_id) REFERENCES Cluster(id) ON DELETE CASCADE,
+
+    -- Constraints to ensure one 'from' and one 'to' is set
+    CHECK ((from_node_id IS NOT NULL AND from_cluster_id IS NULL) OR (from_node_id IS NULL AND from_cluster_id IS NOT NULL)),
+    CHECK ((to_node_id IS NOT NULL AND to_cluster_id IS NULL) OR (to_node_id IS NULL AND to_cluster_id IS NOT NULL))
 );
 
 -- --- SchemaDefinition Queries ---
@@ -57,23 +79,42 @@ SELECT * FROM Node;
 selectNodeById:
 SELECT * FROM Node WHERE id = ?;
 
--- ADDED: Query to count nodes for a schema
 countNodesForSchema:
 SELECT COUNT(*) FROM Node WHERE schema_id = ?;
 
 insertNode:
-INSERT INTO Node(schema_id, display_label, properties_json)
-VALUES (?, ?, ?);
+INSERT INTO Node(schema_id, display_label, properties_json, cluster_id) -- MODIFIED
+VALUES (?, ?, ?, ?);
 
 updateNodeProperties:
 UPDATE Node
-SET display_label = ?, properties_json = ?
+SET display_label = ?, properties_json = ?, cluster_id = ? -- MODIFIED
 WHERE id = ?;
 
 deleteNodeById:
 DELETE FROM Node WHERE id = ?;
 
--- --- Edge Queries ---
+-- --- Cluster Queries (NEW) ---
+
+selectAllClusters:
+SELECT * FROM Cluster;
+
+selectClusterById:
+SELECT * FROM Cluster WHERE id = ?;
+
+insertCluster:
+INSERT INTO Cluster(schema_id, display_label, properties_json)
+VALUES (?, ?, ?);
+
+updateClusterProperties:
+UPDATE Cluster
+SET display_label = ?, properties_json = ?
+WHERE id = ?;
+
+deleteClusterById:
+DELETE FROM Cluster WHERE id = ?;
+
+-- --- Edge Queries (MODIFIED) ---
 
 selectAllEdges:
 SELECT * FROM Edge;
@@ -81,13 +122,12 @@ SELECT * FROM Edge;
 selectEdgeById:
 SELECT * FROM Edge WHERE id = ?;
 
--- ADDED: Query to count edges for a schema
 countEdgesForSchema:
 SELECT COUNT(*) FROM Edge WHERE schema_id = ?;
 
 insertEdge:
-INSERT INTO Edge(schema_id, from_node_id, to_node_id, properties_json)
-VALUES (?, ?, ?, ?);
+INSERT INTO Edge(schema_id, properties_json, from_node_id, from_cluster_id, to_node_id, to_cluster_id)
+VALUES (?, ?, ?, ?, ?, ?);
 
 updateEdgeProperties:
 UPDATE Edge

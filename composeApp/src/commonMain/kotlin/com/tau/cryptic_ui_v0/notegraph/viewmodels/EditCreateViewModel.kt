@@ -10,7 +10,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.tau.cryptic_ui_v0.db.AppDatabase
 
-// UPDATED: Constructor now takes SqliteDbService
 class EditCreateViewModel(
     private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
@@ -21,12 +20,11 @@ class EditCreateViewModel(
     private val _editScreenState = MutableStateFlow<EditScreenState>(EditScreenState.None)
     val editScreenState = _editScreenState.asStateFlow()
 
-    // ADDED: JSON serializer instance
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true
-        encodeDefaults = true // Ensure all fields are present
+        encodeDefaults = true
     }
 
     /**
@@ -39,6 +37,8 @@ class EditCreateViewModel(
             is EditScreenState.EditEdge -> s.state
             is EditScreenState.EditNodeSchema -> s.state
             is EditScreenState.EditEdgeSchema -> s.state
+            is EditScreenState.EditCluster -> s.state // ADDED
+            is EditScreenState.EditClusterSchema -> s.state // ADDED
             else -> null // It's a creation state or None
         }
     }
@@ -53,8 +53,6 @@ class EditCreateViewModel(
 
     // --- Node Creation ---
     fun initiateNodeCreation() {
-        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
-        // UPDATED: Fetches new SchemaData and filters for node schemas
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
@@ -62,7 +60,6 @@ class EditCreateViewModel(
         )
     }
 
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun updateNodeCreationSchema(schemaNode: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNode) return@update current
@@ -85,21 +82,16 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
     fun createNodeFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateNode)?.state ?: return@launch
 
             if (state.selectedSchema != null) {
                 try {
-                    // Serialize properties to JSON
                     val propertiesJson = json.encodeToString(state.properties)
-
-                    // Find the display property's value
                     val displayKey = state.selectedSchema.properties.firstOrNull { it.isDisplayProperty }?.name
-                    val displayLabel = state.properties[displayKey] ?: "Node" // Fallback
+                    val displayLabel = state.properties[displayKey] ?: "Node"
 
-                    // Call SQLDelight insert query
                     dbService.database.appDatabaseQueries.insertNode(
                         schema_id = state.selectedSchema.id,
                         display_label = displayLabel,
@@ -110,7 +102,62 @@ class EditCreateViewModel(
                     onFinished()
                 } catch (e: Exception) {
                     println("Error creating node: ${e.message}")
-                    // TODO: Show user-facing error
+                }
+            }
+        }
+    }
+
+    // --- Cluster Creation (ADDED) ---
+    fun initiateClusterCreation() {
+        val clusterSchemas = schemaViewModel.schema.value?.clusterSchemas ?: emptyList()
+        metadataViewModel.clearSelectedItem()
+        _editScreenState.value = EditScreenState.CreateCluster(
+            ClusterCreationState(schemas = clusterSchemas)
+        )
+    }
+
+    fun updateClusterCreationSchema(schemaCluster: SchemaDefinitionItem) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateCluster) return@update current
+            current.copy(
+                state = current.state.copy(
+                    selectedSchema = schemaCluster,
+                    properties = emptyMap() // Reset properties when schema changes
+                )
+            )
+        }
+    }
+
+    fun updateClusterCreationProperty(key: String, value: String) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateCluster) return@update current
+            val newProperties = current.state.properties.toMutableMap().apply {
+                this[key] = value
+            }
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    fun createClusterFromState(onFinished: () -> Unit) {
+        viewModelScope.launch {
+            val state = (_editScreenState.value as? EditScreenState.CreateCluster)?.state ?: return@launch
+
+            if (state.selectedSchema != null) {
+                try {
+                    val propertiesJson = json.encodeToString(state.properties)
+                    val displayKey = state.selectedSchema.properties.firstOrNull { it.isDisplayProperty }?.name
+                    val displayLabel = state.properties[displayKey] ?: "Cluster"
+
+                    dbService.database.appDatabaseQueries.insertCluster(
+                        schema_id = state.selectedSchema.id,
+                        display_label = displayLabel,
+                        properties_json = propertiesJson
+                    )
+                    cancelAllEditing()
+                    metadataViewModel.listClusters()
+                    onFinished()
+                } catch (e: Exception) {
+                    println("Error creating cluster: ${e.message}")
                 }
             }
         }
@@ -118,22 +165,23 @@ class EditCreateViewModel(
 
     // --- Edge Creation ---
     fun initiateEdgeCreation() {
-        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
-        // UPDATED: Fetches new SchemaData and filters for edge schemas
         val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
         if (metadataViewModel.nodeList.value.isEmpty()) {
             metadataViewModel.listNodes()
+        }
+        if (metadataViewModel.clusterList.value.isEmpty()) { // ADDED
+            metadataViewModel.listClusters()
         }
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateEdge(
             EdgeCreationState(
                 schemas = edgeSchemas,
-                availableNodes = metadataViewModel.nodeList.value
+                // UPDATED: Combine nodes and clusters
+                availableEntities = metadataViewModel.nodeList.value + metadataViewModel.clusterList.value
             )
         )
     }
 
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun updateEdgeCreationSchema(schemaEdge: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
@@ -155,24 +203,26 @@ class EditCreateViewModel(
             current.copy(
                 state = current.state.copy(
                     selectedConnection = connection,
-                    src = null, // Reset src/dst when connection type changes
+                    src = null,
                     dst = null
                 )
             )
         }
     }
 
-    fun updateEdgeCreationSrc(node: NodeDisplayItem) {
+    // UPDATED: Parameter is now GraphEntityDisplayItem
+    fun updateEdgeCreationSrc(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            current.copy(state = current.state.copy(src = node))
+            current.copy(state = current.state.copy(src = entity))
         }
     }
 
-    fun updateEdgeCreationDst(node: NodeDisplayItem) {
+    // UPDATED: Parameter is now GraphEntityDisplayItem
+    fun updateEdgeCreationDst(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            current.copy(state = current.state.copy(dst = node))
+            current.copy(state = current.state.copy(dst = entity))
         }
     }
 
@@ -186,29 +236,34 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
+    // UPDATED: Rewritten to handle new Edge table structure
     fun createEdgeFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateEdge)?.state ?: return@launch
 
             if (state.selectedSchema != null && state.src != null && state.dst != null) {
                 try {
-                    // Serialize properties to JSON
                     val propertiesJson = json.encodeToString(state.properties)
 
-                    // Call SQLDelight insert query
+                    // Determine if src/dst are Node or Cluster
+                    val fromNodeId = (state.src as? NodeDisplayItem)?.id
+                    val fromClusterId = (state.src as? ClusterDisplayItem)?.id
+                    val toNodeId = (state.dst as? NodeDisplayItem)?.id
+                    val toClusterId = (state.dst as? ClusterDisplayItem)?.id
+
                     dbService.database.appDatabaseQueries.insertEdge(
                         schema_id = state.selectedSchema.id,
-                        from_node_id = state.src.id,
-                        to_node_id = state.dst.id,
+                        from_node_id = fromNodeId,
+                        from_cluster_id = fromClusterId,
+                        to_node_id = toNodeId,
+                        to_cluster_id = toClusterId,
                         properties_json = propertiesJson
                     )
-                    cancelAllEditing() // Exit creation mode
-                    metadataViewModel.listEdges() // Refresh the edge list
+                    cancelAllEditing()
+                    metadataViewModel.listEdges()
                     onFinished()
                 } catch (e: Exception) {
                     println("Error creating edge: ${e.message}")
-                    // TODO: Show user-facing error
                 }
             }
         }
@@ -216,11 +271,9 @@ class EditCreateViewModel(
 
     // --- Node Schema Creation ---
     fun initiateNodeSchemaCreation() {
-        // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
-            metadataViewModel.setItemToEdit("CreateNodeSchema") // Keep this for cancel logic
+            metadataViewModel.setItemToEdit("CreateNodeSchema")
         }
-        // UPDATED: Uses new NodeSchemaCreationState with default SchemaProperty
         _editScreenState.value = EditScreenState.CreateNodeSchema(
             NodeSchemaCreationState(
                 properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
@@ -235,7 +288,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun onNodeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
@@ -246,7 +298,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Adds new SchemaProperty
     fun onAddNodeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
@@ -264,41 +315,107 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
     fun createNodeSchemaFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateNodeSchema)?.state ?: return@launch
             try {
-                // Serialize properties
                 val propertiesJson = json.encodeToString(state.properties)
 
-                // Call SQLDelight insert query
                 dbService.database.appDatabaseQueries.insertSchema(
                     type = "NODE",
                     name = state.tableName,
                     properties_json = propertiesJson,
-                    connections_json = null // Nodes don't have connections
+                    connections_json = null
                 )
                 onFinished()
                 cancelAllEditing()
                 schemaViewModel.showSchema()
             } catch (e: Exception) {
                 println("Error creating node schema: ${e.message}")
-                // TODO: Show user-facing error
             }
         }
     }
 
+    // --- Cluster Schema Creation (ADDED) ---
+    fun initiateClusterSchemaCreation() {
+        viewModelScope.launch {
+            metadataViewModel.setItemToEdit("CreateClusterSchema")
+        }
+        _editScreenState.value = EditScreenState.CreateClusterSchema(
+            ClusterSchemaCreationState(
+                properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
+            )
+        )
+    }
+
+    fun onClusterSchemaTableNameChange(name: String) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateClusterSchema) return@update current
+            current.copy(state = current.state.copy(tableName = name))
+        }
+    }
+
+    fun onClusterSchemaPropertyChange(index: Int, property: SchemaProperty) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateClusterSchema) return@update current
+            val newProperties = current.state.properties.toMutableList().apply {
+                this[index] = property
+            }
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    fun onAddClusterSchemaProperty() {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateClusterSchema) return@update current
+            current.copy(state = current.state.copy(properties = current.state.properties + SchemaProperty("newProperty", "Text")))
+        }
+    }
+
+    fun onRemoveClusterSchemaProperty(index: Int) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.CreateClusterSchema) return@update current
+            val newProperties = current.state.properties.toMutableList().apply {
+                removeAt(index)
+            }
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    fun createClusterSchemaFromState(onFinished: () -> Unit) {
+        viewModelScope.launch {
+            val state = (_editScreenState.value as? EditScreenState.CreateClusterSchema)?.state ?: return@launch
+            try {
+                val propertiesJson = json.encodeToString(state.properties)
+
+                dbService.database.appDatabaseQueries.insertSchema(
+                    type = "CLUSTER",
+                    name = state.tableName,
+                    properties_json = propertiesJson,
+                    connections_json = null // Clusters don't have connections
+                )
+                onFinished()
+                cancelAllEditing()
+                schemaViewModel.showSchema()
+            } catch (e: Exception) {
+                println("Error creating cluster schema: ${e.message}")
+            }
+        }
+    }
+
+
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
-        // UPDATED: Fetches new SchemaData and filters for node schemas
+        // UPDATED: Now also fetches cluster schemas
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
-        // FIX: Launch a coroutine *only* for the suspend call
+        val clusterSchemas = schemaViewModel.schema.value?.clusterSchemas ?: emptyList()
+        val allEntities = nodeSchemas + clusterSchemas // Combine them
+
         viewModelScope.launch {
-            metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic
+            metadataViewModel.setItemToEdit("CreateEdgeSchema")
         }
         _editScreenState.value = EditScreenState.CreateEdgeSchema(
-            EdgeSchemaCreationState(allNodeSchemas = nodeSchemas)
+            EdgeSchemaCreationState(allNodeSchemas = allEntities) // Pass combined list
         )
     }
 
@@ -331,7 +448,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun onEdgeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -342,7 +458,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Adds new SchemaProperty
     fun onAddEdgeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -360,16 +475,13 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties AND connections and call SQLDelight insert query
     fun createEdgeSchemaFromState(onFinished: () -> Unit) {
         viewModelScope.launch {
             val state = (_editScreenState.value as? EditScreenState.CreateEdgeSchema)?.state ?: return@launch
             try {
-                // Serialize both properties and connections
                 val propertiesJson = json.encodeToString(state.properties)
                 val connectionsJson = json.encodeToString(state.connections)
 
-                // Call SQLDelight insert query
                 dbService.database.appDatabaseQueries.insertSchema(
                     type = "EDGE",
                     name = state.tableName,
@@ -381,19 +493,16 @@ class EditCreateViewModel(
                 schemaViewModel.showSchema()
             } catch (e: Exception) {
                 println("Error creating edge schema: ${e.message}")
-                // TODO: Show user-facing error
             }
         }
     }
 
     // --- Node Editing ---
-    // UPDATED: Signature uses new NodeEditState
     fun initiateNodeEdit(node: NodeEditState) {
         _editScreenState.value = EditScreenState.EditNode(node)
         println("DEBUG: Initiated node edit for: ${node.schema.name}")
     }
 
-    // UPDATED: Logic remains the same, but operates on NodeEditState
     fun updateNodeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNode) return@update current
@@ -407,14 +516,31 @@ class EditCreateViewModel(
         }
     }
 
+    // --- Cluster Editing (ADDED) ---
+    fun initiateClusterEdit(cluster: ClusterEditState) {
+        _editScreenState.value = EditScreenState.EditCluster(cluster)
+        println("DEBUG: Initiated cluster edit for: ${cluster.schema.name}")
+    }
+
+    fun updateClusterEditProperty(key: String, value: String) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditCluster) return@update current
+
+            val newProperties = current.state.properties.toMutableMap().apply {
+                this[key] = value
+            }
+
+            println("DEBUG: Updated cluster property '$key' to '$value'.")
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
     // --- Edge Editing ---
-    // UPDATED: Signature uses new EdgeEditState
     fun initiateEdgeEdit(edge: EdgeEditState) {
         _editScreenState.value = EditScreenState.EditEdge(edge)
         println("DEBUG: Initiated edge edit for: ${edge.schema.name}")
     }
 
-    // UPDATED: Logic remains the same, but operates on EdgeEditState
     fun updateEdgeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdge) return@update current
@@ -429,13 +555,12 @@ class EditCreateViewModel(
     }
 
     // --- Node Schema Editing ---
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun initiateNodeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditNodeSchema(
             NodeSchemaEditState(
                 originalSchema = schema,
                 currentName = schema.name,
-                properties = schema.properties // Start with the original properties
+                properties = schema.properties
             )
         )
     }
@@ -469,7 +594,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun updateNodeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
@@ -480,8 +604,58 @@ class EditCreateViewModel(
         }
     }
 
+    // --- Cluster Schema Editing (ADDED) ---
+    fun initiateClusterSchemaEdit(schema: SchemaDefinitionItem) {
+        _editScreenState.value = EditScreenState.EditClusterSchema(
+            ClusterSchemaEditState(
+                originalSchema = schema,
+                currentName = schema.name,
+                properties = schema.properties
+            )
+        )
+    }
+
+    fun updateClusterSchemaEditLabel(label: String) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditClusterSchema) return@update current
+            current.copy(state = current.state.copy(currentName = label))
+        }
+    }
+
+    fun updateClusterSchemaEditAddProperty() {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditClusterSchema) return@update current
+            val newProperties = current.state.properties + SchemaProperty(
+                name = "newProperty",
+                type = "Text",
+                isDisplayProperty = false
+            )
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    fun updateClusterSchemaEditRemoveProperty(index: Int) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditClusterSchema) return@update current
+            val newProperties = current.state.properties.toMutableList().apply {
+                removeAt(index)
+            }
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+    fun updateClusterSchemaEditProperty(index: Int, property: SchemaProperty) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditClusterSchema) return@update current
+            val newProperties = current.state.properties.toMutableList().apply {
+                this[index] = property
+            }
+            current.copy(state = current.state.copy(properties = newProperties))
+        }
+    }
+
+
     // --- Edge Schema Editing ---
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun initiateEdgeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditEdgeSchema(
             EdgeSchemaEditState(
@@ -522,7 +696,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun updateEdgeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
@@ -533,7 +706,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Add/Remove Connections for Edge Schema Editing
     fun updateEdgeSchemaEditAddConnection(src: String, dst: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
@@ -556,4 +728,3 @@ class EditCreateViewModel(
         }
     }
 }
-

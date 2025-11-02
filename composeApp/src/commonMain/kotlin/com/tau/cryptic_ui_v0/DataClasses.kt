@@ -15,30 +15,52 @@ data class NoteGraphItem(
     val path: String
 )
 
+// --- NEW: Sealed interface for items that can be in the graph (Nodes or Clusters) ---
+sealed interface GraphEntityDisplayItem {
+    val id: Long
+    val label: String
+    val displayProperty: String
+}
+
 /**
  * Represents a Node in the UI lists and graph.
  * @param id The unique ID from the SQLite 'Node' table.
  * @param label The name of the schema (e.g., "Person", "Note").
  * @param displayProperty The user-friendly text to show (e.g., a person's name, a note's title).
+ * @param clusterId The ID of the cluster this node belongs to, if any.
  */
 data class NodeDisplayItem(
-    val id: Long,
-    val label: String,
-    val displayProperty: String
-)
+    override val id: Long,
+    override val label: String,
+    override val displayProperty: String,
+    val clusterId: Long? = null // NEW: To know which cluster it's in
+) : GraphEntityDisplayItem
+
+/**
+ * Represents a Cluster in the UI lists and graph.
+ * @param id The unique ID for the cluster (generated in code, not from DB yet).
+ * @param label The name of the cluster schema (e.g., "Community").
+ * @param displayProperty The user-friendly text to show (e.g., the cluster's name).
+ */
+data class ClusterDisplayItem(
+    override val id: Long,
+    override val label: String,
+    override val displayProperty: String
+) : GraphEntityDisplayItem
+
 
 /**
  * Represents an Edge in the UI lists and graph.
  * @param id The unique ID from the SQLite 'Edge' table.
  * @param label The name of the schema (e.g., "KNOWS", "REFERENCES").
- * @param src The source Node.
- * @param dst The destination Node.
+ * @param src The source entity (Node or Cluster).
+ * @param dst The destination entity (Node or Cluster).
  */
 data class EdgeDisplayItem(
     val id: Long,
     val label: String,
-    val src: NodeDisplayItem,
-    val dst: NodeDisplayItem
+    val src: GraphEntityDisplayItem, // Was NodeDisplayItem
+    val dst: GraphEntityDisplayItem  // Was NodeDisplayItem
 )
 
 /**
@@ -153,6 +175,32 @@ data class EdgeSchemaEditState(
     val properties: List<SchemaProperty>
 )
 
+// --- NEW: Data classes for Cluster Creation/Editing (parallel to Node/Edge) ---
+
+data class ClusterCreationState(
+    val schemas: List<SchemaDefinitionItem>, // All available CLUSTER schemas
+    val selectedSchema: SchemaDefinitionItem? = null,
+    val properties: Map<String, String> = emptyMap()
+)
+
+data class ClusterSchemaCreationState(
+    val tableName: String = "",
+    val properties: List<SchemaProperty> = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
+)
+
+data class ClusterEditState(
+    val id: Long,
+    val schema: SchemaDefinitionItem,
+    val properties: Map<String, String>
+)
+
+data class ClusterSchemaEditState(
+    val originalSchema: SchemaDefinitionItem,
+    val currentName: String,
+    val properties: List<SchemaProperty>
+)
+
+
 /**
  * Stores the generated hex color and its raw RGB components.
  */
@@ -172,6 +220,12 @@ sealed interface EditScreenState {
     data class EditEdge(val state: EdgeEditState) : EditScreenState
     data class EditNodeSchema(val state: NodeSchemaEditState) : EditScreenState
     data class EditEdgeSchema(val state: EdgeSchemaEditState) : EditScreenState
+
+    // --- NEW: Cluster states added to the sealed interface ---
+    data class CreateCluster(val state: ClusterCreationState) : EditScreenState
+    data class CreateClusterSchema(val state: ClusterSchemaCreationState) : EditScreenState
+    data class EditCluster(val state: ClusterEditState) : EditScreenState
+    data class EditClusterSchema(val state: ClusterSchemaEditState) : EditScreenState
 }
 
 // --- Data classes for Graph View ---
@@ -190,6 +244,7 @@ sealed interface EditScreenState {
  * @param oldForce The net force applied to this node in the *previous* frame.
  * @param swinging The magnitude of the change in force between frames.
  * @param traction The magnitude of the consistent force between frames.
+ * @param clusterId The ID of the cluster this node belongs to, if any.
  */
 data class GraphNode(
     val id: Long,
@@ -204,8 +259,28 @@ data class GraphNode(
     // --- ADDED: State for ForceAtlas2 Adaptive Speed ---
     var oldForce: Offset = Offset.Zero,
     var swinging: Float = 0f,
+    var traction: Float = 0f,
+    val clusterId: Long? = null // NEW
+)
+
+/**
+ * NEW: Represents the physical state of a "super-node" cluster in the simulation.
+ */
+data class GraphCluster(
+    val id: Long,
+    val label: String,
+    val displayProperty: String,
+    var pos: Offset, // Center of mass
+    var vel: Offset,
+    var mass: Float, // Sum of internal node masses
+    var radius: Float, // Calculated radius of convex hull
+    val colorInfo: ColorInfo,
+    var isFixed: Boolean = false,
+    var oldForce: Offset = Offset.Zero,
+    var swinging: Float = 0f,
     var traction: Float = 0f
 )
+
 
 /**
  * Represents the physical state of an edge in the graph simulation.
