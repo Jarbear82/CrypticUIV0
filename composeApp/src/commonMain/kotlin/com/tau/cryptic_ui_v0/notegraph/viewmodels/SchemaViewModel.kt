@@ -13,8 +13,7 @@ import kotlinx.serialization.json.Json
 
 data class SchemaData(
     val nodeSchemas: List<SchemaDefinitionItem>,
-    val edgeSchemas: List<SchemaDefinitionItem>,
-    val clusterSchemas: List<SchemaDefinitionItem> // ADDED
+    val edgeSchemas: List<SchemaDefinitionItem>
 )
 
 class SchemaViewModel(
@@ -24,7 +23,6 @@ class SchemaViewModel(
     private val _schema = MutableStateFlow<SchemaData?>(null)
     val schema = _schema.asStateFlow()
 
-    // --- ADDED: State for managing the delete confirmation dialog ---
     private val _schemaToDelete = MutableStateFlow<SchemaDefinitionItem?>(null)
     val schemaToDelete = _schemaToDelete.asStateFlow()
 
@@ -57,7 +55,6 @@ class SchemaViewModel(
 
             val nodeSchemas = mutableListOf<SchemaDefinitionItem>()
             val edgeSchemas = mutableListOf<SchemaDefinitionItem>()
-            val clusterSchemas = mutableListOf<SchemaDefinitionItem>() // ADDED
 
             dbSchemas.forEach { dbSchema ->
                 // Deserialize properties
@@ -98,22 +95,12 @@ class SchemaViewModel(
                             connections = connections
                         )
                     )
-                } else if (dbSchema.type == "CLUSTER") { // ADDED
-                    clusterSchemas.add(
-                        SchemaDefinitionItem(
-                            id = dbSchema.id,
-                            type = dbSchema.type,
-                            name = dbSchema.name,
-                            properties = properties,
-                            connections = null // Clusters don't have connections
-                        )
-                    )
                 }
             }
-            _schema.value = SchemaData(nodeSchemas, edgeSchemas, clusterSchemas) // UPDATED
+            _schema.value = SchemaData(nodeSchemas, edgeSchemas)
         } catch (e: Exception) {
             println("Error fetching schema: ${e.message}")
-            _schema.value = SchemaData(emptyList(), emptyList(), emptyList()) // Set to empty on error
+            _schema.value = SchemaData(emptyList(), emptyList()) // Set to empty on error
         }
     }
 
@@ -126,10 +113,7 @@ class SchemaViewModel(
                 // Use new queries to check for dependencies
                 val nodeCount = dbService.database.appDatabaseQueries.countNodesForSchema(item.id).executeAsOne()
                 val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(item.id).executeAsOne()
-                // --- MODIFIED: Call correct query name ---
-                val clusterCount = dbService.database.appDatabaseQueries.countClustersForSchema(item.id).executeAsOne() // ADDED
-                // --- END MODIFICATION ---
-                val totalCount = nodeCount + edgeCount + clusterCount // UPDATED
+                val totalCount = nodeCount + edgeCount
 
                 if (totalCount == 0L) {
                     // No dependencies, delete immediately

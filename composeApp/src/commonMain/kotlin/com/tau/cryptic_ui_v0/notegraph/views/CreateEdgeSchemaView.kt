@@ -75,11 +75,11 @@ fun CreateEdgeSchemaView(
                     onDismissRequest = { newSrcExpanded = false }
                 ) {
                     // UPDATED: Use new SchemaDefinitionItem and .name
-                    state.allNodeSchemas.forEach { schema ->
+                    state.allConnectableNames.forEach { schemaName ->
                         DropdownMenuItem(
-                            text = { Text(schema.name) },
+                            text = { Text(schemaName) },
                             onClick = {
-                                newSrcTable = schema.name
+                                newSrcTable = schemaName
                                 newSrcExpanded = false
                             }
                         )
@@ -105,11 +105,11 @@ fun CreateEdgeSchemaView(
                     onDismissRequest = { newDstExpanded = false }
                 ) {
                     // UPDATED: Use new SchemaDefinitionItem and .name
-                    state.allNodeSchemas.forEach { schema ->
+                    state.allConnectableNames.forEach { schemaName ->
                         DropdownMenuItem(
-                            text = { Text(schema.name) },
+                            text = { Text(schemaName) },
                             onClick = {
-                                newDstTable = schema.name
+                                newDstTable = schemaName
                                 newDstExpanded = false
                             }
                         )

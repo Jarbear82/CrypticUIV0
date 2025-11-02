@@ -66,27 +66,6 @@ fun EditItemView(
     onEdgeSchemaEditAddConnection: (src: String, dst: String) -> Unit,
     onEdgeSchemaEditRemoveConnection: (Int) -> Unit,
     allNodeSchemaNames: List<String>, // ADDED: Needed for edge schema editors
-
-    // --- ADDED: Cluster Creation ---
-    onClusterCreationSchemaSelected: (SchemaDefinitionItem) -> Unit,
-    onClusterCreationPropertyChanged: (String, String) -> Unit,
-    onClusterCreationCreateClick: () -> Unit,
-
-    // --- ADDED: Cluster Schema Creation ---
-    onClusterSchemaCreationCreateClick: () -> Unit,
-    onClusterSchemaTableNameChange: (String) -> Unit,
-    onClusterSchemaPropertyChange: (Int, SchemaProperty) -> Unit,
-    onAddClusterSchemaProperty: () -> Unit,
-    onRemoveClusterSchemaProperty: (Int) -> Unit,
-
-    // --- ADDED: Cluster Edit ---
-    onClusterEditPropertyChange: (String, String) -> Unit,
-
-    // --- ADDED: Cluster Schema Edit ---
-    onClusterSchemaEditLabelChange: (String) -> Unit,
-    onClusterSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit,
-    onClusterSchemaEditAddProperty: () -> Unit,
-    onClusterSchemaEditRemoveProperty: (Int) -> Unit
 ) {
     // Use a 'when' block to route to the correct composable
     when (editScreenState) {
@@ -177,47 +156,6 @@ fun EditItemView(
                 allNodeSchemaNames = allNodeSchemaNames // ADDED
             )
         }
-        // --- MODIFIED: Replaced Placeholders ---
-        is EditScreenState.CreateCluster -> {
-            CreateClusterView(
-                clusterCreationState = editScreenState.state,
-                onSchemaSelected = onClusterCreationSchemaSelected,
-                onPropertyChanged = onClusterCreationPropertyChanged,
-                onCreateClick = onClusterCreationCreateClick,
-                onCancelClick = onCancelClick
-            )
-        }
-        is EditScreenState.CreateClusterSchema -> {
-            CreateClusterSchemaView(
-                state = editScreenState.state,
-                onTableNameChange = onClusterSchemaTableNameChange,
-                onPropertyChange = onClusterSchemaPropertyChange,
-                onAddProperty = onAddClusterSchemaProperty,
-                onRemoveProperty = onRemoveClusterSchemaProperty,
-                onCreate = { onClusterSchemaCreationCreateClick() },
-                onCancel = onCancelClick
-            )
-        }
-        is EditScreenState.EditCluster -> {
-            EditClusterView(
-                state = editScreenState.state,
-                onPropertyChange = onClusterEditPropertyChange,
-                onSave = onSaveClick,
-                onCancel = onCancelClick
-            )
-        }
-        is EditScreenState.EditClusterSchema -> {
-            EditClusterSchemaView(
-                state = editScreenState.state,
-                onLabelChange = onClusterSchemaEditLabelChange,
-                onPropertyChange = onClusterSchemaEditPropertyChange,
-                onAddProperty = onClusterSchemaEditAddProperty,
-                onRemoveProperty = onClusterSchemaEditRemoveProperty,
-                onSave = onSaveClick,
-                onCancel = onCancelClick
-            )
-        }
-        // --- END MODIFIED ---
         is EditScreenState.None -> {
             Text("No item selected to edit.")
         }

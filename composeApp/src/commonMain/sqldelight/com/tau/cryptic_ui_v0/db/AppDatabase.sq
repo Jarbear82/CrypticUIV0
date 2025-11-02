@@ -1,18 +1,14 @@
 CREATE TABLE SchemaDefinition (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE', 'CLUSTER')), -- MODIFIED
+    type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
     name TEXT NOT NULL UNIQUE,
     properties_json TEXT NOT NULL,
     connections_json TEXT
 );
 
--- NEW TABLE
 CREATE TABLE Cluster (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    schema_id INTEGER NOT NULL,
-    display_label TEXT NOT NULL,
-    properties_json TEXT NOT NULL,
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
+    display_label TEXT NOT NULL
 );
 
 CREATE TABLE Node (
@@ -103,22 +99,18 @@ selectClusterById:
 SELECT * FROM Cluster WHERE id = ?;
 
 insertCluster:
-INSERT INTO Cluster(schema_id, display_label, properties_json)
-VALUES (?, ?, ?);
+INSERT INTO Cluster(display_label)
+VALUES (?);
 
-updateClusterProperties:
+updateClusterLabel:
 UPDATE Cluster
-SET display_label = ?, properties_json = ?
+SET display_label = ?
 WHERE id = ?;
 
 deleteClusterById:
 DELETE FROM Cluster WHERE id = ?;
 
--- --- ADDED: Query to count cluster dependencies ---
-countClustersForSchema:
-SELECT COUNT(*) FROM Cluster WHERE schema_id = ?;
-
--- --- Edge Queries (MODIFIED) ---
+-- --- Edge Queries ---
 
 selectAllEdges:
 SELECT * FROM Edge;

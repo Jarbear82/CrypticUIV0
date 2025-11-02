@@ -41,13 +41,7 @@ fun SchemaView(
     onDeleteNodeClick: (SchemaDefinitionItem) -> Unit,
     onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
-    onAddEdgeSchemaClick: () -> Unit,
-    // --- ADDED ---
-    onClusterClick: (SchemaDefinitionItem) -> Unit,
-    onEditClusterClick: (SchemaDefinitionItem) -> Unit,
-    onDeleteClusterClick: (SchemaDefinitionItem) -> Unit,
-    onAddClusterSchemaClick: () -> Unit
-    // --- END ADDED ---
+    onAddEdgeSchemaClick: () -> Unit
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -112,60 +106,6 @@ fun SchemaView(
                 }
             }
         }
-
-        // --- ADDED: Cluster Schemas ---
-        Column(modifier = Modifier.weight(1f).padding(8.dp)) {
-            ListItem(
-                leadingContent = { Icon(Icons.Default.Workspaces, contentDescription = "Cluster Schema")},
-                headlineContent = { Text("Cluster Schemas:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
-                trailingContent = {
-                    IconButton(onClick = onAddClusterSchemaClick) {
-                        Icon(Icons.Default.Add, contentDescription = "New Cluster Schema")
-                    }
-                }
-            )
-            HorizontalDivider(color = Color.Black)
-            LazyColumn {
-                items(schema.clusterSchemas, key = { it.id }) { table ->
-                    val isSelected = primarySelectedItem == table
-                    val colorInfo = labelToColor(table.name)
-                    ListItem(
-                        headlineContent = { Text(table.name, style = MaterialTheme.typography.titleMedium) },
-                        modifier = Modifier
-                            .padding(bottom = 8.dp)
-                            .clickable { onClusterClick(table) }
-                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
-                        leadingContent = {
-                            IconButton(onClick = { onEditClusterClick(table) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Cluster Schema")
-                            }
-                        },
-                        supportingContent = {
-                            Text(
-                                text = table.properties.joinToString(separator = "\n") { prop ->
-                                    val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
-                                    "  - ${prop.name}: ${prop.type}$suffix"
-                                },
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        },
-                        trailingContent = {
-                            IconButton(onClick = { onDeleteClusterClick(table) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Cluster Schema")
-                            }
-                        },
-                        colors = ListItemDefaults.colors(
-                            containerColor = colorInfo.composeColor,
-                            headlineColor = colorInfo.composeFontColor,
-                            supportingColor = colorInfo.composeFontColor,
-                            leadingIconColor = colorInfo.composeFontColor,
-                            trailingIconColor = colorInfo.composeFontColor
-                        )
-                    )
-                }
-            }
-        }
-        // --- END ADDED ---
 
         // --- Edge Schemas ---
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {

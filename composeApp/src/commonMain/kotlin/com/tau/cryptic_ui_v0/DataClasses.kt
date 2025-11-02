@@ -44,10 +44,10 @@ data class NodeDisplayItem(
  */
 data class ClusterDisplayItem(
     override val id: Long,
-    override val label: String,
     override val displayProperty: String
-) : GraphEntityDisplayItem
-
+) : GraphEntityDisplayItem {
+    override val label: String get() = "Cluster"
+}
 
 /**
  * Represents an Edge in the UI lists and graph.
@@ -142,7 +142,8 @@ data class EdgeSchemaCreationState(
     val tableName: String = "",
     val connections: List<ConnectionPair> = emptyList(),
     val properties: List<SchemaProperty> = emptyList(),
-    val allNodeSchemas: List<SchemaDefinitionItem> = emptyList() // All NODE schemas
+    val allNodeSchemas: List<SchemaDefinitionItem> = emptyList(),
+    val allConnectableNames: List<String> = emptyList()
 )
 
 // --- Data classes for Editing Instances ---
@@ -179,32 +180,6 @@ data class EdgeSchemaEditState(
     val properties: List<SchemaProperty>
 )
 
-// --- NEW: Data classes for Cluster Creation/Editing (parallel to Node/Edge) ---
-
-data class ClusterCreationState(
-    val schemas: List<SchemaDefinitionItem>, // All available CLUSTER schemas
-    val selectedSchema: SchemaDefinitionItem? = null,
-    val properties: Map<String, String> = emptyMap()
-)
-
-data class ClusterSchemaCreationState(
-    val tableName: String = "",
-    val properties: List<SchemaProperty> = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
-)
-
-data class ClusterEditState(
-    val id: Long,
-    val schema: SchemaDefinitionItem,
-    val properties: Map<String, String>
-)
-
-data class ClusterSchemaEditState(
-    val originalSchema: SchemaDefinitionItem,
-    val currentName: String,
-    val properties: List<SchemaProperty>
-)
-
-
 /**
  * Stores the generated hex color and its raw RGB components.
  */
@@ -224,12 +199,6 @@ sealed interface EditScreenState {
     data class EditEdge(val state: EdgeEditState) : EditScreenState
     data class EditNodeSchema(val state: NodeSchemaEditState) : EditScreenState
     data class EditEdgeSchema(val state: EdgeSchemaEditState) : EditScreenState
-
-    // --- NEW: Cluster states added to the sealed interface ---
-    data class CreateCluster(val state: ClusterCreationState) : EditScreenState
-    data class CreateClusterSchema(val state: ClusterSchemaCreationState) : EditScreenState
-    data class EditCluster(val state: ClusterEditState) : EditScreenState
-    data class EditClusterSchema(val state: ClusterSchemaEditState) : EditScreenState
 }
 
 // --- Data classes for Graph View ---

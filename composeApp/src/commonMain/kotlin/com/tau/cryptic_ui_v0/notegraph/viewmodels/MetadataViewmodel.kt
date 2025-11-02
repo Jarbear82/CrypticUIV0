@@ -89,35 +89,15 @@ class MetadataViewModel(
     // ADDED
     private suspend fun fetchClusters() {
         try {
-            var schemaData = schemaViewModel.schema.value
-            if (schemaData == null) {
-                println("Schema not yet loaded. Calling and awaiting showSchema() first.")
-                schemaViewModel.showSchema()
-                schemaData = schemaViewModel.schema.value
-            }
-
-            val schemaMap = schemaData?.clusterSchemas?.associateBy { it.id } ?: emptyMap()
-
-            if (schemaData == null) {
-                println("Schema could not be loaded. Aborting cluster fetch.")
-                _clusterList.value = emptyList()
-                return
-            }
 
             val dbClusters = dbService.database.appDatabaseQueries.selectAllClusters().executeAsList()
             println("fetchClusters: Found ${dbClusters.size} clusters.")
-            _clusterList.value = dbClusters.mapNotNull { dbCluster ->
-                val clusterSchema = schemaMap[dbCluster.schema_id]
-                if (clusterSchema == null) {
-                    println("Warning: Found cluster with unknown schema ID ${dbCluster.schema_id}")
-                    null
-                } else {
-                    ClusterDisplayItem(
-                        id = dbCluster.id,
-                        label = clusterSchema.name,
-                        displayProperty = dbCluster.display_label
-                    )
-                }
+            _clusterList.value = dbClusters.map { dbCluster ->
+                ClusterDisplayItem(
+                    id = dbCluster.id,
+                    // 'label' is a constant "Cluster" defined in the data class
+                    displayProperty = dbCluster.display_label
+                )
             }
         } catch (e: Exception) {
             println("Error listing clusters: ${e.message}")
@@ -125,7 +105,6 @@ class MetadataViewModel(
         }
     }
 
-    // UPDATED: Rewritten to handle new Edge table and GraphEntityDisplayItem
     private suspend fun fetchEdges() {
         try {
             var schemaData = schemaViewModel.schema.value
@@ -264,7 +243,6 @@ class MetadataViewModel(
                     println("Error parsing node properties: ${e.message}")
                     emptyMap()
                 }
-                // --- MODIFICATION: Populate new NodeEditState fields ---
                 NodeEditState(
                     id = dbNode.id,
                     schema = schema,
@@ -272,24 +250,6 @@ class MetadataViewModel(
                     clusterId = dbNode.cluster_id, // Pass clusterId
                     availableClusters = allClusters // Pass all clusters
                 )
-                // --- END MODIFICATION ---
-            }
-            // ADDED
-            is ClusterDisplayItem -> {
-                val dbCluster = dbService.database.appDatabaseQueries.selectClusterById(item.id).executeAsOneOrNull() ?: return null
-                var schemaData = schemaViewModel.schema.value
-                if (schemaData == null) {
-                    schemaViewModel.showSchema()
-                    schemaData = schemaViewModel.schema.value
-                }
-                val schema = schemaData?.clusterSchemas?.firstOrNull { it.id == dbCluster.schema_id } ?: return null
-                val properties = try {
-                    json.decodeFromString<Map<String, String>>(dbCluster.properties_json)
-                } catch (e: Exception) {
-                    println("Error parsing cluster properties: ${e.message}")
-                    emptyMap()
-                }
-                ClusterEditState(id = dbCluster.id, schema = schema, properties = properties)
             }
             is EdgeDisplayItem -> {
                 val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
@@ -339,7 +299,6 @@ class MetadataViewModel(
                         val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
                         val displayLabel = editedState.properties[displayKey] ?: "Node ${editedState.id}"
 
-                        // --- MODIFICATION: Pass cluster_id to the query ---
                         dbService.database.appDatabaseQueries.updateNodeProperties(
                             id = editedState.id,
                             display_label = displayLabel,
@@ -348,20 +307,6 @@ class MetadataViewModel(
                         )
                         // listAll() is needed to refresh node.clusterId in all viewmodels
                         listAll()
-                        // --- END MODIFICATION ---
-                    }
-                    // ADDED
-                    is ClusterEditState -> {
-                        val propertiesJson = json.encodeToString(editedState.properties)
-                        val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
-                        val displayLabel = editedState.properties[displayKey] ?: "Cluster ${editedState.id}"
-
-                        dbService.database.appDatabaseQueries.updateClusterProperties(
-                            id = editedState.id,
-                            display_label = displayLabel,
-                            properties_json = propertiesJson
-                        )
-                        listClusters() // Refresh list
                     }
                     is EdgeEditState -> {
                         val propertiesJson = json.encodeToString(editedState.properties)
@@ -381,18 +326,6 @@ class MetadataViewModel(
                             connections_json = null
                         )
                         schemaViewModel.showSchema()
-                    }
-                    // ADDED
-                    is ClusterSchemaEditState -> {
-                        val originalSchema = originalState as? SchemaDefinitionItem ?: throw IllegalStateException("Original schema not found")
-                        val propertiesJson = json.encodeToString(editedState.properties)
-                        dbService.database.appDatabaseQueries.updateSchema(
-                            id = originalSchema.id,
-                            name = editedState.currentName,
-                            properties_json = propertiesJson,
-                            connections_json = null // Clusters don't have connections
-                        )
-                        schemaViewModel.showSchema() // Refresh schema
                     }
                     is EdgeSchemaEditState -> {
                         val originalSchema = originalState as? SchemaDefinitionItem ?: throw IllegalStateException("Original schema not found")

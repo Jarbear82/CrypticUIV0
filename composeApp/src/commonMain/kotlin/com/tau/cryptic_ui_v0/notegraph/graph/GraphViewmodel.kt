@@ -29,16 +29,12 @@ import kotlin.random.Random
 
 class GraphViewmodel(
     private val viewModelScope: CoroutineScope,
-    // UPDATED: Made metadataViewModel public
     val metadataViewModel: MetadataViewModel,
-    // ADDED: ViewModels for handling creation
     private val editCreateViewModel: EditCreateViewModel,
     private val onSwitchToEditTab: () -> Unit
 ) {
-    // UPDATED: No longer passing options here
     private val physicsEngine = PhysicsEngine()
 
-    // --- ADDED: State for physics options ---
     private val _physicsOptions = MutableStateFlow(PhysicsOptions(gravity = 0.5f, internalGravity = 0.5f)) // Use stronger gravity
     val physicsOptions = _physicsOptions.asStateFlow()
 
@@ -52,9 +48,7 @@ class GraphViewmodel(
 
     // This is the single source of truth for all cluster physics states
     private val _graphClusters = MutableStateFlow<Map<Long, GraphCluster>>(emptyMap())
-    // --- MODIFIED: Expose clusters to the view ---
     val graphClusters = _graphClusters.asStateFlow()
-    // --- END MODIFICATION ---
 
     private val _transform = MutableStateFlow(TransformState())
     val transform = _transform.asStateFlow()
@@ -62,36 +56,29 @@ class GraphViewmodel(
     // Ticker for the physics simulation
     private val _simulationRunning = MutableStateFlow(true)
 
-    // ADDED: State for node dragging
     private val _draggedNodeId = MutableStateFlow<Long?>(null)
     private val _dragVelocity = MutableStateFlow(Offset.Zero)
 
-    // ADDED: State for FAB menu
     private val _showFabMenu = MutableStateFlow(false)
     val showFabMenu = _showFabMenu.asStateFlow()
 
-    // --- ADDED: State for settings UI ---
     private val _showSettings = MutableStateFlow(false)
     val showSettings = _showSettings.asStateFlow()
 
     // We need the canvas size to correctly calculate zoom center
     private var size = Size.Zero
 
-    // --- ADDED: Pre-processed edges for rendering ---
-    // These are remapped to point to clusters where appropriate
     private val _macroEdges = MutableStateFlow<List<GraphEdge>>(emptyList())
     val macroEdges = _macroEdges.asStateFlow()
 
     // These are edges that exist *within* a cluster
     private val _microEdges = MutableStateFlow<List<GraphEdge>>(emptyList())
     val microEdges = _microEdges.asStateFlow()
-    // --- END ADDED ---
 
 
     init {
         // Observe changes in the metadata view model
         viewModelScope.launch {
-            // UPDATED: Combine all three lists
             combine(
                 metadataViewModel.nodeList,
                 metadataViewModel.edgeList,
@@ -147,10 +134,8 @@ class GraphViewmodel(
                     macroEdgeList.add(edge.copy(sourceId = macroSourceId, targetId = macroTargetId)) // MODIFIED
                 }
             }
-            // --- MODIFIED: Update rendering edge lists ---
             _microEdges.value = microEdgeList
             _macroEdges.value = macroEdgeList
-            // --- END MODIFICATION ---
 
 
             // 1c. Update clusters and create proxy nodes for macro sim
@@ -169,7 +154,7 @@ class GraphViewmodel(
                     (mass to pos)
                 }
 
-                // --- MODIFIED: Calculate cluster radius from convex hull ---
+                // Calculate cluster radius from convex hull
                 val radius = if (microNodes.size < 3) {
                     // Simple bounding circle for 0-2 nodes
                     microNodes.map { (it.pos - newPos).getDistance() + it.radius }.maxOrNull() ?: 30f
@@ -189,11 +174,9 @@ class GraphViewmodel(
                     // Find max distance from center of mass to any hull point
                     hullPoints.map { (it - newPos).getDistance() }.maxOrNull() ?: 30f
                 }.coerceAtLeast(30f) // Ensure a minimum radius
-                // --- END MODIFICATION ---
-
 
                 // Update the cluster state
-                val newCluster = cluster.copy(mass = newMass, pos = newPos, radius = radius) // MODIFIED: Set radius
+                val newCluster = cluster.copy(mass = newMass, pos = newPos, radius = radius)
                 updatedClusters[id] = newCluster
 
                 // Create the proxy GraphNode for the physics engine
@@ -204,7 +187,7 @@ class GraphViewmodel(
                     pos = newPos, // Use new center of mass
                     vel = cluster.vel,
                     mass = newMass, // Use new mass
-                    radius = radius, // MODIFIED: Use calculated radius
+                    radius = radius,
                     colorInfo = cluster.colorInfo,
                     isFixed = cluster.isFixed,
                     oldForce = cluster.oldForce,
@@ -220,7 +203,7 @@ class GraphViewmodel(
             val macroPhysicsBodiesMap = unClusteredNodes.associateBy { it.id } + macroProxyNodes
             val updatedMacroBodiesMap = physicsEngine.update(
                 macroPhysicsBodiesMap,
-                macroEdgeList, // MODIFIED: Use macro edges
+                macroEdgeList, // Use macro edges
                 options,
                 dt.coerceAtMost(0.032f)
             )

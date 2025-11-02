@@ -39,9 +39,6 @@ fun ListView(
     // --- END ADDED ---
     onEdgeClick: (EdgeDisplayItem) -> Unit,
     onEditNodeClick: (NodeDisplayItem) -> Unit,
-    // --- ADDED ---
-    onEditClusterClick: (ClusterDisplayItem) -> Unit,
-    // --- END ADDED ---
     onEditEdgeClick: (EdgeDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
     // --- ADDED ---
@@ -49,9 +46,6 @@ fun ListView(
     // --- END ADDED ---
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
-    // --- ADDED ---
-    onAddClusterClick: () -> Unit,
-    // --- END ADDED ---
     onAddEdgeClick: () -> Unit
 ) {
     // User requested "side by side lists"
@@ -104,11 +98,6 @@ fun ListView(
             ListItem(
                 leadingContent = { Icon(Icons.Default.Workspaces, contentDescription = "Cluster")},
                 headlineContent = { Text("Clusters:", style = MaterialTheme.typography.titleSmall) } ,
-                trailingContent = {
-                    IconButton(onClick = onAddClusterClick) {
-                        Icon(Icons.Default.Add, contentDescription = "New Cluster")
-                    }
-                }
             )
             HorizontalDivider(color = Color.Black)
             LazyColumn {
@@ -118,9 +107,7 @@ fun ListView(
                     ListItem(
                         headlineContent = { Text("${cluster.label} : ${cluster.displayProperty}", style = MaterialTheme.typography.bodyMedium) },
                         leadingContent = {
-                            IconButton(onClick = { onEditClusterClick(cluster) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Cluster")
-                            }
+                            Spacer(Modifier.width(48.dp)) // Placeholder for alignment with edit button
                         },
                         modifier = Modifier
                             .fillMaxWidth()
