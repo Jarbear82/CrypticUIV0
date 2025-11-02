@@ -14,6 +14,7 @@ package com.tau.cryptic_ui_v0.notegraph.graph
  * Higher values are faster but less accurate. (Default: 1.2)
  * @param tolerance The "Tolerance (speed)" parameter for ForceAtlas2 adaptive speed.
  * Controls how much node "swinging" is allowed. (Default: 1.0)
+ * @param internalGravity The strength of the pull on a micro-node toward its cluster center.
  */
 data class PhysicsOptions(
     val gravity: Float = 0.05f,
@@ -25,5 +26,7 @@ data class PhysicsOptions(
     val minDistance: Float = 5.0f, // Extra buffer between nodes
     // --- ADDED: Parameters for ForceAtlas2 optimizations ---
     val barnesHutTheta: Float = 1.2f,
-    val tolerance: Float = 1.0f
+    val tolerance: Float = 1.0f,
+    // --- ADDED: Parameter for Cluster-Micro simulation ---
+    val internalGravity: Float = 0.1f
 )

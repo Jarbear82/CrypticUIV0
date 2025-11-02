@@ -186,9 +186,118 @@ class PhysicsEngine() {
 
         return newNodes
     }
+
+    /**
+     * NEW: Runs an internal O(n^2) simulation for nodes within a single cluster.
+     * This does *not* use Barnes-Hut or ForceAtlas2 adaptive speed.
+     * It applies internal gravity, repulsion, and spring forces.
+     *
+     * @param microNodes The list of nodes *inside* this cluster.
+     * @param microEdges The list of edges *within* this cluster.
+     * @param clusterCenter The target center for the internal gravity.
+     * @param options The current physics options.
+     * @param dt The time delta.
+     * @return A list of updated nodes.
+     */
+    fun updateInternal(
+        microNodes: List<GraphNode>,
+        microEdges: List<GraphEdge>,
+        clusterCenter: Offset,
+        options: PhysicsOptions,
+        dt: Float
+    ): List<GraphNode> {
+        if (microNodes.isEmpty()) return emptyList()
+
+        val forces = mutableMapOf<Long, Offset>()
+        // Create copies to modify, indexed by ID for edge lookups
+        val newNodes = microNodes.associateBy { it.id }.mapValues { it.value.copy() }
+
+        // 1. Initialize forces
+        for (node in newNodes.values) {
+            forces[node.id] = Offset.Zero
+        }
+
+        // 2. Apply forces
+        // 2a. Internal Gravity (pull to cluster center)
+        for (node in newNodes.values) {
+            if (node.isFixed) continue
+            val gravityForce = (clusterCenter - node.pos) * options.internalGravity * node.mass
+            forces[node.id] = forces[node.id]!! + gravityForce
+        }
+
+        // 2b. Repulsion (O(n^2))
+        val nodePairs = newNodes.values.toList().combinations()
+        for ((nodeA, nodeB) in nodePairs) {
+            if (nodeA.isFixed && nodeB.isFixed) continue
+
+            val delta = nodeB.pos - nodeA.pos
+            var dist = delta.getDistance()
+            if (dist == 0f) dist = 0.1f // Avoid division by zero
+
+            // Collision detection
+            val minAllowableDist = nodeA.radius + nodeB.radius + options.minDistance
+            var collisionForce = Offset.Zero
+            if (dist < minAllowableDist) {
+                val overlap = minAllowableDist - dist
+                collisionForce = -delta.normalized() * overlap * options.repulsion * 10f // Stronger force
+            }
+
+            // Standard ForceAtlas2-style repulsion (1/d)
+            val repulsionForce = -delta.normalized() * (options.repulsion * nodeA.mass * nodeB.mass) / dist
+
+            val totalForce = collisionForce + repulsionForce
+            if (!nodeA.isFixed) {
+                forces[nodeA.id] = forces[nodeA.id]!! - totalForce
+            }
+            if (!nodeB.isFixed) {
+                forces[nodeB.id] = forces[nodeB.id]!! + totalForce
+            }
+        }
+
+        // 2c. Spring (from micro edges)
+        for (edge in microEdges) {
+            val nodeA = newNodes[edge.sourceId]
+            val nodeB = newNodes[edge.targetId]
+
+            if (nodeA != null && nodeB != null) {
+                if (nodeA.isFixed || nodeB.isFixed) continue
+
+                val delta = nodeB.pos - nodeA.pos
+                val dist = delta.getDistance()
+                if (dist == 0f) continue
+
+                val idealLength = nodeA.radius + nodeB.radius + (options.minDistance * 5)
+                val displacement = dist - idealLength
+                val springForce = delta.normalized() * displacement * options.spring * edge.strength
+
+                forces[nodeA.id] = forces[nodeA.id]!! + springForce
+                forces[nodeB.id] = forces[nodeB.id]!! - springForce
+            }
+        }
+
+        // 3. Update velocities and positions (simple Euler integration)
+        for (node in newNodes.values) {
+            if (node.isFixed) {
+                node.vel = Offset.Zero
+                continue
+            }
+
+            val force = forces[node.id]!!
+            val acceleration = force / node.mass
+            var newVel = node.vel + (acceleration * dt)
+            newVel *= options.damping // Apply damping
+            val newPos = node.pos + (newVel * dt)
+
+            node.vel = newVel
+            node.pos = newPos
+        }
+
+        return newNodes.values.toList()
+    }
 }
 
 // Helper for unique pairs (n=2)
+// Added here for updateInternal's O(n^2) loop
 private fun <T> List<T>.combinations(n: Int = 2): Sequence<Pair<T, T>> {
     if (n != 2) throw IllegalArgumentException("Only n=2 is supported for pair combinations")
     return sequence {
@@ -201,8 +310,8 @@ private fun <T> List<T>.combinations(n: Int = 2): Sequence<Pair<T, T>> {
 }
 
 // Helper to normalize offset
-private fun Offset.normalized(): Offset {
+// Made internal so updateInternal can use it
+internal fun Offset.normalized(): Offset {
     val mag = this.getDistance()
     return if (mag == 0f) Offset.Zero else this / mag
 }
-
