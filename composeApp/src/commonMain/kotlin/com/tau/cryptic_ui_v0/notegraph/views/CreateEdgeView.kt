@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.ConnectionPair
 import com.tau.cryptic_ui_v0.EdgeCreationState // UPDATED: Uses new state class
+import com.tau.cryptic_ui_v0.GraphEntityDisplayItem
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.SchemaDefinitionItem // UPDATED: Uses new schema class
 
@@ -16,8 +17,10 @@ fun CreateEdgeView(
     edgeCreationState: EdgeCreationState,
     onSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
     onConnectionSelected: (ConnectionPair) -> Unit,
-    onSrcSelected: (NodeDisplayItem) -> Unit,
-    onDstSelected: (NodeDisplayItem) -> Unit,
+    // --- MODIFIED ---
+    onSrcSelected: (GraphEntityDisplayItem) -> Unit,
+    onDstSelected: (GraphEntityDisplayItem) -> Unit,
+    // --- END MODIFICATION ---
     onPropertyChanged: (String, String) -> Unit,
     onCreateClick: () -> Unit,
     onCancelClick: () -> Unit
@@ -103,7 +106,7 @@ fun CreateEdgeView(
             ) {
                 OutlinedTextField(
                     // UPDATED: Use displayProperty
-                    value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Node",
+                    value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Entity",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
@@ -113,17 +116,17 @@ fun CreateEdgeView(
                     expanded = srcExpanded,
                     onDismissRequest = { srcExpanded = false }
                 ) {
-                    // Filter nodes based on selected connection's src
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
+                    // --- MODIFIED: Filter availableEntities ---
+                    edgeCreationState.availableEntities.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { entity ->
                         DropdownMenuItem(
-                            // UPDATED: Use displayProperty
-                            text = { Text("${node.label} : ${node.displayProperty}") },
+                            text = { Text("${entity.label} : ${entity.displayProperty}") },
                             onClick = {
-                                onSrcSelected(node)
+                                onSrcSelected(entity)
                                 srcExpanded = false
                             }
                         )
                     }
+                    // --- END MODIFICATION ---
                 }
             }
 
@@ -134,7 +137,7 @@ fun CreateEdgeView(
             ) {
                 OutlinedTextField(
                     // UPDATED: Use displayProperty
-                    value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Node",
+                    value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Entity",
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
@@ -144,17 +147,17 @@ fun CreateEdgeView(
                     expanded = dstExpanded,
                     onDismissRequest = { dstExpanded = false }
                 ) {
-                    // Filter nodes based on selected connection's dst
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
+                    // --- MODIFIED: Filter availableEntities ---
+                    edgeCreationState.availableEntities.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { entity ->
                         DropdownMenuItem(
-                            // UPDATED: Use displayProperty
-                            text = { Text("${node.label} : ${node.displayProperty}") },
+                            text = { Text("${entity.label} : ${entity.displayProperty}") },
                             onClick = {
-                                onDstSelected(node)
+                                onDstSelected(entity)
                                 dstExpanded = false
                             }
                         )
                     }
+                    // --- END MODIFICATION ---
                 }
             }
 

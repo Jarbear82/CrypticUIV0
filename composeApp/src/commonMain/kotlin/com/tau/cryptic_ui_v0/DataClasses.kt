@@ -121,11 +121,13 @@ data class NodeCreationState(
 // --- Data class for Edge Creation UI State ---
 data class EdgeCreationState(
     val schemas: List<SchemaDefinitionItem>, // All available EDGE schemas
-    val availableNodes: List<NodeDisplayItem>, // <--- TODO: This should be List<GraphEntityDisplayItem>
+    // --- MODIFIED ---
+    val availableEntities: List<GraphEntityDisplayItem>,
     val selectedSchema: SchemaDefinitionItem? = null,
     val selectedConnection: ConnectionPair? = null,
-    val src: NodeDisplayItem? = null, // <--- TODO: This should be GraphEntityDisplayItem
-    val dst: NodeDisplayItem? = null, // <--- TODO: This should be GraphEntityDisplayItem
+    val src: GraphEntityDisplayItem? = null,
+    val dst: GraphEntityDisplayItem? = null,
+    // --- END MODIFICATION ---
     val properties: Map<String, String> = emptyMap()
 )
 
@@ -149,10 +151,8 @@ data class NodeEditState(
     val id: Long,
     val schema: SchemaDefinitionItem,
     val properties: Map<String, String>, // Current values from DB, as strings for UI
-    // --- MODIFIED ---
     val clusterId: Long?, // The ID of the currently assigned cluster
     val availableClusters: List<ClusterDisplayItem> // All clusters available for assignment
-    // --- END MODIFICATION ---
 )
 
 data class EdgeEditState(
@@ -313,3 +313,4 @@ data class TransformState(
     val pan: androidx.compose.ui.geometry.Offset = androidx.compose.ui.geometry.Offset.Zero,
     val zoom: Float = 1.0f
 )
+

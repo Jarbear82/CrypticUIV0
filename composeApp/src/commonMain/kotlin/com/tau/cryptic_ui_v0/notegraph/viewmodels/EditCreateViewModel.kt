@@ -177,9 +177,9 @@ class EditCreateViewModel(
         _editScreenState.value = EditScreenState.CreateEdge(
             EdgeCreationState(
                 schemas = edgeSchemas,
-                // UPDATED: Combine nodes and clusters
-                availableNodes = metadataViewModel.nodeList.value // TODO: Fix this, should be GraphEntityDisplayItem
-                // availableEntities = metadataViewModel.nodeList.value + metadataViewModel.clusterList.value
+                // --- MODIFIED ---
+                availableEntities = metadataViewModel.nodeList.value + metadataViewModel.clusterList.value
+                // --- END MODIFICATION ---
             )
         )
     }
@@ -212,31 +212,21 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Parameter is now GraphEntityDisplayItem
+    // --- MODIFIED ---
     fun updateEdgeCreationSrc(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            // TODO: Fix this, state.src expects NodeDisplayItem
-            if (entity is NodeDisplayItem) {
-                current.copy(state = current.state.copy(src = entity))
-            } else {
-                current
-            }
+            current.copy(state = current.state.copy(src = entity))
         }
     }
 
-    // UPDATED: Parameter is now GraphEntityDisplayItem
     fun updateEdgeCreationDst(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            // TODO: Fix this, state.dst expects NodeDisplayItem
-            if (entity is NodeDisplayItem) {
-                current.copy(state = current.state.copy(dst = entity))
-            } else {
-                current
-            }
+            current.copy(state = current.state.copy(dst = entity))
         }
     }
+    // --- END MODIFICATION ---
 
     fun updateEdgeCreationProperty(key: String, value: String) {
         _editScreenState.update { current ->
@@ -749,3 +739,4 @@ class EditCreateViewModel(
         }
     }
 }
+
