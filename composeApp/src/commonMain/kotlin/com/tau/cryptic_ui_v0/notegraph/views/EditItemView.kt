@@ -21,8 +21,10 @@ fun EditItemView(
     // Edge Creation Handlers
     onEdgeCreationSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
     onEdgeCreationConnectionSelected: (ConnectionPair) -> Unit,
-    onEdgeCreationSrcSelected: (NodeDisplayItem) -> Unit,
-    onEdgeCreationDstSelected: (NodeDisplayItem) -> Unit,
+    // --- MODIFIED ---
+    onEdgeCreationSrcSelected: (GraphEntityDisplayItem) -> Unit,
+    onEdgeCreationDstSelected: (GraphEntityDisplayItem) -> Unit,
+    // --- END MODIFICATION ---
     onEdgeCreationPropertyChanged: (String, String) -> Unit,
     onEdgeCreationCreateClick: () -> Unit,
 
@@ -44,9 +46,7 @@ fun EditItemView(
 
     // Node Edit Handlers
     onNodeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
-    // --- ADDED ---
     onNodeEditClusterChange: (ClusterDisplayItem?) -> Unit,
-    // --- END ADDED ---
 
     // Edge Edit Handlers
     onEdgeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
@@ -139,9 +139,7 @@ fun EditItemView(
             EditNodeView(
                 state = editScreenState.state,
                 onPropertyChange = onNodeEditPropertyChange,
-                // --- ADDED ---
                 onClusterChange = onNodeEditClusterChange,
-                // --- END ADDED ---
                 onSave = onSaveClick,
                 onCancel = onCancelClick
             )
@@ -237,3 +235,4 @@ fun EditItemView(
         }
     }
 }
+

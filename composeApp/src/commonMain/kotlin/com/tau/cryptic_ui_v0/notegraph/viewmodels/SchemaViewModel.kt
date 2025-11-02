@@ -126,7 +126,9 @@ class SchemaViewModel(
                 // Use new queries to check for dependencies
                 val nodeCount = dbService.database.appDatabaseQueries.countNodesForSchema(item.id).executeAsOne()
                 val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(item.id).executeAsOne()
+                // --- MODIFIED: Call correct query name ---
                 val clusterCount = dbService.database.appDatabaseQueries.countClustersForSchema(item.id).executeAsOne() // ADDED
+                // --- END MODIFICATION ---
                 val totalCount = nodeCount + edgeCount + clusterCount // UPDATED
 
                 if (totalCount == 0L) {

@@ -114,6 +114,10 @@ WHERE id = ?;
 deleteClusterById:
 DELETE FROM Cluster WHERE id = ?;
 
+-- --- ADDED: Query to count cluster dependencies ---
+countClustersForSchema:
+SELECT COUNT(*) FROM Cluster WHERE schema_id = ?;
+
 -- --- Edge Queries (MODIFIED) ---
 
 selectAllEdges:

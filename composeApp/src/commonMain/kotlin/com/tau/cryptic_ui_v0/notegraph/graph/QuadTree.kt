@@ -3,6 +3,8 @@ package com.tau.cryptic_ui_v0.notegraph.graph
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import com.tau.cryptic_ui_v0.GraphNode
+// --- ADDED: Import for normalized() ---
+import com.tau.cryptic_ui_v0.notegraph.graph.normalized
 
 /**
  * Implements a QuadTree for Barnes-Hut optimization.
@@ -154,10 +156,4 @@ class QuadTree(val boundary: Rect) {
     }
 }
 
-/**
- * Helper to normalize offset
- */
-private fun Offset.normalized(): Offset {
-    val mag = this.getDistance()
-    return if (mag == 0f) Offset.Zero else this / mag
-}
+// --- REMOVED: Duplicate helper function ---
