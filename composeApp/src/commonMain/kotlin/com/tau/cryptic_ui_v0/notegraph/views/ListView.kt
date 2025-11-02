@@ -11,12 +11,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Workspaces
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ClusterDisplayItem
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
 import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
@@ -25,16 +27,31 @@ import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 @Composable
 fun ListView(
     nodes: List<NodeDisplayItem>,
+    // --- ADDED ---
+    clusters: List<ClusterDisplayItem>,
+    // --- END ADDED ---
     edges: List<EdgeDisplayItem>,
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onEdgeClick: (EdgeDisplayItem) -> Unit,
     onEditNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onEditClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onEditEdgeClick: (EdgeDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onDeleteClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
+    // --- ADDED ---
+    onAddClusterClick: () -> Unit,
+    // --- END ADDED ---
     onAddEdgeClick: () -> Unit
 ) {
     // User requested "side by side lists"
@@ -81,6 +98,50 @@ fun ListView(
                 }
             }
         }
+
+        // --- ADDED: Clusters List ---
+        Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+            ListItem(
+                leadingContent = { Icon(Icons.Default.Workspaces, contentDescription = "Cluster")},
+                headlineContent = { Text("Clusters:", style = MaterialTheme.typography.titleSmall) } ,
+                trailingContent = {
+                    IconButton(onClick = onAddClusterClick) {
+                        Icon(Icons.Default.Add, contentDescription = "New Cluster")
+                    }
+                }
+            )
+            HorizontalDivider(color = Color.Black)
+            LazyColumn {
+                items(clusters) { cluster ->
+                    val isSelected = primarySelectedItem == cluster
+                    val colorInfo = labelToColor(cluster.label)
+                    ListItem(
+                        headlineContent = { Text("${cluster.label} : ${cluster.displayProperty}", style = MaterialTheme.typography.bodyMedium) },
+                        leadingContent = {
+                            IconButton(onClick = { onEditClusterClick(cluster) }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Cluster")
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onClusterClick(cluster) }
+                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
+                        trailingContent = {
+                            IconButton(onClick = { onDeleteClusterClick(cluster) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Cluster")
+                            }
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = colorInfo.composeColor,
+                            headlineColor = colorInfo.composeFontColor,
+                            leadingIconColor = colorInfo.composeFontColor,
+                            trailingIconColor = colorInfo.composeFontColor
+                        )
+                    )
+                }
+            }
+        }
+        // --- END ADDED ---
 
         // --- Edges List ---
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {

@@ -11,12 +11,15 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Workspaces
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ClusterDisplayItem
 import com.tau.cryptic_ui_v0.DBMetaData
 import com.tau.cryptic_ui_v0.EdgeDisplayItem
 import com.tau.cryptic_ui_v0.NodeDisplayItem
@@ -26,20 +29,38 @@ import com.tau.cryptic_ui_v0.notegraph.views.labelToColor
 @Composable
 fun MetadataView(
     nodes: List<NodeDisplayItem>,
+    // --- ADDED ---
+    clusters: List<ClusterDisplayItem>,
+    // --- END ADDED ---
     edges: List<EdgeDisplayItem>,
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onEdgeClick: (EdgeDisplayItem) -> Unit,
     onEditNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onEditClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onEditEdgeClick: (EdgeDisplayItem) -> Unit,
     onDeleteNodeClick: (NodeDisplayItem) -> Unit,
+    // --- ADDED ---
+    onDeleteClusterClick: (ClusterDisplayItem) -> Unit,
+    // --- END ADDED ---
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
+    // --- ADDED ---
+    onAddClusterClick: () -> Unit,
+    // --- END ADDED ---
     onAddEdgeClick: () -> Unit,
     // ADDED: Refresh handlers
     onListAllClick: () -> Unit,
     onListNodesClick: () -> Unit,
+    // --- ADDED ---
+    onListClustersClick: () -> Unit,
+    // --- END ADDED ---
     onListEdgesClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
@@ -48,8 +69,10 @@ fun MetadataView(
         Text("Selection Details", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
 
+        // --- MODIFIED: Handle cluster selection ---
         val primaryNode = primarySelectedItem as? NodeDisplayItem
         val secondaryNode = secondarySelectedItem as? NodeDisplayItem
+        val primaryCluster = primarySelectedItem as? ClusterDisplayItem
 
         if (primaryNode != null && secondaryNode != null) {
             Text(
@@ -63,6 +86,12 @@ fun MetadataView(
                         "${primaryNode.label} : ${primaryNode.displayProperty}",
                 style = MaterialTheme.typography.bodyMedium
             )
+        } else if (primaryCluster != null) {
+            Text(
+                "Selected Cluster:\n" +
+                        "${primaryCluster.label} : ${primaryCluster.displayProperty}",
+                style = MaterialTheme.typography.bodyMedium
+            )
         } else if (primarySelectedItem != null) {
             Text(
                 "Selected Item: $primarySelectedItem",
@@ -71,6 +100,7 @@ fun MetadataView(
         } else {
             Text("No item selected.", style = MaterialTheme.typography.bodyMedium)
         }
+        // --- END MODIFIED ---
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -82,7 +112,9 @@ fun MetadataView(
             onClick = onListAllClick,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("List All Nodes & Edges")
+            Icon(Icons.Default.Refresh, contentDescription = "Refresh All")
+            Spacer(Modifier.width(8.dp))
+            Text("List All")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(
@@ -95,6 +127,14 @@ fun MetadataView(
             ) {
                 Text("List Nodes")
             }
+            // --- ADDED ---
+            Button(
+                onClick = onListClustersClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("List Clusters")
+            }
+            // --- END ADDED ---
             Button(
                 onClick = onListEdgesClick,
                 modifier = Modifier.weight(1f)
@@ -105,13 +145,13 @@ fun MetadataView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        // --- Node and Edge Lists (from original design) ---
+        // --- Node, Cluster, and Edge Lists ---
         Column(modifier = Modifier.fillMaxSize()) {
             // Nodes List
             Column(modifier = Modifier.weight(1f)) {
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
-                    headlineContent = { Text("Nodes:", style = MaterialTheme.typography.headlineSmall) } ,
+                    headlineContent = { Text("Nodes:", style = MaterialTheme.typography.titleMedium) } , // MODIFIED: smaller title
                     trailingContent = {
                         IconButton(onClick = onAddNodeClick) {
                             Icon(Icons.Default.Add, contentDescription = "New Node")
@@ -151,11 +191,55 @@ fun MetadataView(
                 }
             }
 
+            // --- ADDED: Clusters List ---
+            Column(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
+                ListItem(
+                    leadingContent = { Icon(Icons.Default.Workspaces, contentDescription = "Cluster")},
+                    headlineContent = { Text("Clusters:", style = MaterialTheme.typography.titleMedium) } ,
+                    trailingContent = {
+                        IconButton(onClick = onAddClusterClick) {
+                            Icon(Icons.Default.Add, contentDescription = "New Cluster")
+                        }
+                    },
+                )
+                HorizontalDivider(color = Color.Black)
+                LazyColumn {
+                    items(clusters, key = { it.id }) { cluster ->
+                        val isSelected = primarySelectedItem == cluster
+                        val colorInfo = labelToColor(cluster.label)
+                        ListItem(
+                            headlineContent = { Text("${cluster.label} : ${cluster.displayProperty}") },
+                            leadingContent = {
+                                IconButton(onClick = { onEditClusterClick(cluster) }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit Cluster")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onClusterClick(cluster) }
+                                .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
+                            trailingContent = {
+                                IconButton(onClick = { onDeleteClusterClick(cluster) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Cluster")
+                                }
+                            },
+                            colors = ListItemDefaults.colors(
+                                containerColor = colorInfo.composeColor,
+                                headlineColor = colorInfo.composeFontColor,
+                                leadingIconColor = colorInfo.composeFontColor,
+                                trailingIconColor = colorInfo.composeFontColor
+                            )
+                        )
+                    }
+                }
+            }
+            // --- END ADDED ---
+
             // Edges List
             Column(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
                 ListItem(
                     leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
-                    headlineContent = { Text("Edges:", style = MaterialTheme.typography.headlineSmall) } ,
+                    headlineContent = { Text("Edges:", style = MaterialTheme.typography.titleMedium) } , // MODIFIED: smaller title
                     trailingContent = {
                         IconButton(onClick = onAddEdgeClick) {
                             Icon(Icons.Default.Add, contentDescription = "New Edge")
@@ -179,7 +263,7 @@ fun MetadataView(
                                 )
                                 Text(
                                     "[${edge.label}]",
-                                    style=MaterialTheme.typography.headlineSmall,
+                                    style=MaterialTheme.typography.titleMedium, // MODIFIED: smaller title
                                     textAlign = TextAlign.Center
                                 )
                                 // UPDATED: Use displayProperty

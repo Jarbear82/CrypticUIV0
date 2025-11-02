@@ -177,62 +177,49 @@ fun EditItemView(
                 allNodeSchemaNames = allNodeSchemaNames // ADDED
             )
         }
-        // --- ADDED: All Cluster Views ---
+        // --- MODIFIED: Replaced Placeholders ---
         is EditScreenState.CreateCluster -> {
-            // TODO: Create CreateClusterView.kt
-            // For now, using a placeholder
-            Text("Create Cluster View Placeholder")
-//            CreateClusterView(
-//                state = editScreenState.state,
-//                onSchemaSelected = onClusterCreationSchemaSelected,
-//                onPropertyChanged = onClusterCreationPropertyChanged,
-//                onCreateClick = onClusterCreationCreateClick,
-//                onCancelClick = onCancelClick
-//            )
+            CreateClusterView(
+                clusterCreationState = editScreenState.state,
+                onSchemaSelected = onClusterCreationSchemaSelected,
+                onPropertyChanged = onClusterCreationPropertyChanged,
+                onCreateClick = onClusterCreationCreateClick,
+                onCancelClick = onCancelClick
+            )
         }
         is EditScreenState.CreateClusterSchema -> {
-            // TODO: Create CreateClusterSchemaView.kt
-            // For now, using a placeholder
-            Text("Create Cluster Schema View Placeholder")
-//            CreateClusterSchemaView(
-//                state = editScreenState.state,
-//                onTableNameChange = onClusterSchemaTableNameChange,
-//                onPropertyChange = onClusterSchemaPropertyChange,
-//                onAddProperty = onAddClusterSchemaProperty,
-//                onRemoveProperty = onRemoveClusterSchemaProperty,
-//                onCreate = { onClusterSchemaCreationCreateClick() },
-//                onCancel = onCancelClick
-//            )
+            CreateClusterSchemaView(
+                state = editScreenState.state,
+                onTableNameChange = onClusterSchemaTableNameChange,
+                onPropertyChange = onClusterSchemaPropertyChange,
+                onAddProperty = onAddClusterSchemaProperty,
+                onRemoveProperty = onRemoveClusterSchemaProperty,
+                onCreate = { onClusterSchemaCreationCreateClick() },
+                onCancel = onCancelClick
+            )
         }
         is EditScreenState.EditCluster -> {
-            // TODO: Create EditClusterView.kt
-            // For now, using a placeholder
-            Text("Edit Cluster View Placeholder")
-//            EditClusterView(
-//                state = editScreenState.state,
-//                onPropertyChange = onClusterEditPropertyChange,
-//                onSave = onSaveClick,
-//                onCancel = onCancelClick
-//            )
+            EditClusterView(
+                state = editScreenState.state,
+                onPropertyChange = onClusterEditPropertyChange,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
         }
         is EditScreenState.EditClusterSchema -> {
-            // TODO: Create EditClusterSchemaView.kt
-            // For now, using a placeholder
-            Text("Edit Cluster Schema View Placeholder")
-//            EditClusterSchemaView(
-//                state = editScreenState.state,
-//                onLabelChange = onClusterSchemaEditLabelChange,
-//                onPropertyChange = onClusterSchemaEditPropertyChange,
-//                onAddProperty = onClusterSchemaEditAddProperty,
-//                onRemoveProperty = onRemoveClusterSchemaEditRemoveProperty,
-//                onSave = onSaveClick,
-//                onCancel = onCancelClick
-//            )
+            EditClusterSchemaView(
+                state = editScreenState.state,
+                onLabelChange = onClusterSchemaEditLabelChange,
+                onPropertyChange = onClusterSchemaEditPropertyChange,
+                onAddProperty = onClusterSchemaEditAddProperty,
+                onRemoveProperty = onClusterSchemaEditRemoveProperty,
+                onSave = onSaveClick,
+                onCancel = onCancelClick
+            )
         }
-        // --- END ADDED ---
+        // --- END MODIFIED ---
         is EditScreenState.None -> {
             Text("No item selected to edit.")
         }
     }
 }
-
