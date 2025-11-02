@@ -44,6 +44,9 @@ fun EditItemView(
 
     // Node Edit Handlers
     onNodeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
+    // --- ADDED ---
+    onNodeEditClusterChange: (ClusterDisplayItem?) -> Unit,
+    // --- END ADDED ---
 
     // Edge Edit Handlers
     onEdgeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
@@ -62,7 +65,28 @@ fun EditItemView(
     // ADDED: Handlers for editing connections
     onEdgeSchemaEditAddConnection: (src: String, dst: String) -> Unit,
     onEdgeSchemaEditRemoveConnection: (Int) -> Unit,
-    allNodeSchemaNames: List<String> // ADDED: Needed for edge schema editors
+    allNodeSchemaNames: List<String>, // ADDED: Needed for edge schema editors
+
+    // --- ADDED: Cluster Creation ---
+    onClusterCreationSchemaSelected: (SchemaDefinitionItem) -> Unit,
+    onClusterCreationPropertyChanged: (String, String) -> Unit,
+    onClusterCreationCreateClick: () -> Unit,
+
+    // --- ADDED: Cluster Schema Creation ---
+    onClusterSchemaCreationCreateClick: () -> Unit,
+    onClusterSchemaTableNameChange: (String) -> Unit,
+    onClusterSchemaPropertyChange: (Int, SchemaProperty) -> Unit,
+    onAddClusterSchemaProperty: () -> Unit,
+    onRemoveClusterSchemaProperty: (Int) -> Unit,
+
+    // --- ADDED: Cluster Edit ---
+    onClusterEditPropertyChange: (String, String) -> Unit,
+
+    // --- ADDED: Cluster Schema Edit ---
+    onClusterSchemaEditLabelChange: (String) -> Unit,
+    onClusterSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit,
+    onClusterSchemaEditAddProperty: () -> Unit,
+    onClusterSchemaEditRemoveProperty: (Int) -> Unit
 ) {
     // Use a 'when' block to route to the correct composable
     when (editScreenState) {
@@ -115,6 +139,9 @@ fun EditItemView(
             EditNodeView(
                 state = editScreenState.state,
                 onPropertyChange = onNodeEditPropertyChange,
+                // --- ADDED ---
+                onClusterChange = onNodeEditClusterChange,
+                // --- END ADDED ---
                 onSave = onSaveClick,
                 onCancel = onCancelClick
             )
@@ -152,6 +179,59 @@ fun EditItemView(
                 allNodeSchemaNames = allNodeSchemaNames // ADDED
             )
         }
+        // --- ADDED: All Cluster Views ---
+        is EditScreenState.CreateCluster -> {
+            // TODO: Create CreateClusterView.kt
+            // For now, using a placeholder
+            Text("Create Cluster View Placeholder")
+//            CreateClusterView(
+//                state = editScreenState.state,
+//                onSchemaSelected = onClusterCreationSchemaSelected,
+//                onPropertyChanged = onClusterCreationPropertyChanged,
+//                onCreateClick = onClusterCreationCreateClick,
+//                onCancelClick = onCancelClick
+//            )
+        }
+        is EditScreenState.CreateClusterSchema -> {
+            // TODO: Create CreateClusterSchemaView.kt
+            // For now, using a placeholder
+            Text("Create Cluster Schema View Placeholder")
+//            CreateClusterSchemaView(
+//                state = editScreenState.state,
+//                onTableNameChange = onClusterSchemaTableNameChange,
+//                onPropertyChange = onClusterSchemaPropertyChange,
+//                onAddProperty = onAddClusterSchemaProperty,
+//                onRemoveProperty = onRemoveClusterSchemaProperty,
+//                onCreate = { onClusterSchemaCreationCreateClick() },
+//                onCancel = onCancelClick
+//            )
+        }
+        is EditScreenState.EditCluster -> {
+            // TODO: Create EditClusterView.kt
+            // For now, using a placeholder
+            Text("Edit Cluster View Placeholder")
+//            EditClusterView(
+//                state = editScreenState.state,
+//                onPropertyChange = onClusterEditPropertyChange,
+//                onSave = onSaveClick,
+//                onCancel = onCancelClick
+//            )
+        }
+        is EditScreenState.EditClusterSchema -> {
+            // TODO: Create EditClusterSchemaView.kt
+            // For now, using a placeholder
+            Text("Edit Cluster Schema View Placeholder")
+//            EditClusterSchemaView(
+//                state = editScreenState.state,
+//                onLabelChange = onClusterSchemaEditLabelChange,
+//                onPropertyChange = onClusterSchemaEditPropertyChange,
+//                onAddProperty = onClusterSchemaEditAddProperty,
+//                onRemoveProperty = onRemoveClusterSchemaEditRemoveProperty,
+//                onSave = onSaveClick,
+//                onCancel = onCancelClick
+//            )
+        }
+        // --- END ADDED ---
         is EditScreenState.None -> {
             Text("No item selected to edit.")
         }

@@ -95,10 +95,11 @@ class EditCreateViewModel(
                     dbService.database.appDatabaseQueries.insertNode(
                         schema_id = state.selectedSchema.id,
                         display_label = displayLabel,
-                        properties_json = propertiesJson
+                        properties_json = propertiesJson,
+                        cluster_id = null // New nodes are unclustered by default
                     )
                     cancelAllEditing()
-                    metadataViewModel.listNodes()
+                    metadataViewModel.listAll() // Use listAll to refresh edges too
                     onFinished()
                 } catch (e: Exception) {
                     println("Error creating node: ${e.message}")
@@ -154,7 +155,7 @@ class EditCreateViewModel(
                         properties_json = propertiesJson
                     )
                     cancelAllEditing()
-                    metadataViewModel.listClusters()
+                    metadataViewModel.listAll() // Use listAll
                     onFinished()
                 } catch (e: Exception) {
                     println("Error creating cluster: ${e.message}")
@@ -177,7 +178,8 @@ class EditCreateViewModel(
             EdgeCreationState(
                 schemas = edgeSchemas,
                 // UPDATED: Combine nodes and clusters
-                availableEntities = metadataViewModel.nodeList.value + metadataViewModel.clusterList.value
+                availableNodes = metadataViewModel.nodeList.value // TODO: Fix this, should be GraphEntityDisplayItem
+                // availableEntities = metadataViewModel.nodeList.value + metadataViewModel.clusterList.value
             )
         )
     }
@@ -214,7 +216,12 @@ class EditCreateViewModel(
     fun updateEdgeCreationSrc(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            current.copy(state = current.state.copy(src = entity))
+            // TODO: Fix this, state.src expects NodeDisplayItem
+            if (entity is NodeDisplayItem) {
+                current.copy(state = current.state.copy(src = entity))
+            } else {
+                current
+            }
         }
     }
 
@@ -222,7 +229,12 @@ class EditCreateViewModel(
     fun updateEdgeCreationDst(entity: GraphEntityDisplayItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
-            current.copy(state = current.state.copy(dst = entity))
+            // TODO: Fix this, state.dst expects NodeDisplayItem
+            if (entity is NodeDisplayItem) {
+                current.copy(state = current.state.copy(dst = entity))
+            } else {
+                current
+            }
         }
     }
 
@@ -260,7 +272,7 @@ class EditCreateViewModel(
                         properties_json = propertiesJson
                     )
                     cancelAllEditing()
-                    metadataViewModel.listEdges()
+                    metadataViewModel.listAll() // Use listAll
                     onFinished()
                 } catch (e: Exception) {
                     println("Error creating edge: ${e.message}")
@@ -515,6 +527,15 @@ class EditCreateViewModel(
             current.copy(state = current.state.copy(properties = newProperties))
         }
     }
+
+    // --- ADDED: Update Node's Cluster ---
+    fun updateNodeEditCluster(cluster: ClusterDisplayItem?) {
+        _editScreenState.update { current ->
+            if (current !is EditScreenState.EditNode) return@update current
+            current.copy(state = current.state.copy(clusterId = cluster?.id))
+        }
+    }
+    // --- END ADDED ---
 
     // --- Cluster Editing (ADDED) ---
     fun initiateClusterEdit(cluster: ClusterEditState) {

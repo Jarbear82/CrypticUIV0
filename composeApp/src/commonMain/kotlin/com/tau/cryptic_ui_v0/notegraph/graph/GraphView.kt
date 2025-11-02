@@ -588,6 +588,7 @@ private fun DrawScope.drawNodes(
 
 // --- ADDED: Cluster Hull Drawing Function ---
 @OptIn(ExperimentalTextApi::class)
+@Composable
 private fun DrawScope.drawClusterHulls(
     clusters: Map<Long, GraphCluster>,
     allNodes: Map<Long, GraphNode>,

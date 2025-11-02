@@ -73,7 +73,10 @@ class MetadataViewModel(
                     NodeDisplayItem(
                         id = dbNode.id,
                         label = nodeSchema.name,
-                        displayProperty = dbNode.display_label
+                        displayProperty = dbNode.display_label,
+                        // --- MODIFIED: Read clusterId from db ---
+                        clusterId = dbNode.cluster_id
+                        // --- END MODIFICATION ---
                     )
                 }
             }
@@ -247,6 +250,13 @@ class MetadataViewModel(
                     schemaViewModel.showSchema()
                     schemaData = schemaViewModel.schema.value
                 }
+                // --- MODIFICATION: Fetch clusters for dropdown ---
+                if (_clusterList.value.isEmpty()) {
+                    fetchClusters()
+                }
+                val allClusters = _clusterList.value
+                // --- END MODIFICATION ---
+
                 val schema = schemaData?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
                 val properties = try {
                     json.decodeFromString<Map<String, String>>(dbNode.properties_json)
@@ -254,7 +264,15 @@ class MetadataViewModel(
                     println("Error parsing node properties: ${e.message}")
                     emptyMap()
                 }
-                NodeEditState(id = dbNode.id, schema = schema, properties = properties)
+                // --- MODIFICATION: Populate new NodeEditState fields ---
+                NodeEditState(
+                    id = dbNode.id,
+                    schema = schema,
+                    properties = properties,
+                    clusterId = dbNode.cluster_id, // Pass clusterId
+                    availableClusters = allClusters // Pass all clusters
+                )
+                // --- END MODIFICATION ---
             }
             // ADDED
             is ClusterDisplayItem -> {
@@ -287,7 +305,13 @@ class MetadataViewModel(
                     println("Error parsing edge properties: ${e.message}")
                     emptyMap()
                 }
-                EdgeEditState(id = dbEdge.id, schema = schema, src = item.src, dst = item.dst, properties = properties)
+                EdgeEditState(
+                    id = dbEdge.id,
+                    schema = schema,
+                    src = item.src,
+                    dst = item.dst,
+                    properties = properties
+                )
             }
             is SchemaDefinitionItem -> item // Pass schema definitions directly
             else -> null
@@ -315,12 +339,16 @@ class MetadataViewModel(
                         val displayKey = editedState.schema.properties.firstOrNull { it.isDisplayProperty }?.name
                         val displayLabel = editedState.properties[displayKey] ?: "Node ${editedState.id}"
 
+                        // --- MODIFICATION: Pass cluster_id to the query ---
                         dbService.database.appDatabaseQueries.updateNodeProperties(
                             id = editedState.id,
                             display_label = displayLabel,
-                            properties_json = propertiesJson
+                            properties_json = propertiesJson,
+                            cluster_id = editedState.clusterId // Pass the new cluster ID
                         )
-                        listNodes() // Refresh list
+                        // listAll() is needed to refresh node.clusterId in all viewmodels
+                        listAll()
+                        // --- END MODIFICATION ---
                     }
                     // ADDED
                     is ClusterEditState -> {

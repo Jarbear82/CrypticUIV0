@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ClusterDisplayItem
 import com.tau.cryptic_ui_v0.NodeDisplayItem
 import com.tau.cryptic_ui_v0.SchemaDefinitionItem
 // UPDATED: This now points to your new custom graph view
@@ -64,8 +65,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                 // Navigate back to the correct tab
                 val targetTab = when (currentState) {
                     // FIX: Use new EditState classes
-                    is com.tau.cryptic_ui_v0.NodeEditState, is com.tau.cryptic_ui_v0.EdgeEditState -> DataViewTabs.METADATA
-                    is com.tau.cryptic_ui_v0.NodeSchemaEditState, is com.tau.cryptic_ui_v0.EdgeSchemaEditState -> DataViewTabs.SCHEMA
+                    is com.tau.cryptic_ui_v0.NodeEditState,
+                    is com.tau.cryptic_ui_v0.EdgeEditState,
+                    is com.tau.cryptic_ui_v0.ClusterEditState -> DataViewTabs.METADATA // MODIFIED
+                    is com.tau.cryptic_ui_v0.NodeSchemaEditState,
+                    is com.tau.cryptic_ui_v0.EdgeSchemaEditState,
+                    is com.tau.cryptic_ui_v0.ClusterSchemaEditState -> DataViewTabs.SCHEMA // MODIFIED
                     else -> DataViewTabs.METADATA
                 }
                 viewModel.selectDataTab(targetTab)
@@ -81,7 +86,9 @@ fun TerminalView(viewModel: TerminalViewModel) {
         // Navigate back to the correct tab based on what *was* being edited
         val targetTab = when (originalItem) {
             // FIX: Use new EditState classes and SchemaDefinitionItem
-            is com.tau.cryptic_ui_v0.NodeEditState, is com.tau.cryptic_ui_v0.EdgeEditState -> DataViewTabs.METADATA
+            is com.tau.cryptic_ui_v0.NodeEditState,
+            is com.tau.cryptic_ui_v0.EdgeEditState,
+            is com.tau.cryptic_ui_v0.ClusterEditState -> DataViewTabs.METADATA // MODIFIED
             is SchemaDefinitionItem -> DataViewTabs.SCHEMA
             is String -> DataViewTabs.SCHEMA // For "Create..." states
             else -> DataViewTabs.METADATA
@@ -146,7 +153,7 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         // Pass the collected nodes and edges to the GraphView
                         // UPDATED: Pass the GraphViewModel
                         graphViewModel?.let {
-                            GraphView(graphViewModel)
+                            GraphView(it)
                         } ?: Text("Loading Graph...")
                     }
                 }
@@ -298,11 +305,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onRemoveEdgeSchemaProperty = { viewModel.editCreateViewModel.onRemoveEdgeSchemaProperty(it) },
 
                         // Node Edit Handlers
-                        // UPDATED: Renamed 'index' to 'key' for clarity
                         onNodeEditPropertyChange = { key, value -> viewModel.editCreateViewModel.updateNodeEditProperty(key, value) },
+                        // --- ADDED ---
+                        onNodeEditClusterChange = { cluster -> viewModel.editCreateViewModel.updateNodeEditCluster(cluster) },
+                        // --- END ADDED ---
 
                         // Edge Edit Handlers
-                        // UPDATED: Renamed 'index' to 'key' for clarity
                         onEdgeEditPropertyChange = { key, value -> viewModel.editCreateViewModel.updateEdgeEditProperty(key, value) },
 
                         // Node Schema Edit Handlers
@@ -318,9 +326,26 @@ fun TerminalView(viewModel: TerminalViewModel) {
                         onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
                         onEdgeSchemaEditAddConnection = { src, dst -> viewModel.editCreateViewModel.updateEdgeSchemaEditAddConnection(src, dst) },
                         onEdgeSchemaEditRemoveConnection = { index -> viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(index) },
-                        allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList()
+                        allNodeSchemaNames = (schema?.nodeSchemas?.map { it.name } ?: emptyList()) + (schema?.clusterSchemas?.map { it.name } ?: emptyList()), // MODIFIED
 
+                        // --- ADDED: Cluster Handlers ---
+                        onClusterCreationSchemaSelected = { viewModel.editCreateViewModel.updateClusterCreationSchema(it) },
+                        onClusterCreationPropertyChanged = { key, value -> viewModel.editCreateViewModel.updateClusterCreationProperty(key, value) },
+                        onClusterCreationCreateClick = { viewModel.editCreateViewModel.createClusterFromState { viewModel.selectDataTab(DataViewTabs.METADATA) } },
 
+                        onClusterSchemaCreationCreateClick = { viewModel.editCreateViewModel.createClusterSchemaFromState { viewModel.selectDataTab(DataViewTabs.SCHEMA) } },
+                        onClusterSchemaTableNameChange = { viewModel.editCreateViewModel.onClusterSchemaTableNameChange(it) },
+                        onClusterSchemaPropertyChange = { index, property -> viewModel.editCreateViewModel.onClusterSchemaPropertyChange(index, property) },
+                        onAddClusterSchemaProperty = { viewModel.editCreateViewModel.onAddClusterSchemaProperty() },
+                        onRemoveClusterSchemaProperty = { viewModel.editCreateViewModel.onRemoveClusterSchemaProperty(it) },
+
+                        onClusterEditPropertyChange = { key, value -> viewModel.editCreateViewModel.updateClusterEditProperty(key, value) },
+
+                        onClusterSchemaEditLabelChange = { viewModel.editCreateViewModel.updateClusterSchemaEditLabel(it) },
+                        onClusterSchemaEditPropertyChange = { index, property -> viewModel.editCreateViewModel.updateClusterSchemaEditProperty(index, property) },
+                        onClusterSchemaEditAddProperty = { viewModel.editCreateViewModel.updateClusterSchemaEditAddProperty() },
+                        onClusterSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateClusterSchemaEditRemoveProperty(it) }
+                        // --- END ADDED ---
                     )
                 }
             }

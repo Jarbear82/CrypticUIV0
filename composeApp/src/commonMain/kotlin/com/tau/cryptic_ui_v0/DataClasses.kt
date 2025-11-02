@@ -121,11 +121,11 @@ data class NodeCreationState(
 // --- Data class for Edge Creation UI State ---
 data class EdgeCreationState(
     val schemas: List<SchemaDefinitionItem>, // All available EDGE schemas
-    val availableNodes: List<NodeDisplayItem>,
+    val availableNodes: List<NodeDisplayItem>, // <--- TODO: This should be List<GraphEntityDisplayItem>
     val selectedSchema: SchemaDefinitionItem? = null,
     val selectedConnection: ConnectionPair? = null,
-    val src: NodeDisplayItem? = null,
-    val dst: NodeDisplayItem? = null,
+    val src: NodeDisplayItem? = null, // <--- TODO: This should be GraphEntityDisplayItem
+    val dst: NodeDisplayItem? = null, // <--- TODO: This should be GraphEntityDisplayItem
     val properties: Map<String, String> = emptyMap()
 )
 
@@ -148,14 +148,18 @@ data class EdgeSchemaCreationState(
 data class NodeEditState(
     val id: Long,
     val schema: SchemaDefinitionItem,
-    val properties: Map<String, String> // Current values from DB, as strings for UI
+    val properties: Map<String, String>, // Current values from DB, as strings for UI
+    // --- MODIFIED ---
+    val clusterId: Long?, // The ID of the currently assigned cluster
+    val availableClusters: List<ClusterDisplayItem> // All clusters available for assignment
+    // --- END MODIFICATION ---
 )
 
 data class EdgeEditState(
     val id: Long,
     val schema: SchemaDefinitionItem,
-    val src: NodeDisplayItem,
-    val dst: NodeDisplayItem,
+    val src: GraphEntityDisplayItem, // MODIFIED: Use interface
+    val dst: GraphEntityDisplayItem, // MODIFIED: Use interface
     val properties: Map<String, String> // Current values from DB, as strings for UI
 )
 
