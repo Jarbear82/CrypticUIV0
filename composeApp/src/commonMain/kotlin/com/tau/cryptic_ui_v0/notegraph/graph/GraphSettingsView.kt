@@ -29,6 +29,8 @@ fun GraphSettingsView(
     onDampingChange: (Float) -> Unit,
     onBarnesHutThetaChange: (Float) -> Unit,
     onToleranceChange: (Float) -> Unit,
+    // --- ADDED ---
+    onInternalGravityChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -42,11 +44,21 @@ fun GraphSettingsView(
 
             // Gravity
             SettingSlider(
-                label = "Gravity",
+                label = "Gravity (Macro)",
                 value = options.gravity,
                 onValueChange = onGravityChange,
                 range = 0f..2f
             )
+
+            // --- ADDED: Internal Gravity ---
+            SettingSlider(
+                label = "Gravity (Internal)",
+                value = options.internalGravity,
+                onValueChange = onInternalGravityChange,
+                range = 0f..2f
+            )
+            // --- END ADDED ---
+
 
             // Repulsion
             SettingSlider(

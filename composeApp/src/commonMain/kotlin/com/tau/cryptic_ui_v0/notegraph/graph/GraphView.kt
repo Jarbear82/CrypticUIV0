@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +53,8 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import com.tau.cryptic_ui_v0.ClusterDisplayItem
+import com.tau.cryptic_ui_v0.GraphCluster
 import com.tau.cryptic_ui_v0.GraphNode
 import com.tau.cryptic_ui_v0.GraphEdge
 import com.tau.cryptic_ui_v0.NodeDisplayItem
@@ -61,21 +64,31 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+// ADDED: Level of Detail threshold
+private const val LOD_ZOOM_THRESHOLD = 0.4f
+
 @OptIn(ExperimentalGraphicsApi::class, ExperimentalTextApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun GraphView(viewModel: GraphViewmodel) {
     val nodes by viewModel.graphNodes.collectAsState()
-    val edges by viewModel.graphEdges.collectAsState()
+    // --- MODIFIED: Get processed edge lists ---
+    val macroEdges by viewModel.macroEdges.collectAsState()
+    val microEdges by viewModel.microEdges.collectAsState()
+    val clusters by viewModel.graphClusters.collectAsState()
+    // --- END MODIFICATION ---
     val transform by viewModel.transform.collectAsState()
     val showFabMenu by viewModel.showFabMenu.collectAsState()
+    // --- ADDED: Settings state ---
+    val showSettings by viewModel.showSettings.collectAsState()
+    val physicsOptions by viewModel.physicsOptions.collectAsState()
+    // --- END ADDED ---
 
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurface
     val crosshairColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
     val selectionColor = MaterialTheme.colorScheme.primary
 
-    // ADDED: State to distinguish node drag from pan
-    var isDraggingNode by remember { mutableStateOf(false) }
+    var isDraggingNode by remember { mutableStateOf(false) } // Handles nodes OR clusters
 
     LaunchedEffect(Unit) {
         viewModel.runSimulationLoop()
@@ -85,10 +98,8 @@ fun GraphView(viewModel: GraphViewmodel) {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                // Combined gesture detector for drag and tap
                 detectDragGestures(
                     onDragStart = { offset ->
-                        // Check if we started on a node
                         isDraggingNode = viewModel.onDragStart(offset)
                     },
                     onDrag = { change, dragAmount ->
@@ -108,7 +119,6 @@ fun GraphView(viewModel: GraphViewmodel) {
                 )
             }
             .pointerInput(Unit) {
-                // Tap detector for selection
                 detectTapGestures(
                     onTap = { offset ->
                         viewModel.onTap(offset)
@@ -116,7 +126,6 @@ fun GraphView(viewModel: GraphViewmodel) {
                 )
             }
             .onPointerEvent(PointerEventType.Scroll) {
-                // Zoom
                 it.changes.firstOrNull()?.let { change ->
                     val zoomDelta = if (change.scrollDelta.y < 0) 1.2f else 0.8f
                     viewModel.onZoom(zoomDelta, change.position)
@@ -135,60 +144,126 @@ fun GraphView(viewModel: GraphViewmodel) {
                 translate(left = transform.pan.x, top = transform.pan.y)
             }) {
 
-                // --- 1. Draw Edges ---
+                val isZoomedIn = transform.zoom >= LOD_ZOOM_THRESHOLD
+                val isZoomedOut = !isZoomedIn
 
-                // Pre-process edges to find counts for curving
-                val edgesByPair = edges.groupBy { Pair(it.sourceId, it.targetId) }
-                val linkCounts = mutableMapOf<Pair<Long, Long>, Int>()
-                val uniquePairs = mutableSetOf<Pair<Long, Long>>()
+                // --- 1. Draw Cluster Hulls (BEFORE edges) ---
+                drawClusterHulls(
+                    clusters = clusters,
+                    allNodes = nodes,
+                    textMeasurer = textMeasurer,
+                    zoom = transform.zoom,
+                    isZoomedIn = isZoomedIn
+                )
 
-                for (edge in edges) {
-                    if (edge.sourceId == edge.targetId) continue
-                    val pair = if (edge.sourceId < edge.targetId) Pair(edge.sourceId, edge.targetId) else Pair(edge.targetId, edge.sourceId)
-                    uniquePairs.add(pair)
-                }
 
-                for (pair in uniquePairs) {
-                    val count = (edgesByPair[pair]?.size ?: 0) + (edgesByPair[Pair(pair.second, pair.first)]?.size ?: 0)
-                    linkCounts[pair] = count
-                }
-
-                val pairDrawIndex = mutableMapOf<Pair<Long, Long>, Int>()
-                val selfLoopDrawIndex = mutableMapOf<Long, Int>()
-
-                // Style for edge labels
+                // --- 2. Draw Edges ---
                 val edgeLabelStyle = TextStyle(
                     fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
                     color = labelColor.copy(alpha = 0.8f)
                 )
 
-                for (edge in edges) {
-                    val nodeA = nodes[edge.sourceId]
-                    val nodeB = nodes[edge.targetId]
-                    if (nodeA == null || nodeB == null) continue
+                // --- 2a. Draw MACRO edges (always visible) ---
+                // We use the macroEdges list which is pre-filtered
+                val macroEdgesByPair = macroEdges.groupBy { Pair(it.sourceId, it.targetId) }
+                val macroLinkCounts = mutableMapOf<Pair<Long, Long>, Int>()
+                val macroUniquePairs = mutableSetOf<Pair<Long, Long>>()
 
-                    if (nodeA.id == nodeB.id) {
+                for (edge in macroEdges) {
+                    if (edge.sourceId == edge.targetId) continue
+                    val pair = if (edge.sourceId < edge.targetId) Pair(edge.sourceId, edge.targetId) else Pair(edge.targetId, edge.sourceId)
+                    macroUniquePairs.add(pair)
+                }
+
+                for (pair in macroUniquePairs) {
+                    val count = (macroEdgesByPair[pair]?.size ?: 0) + (macroEdgesByPair[Pair(pair.second, pair.first)]?.size ?: 0)
+                    macroLinkCounts[pair] = count
+                }
+
+                val macroPairDrawIndex = mutableMapOf<Pair<Long, Long>, Int>()
+                val selfLoopDrawIndex = mutableMapOf<Long, Int>() // Re-used for both
+
+                for (edge in macroEdges) {
+                    // --- MODIFIED: Get entity from nodes OR clusters map ---
+                    val entityA = nodes[edge.sourceId] ?: clusters[edge.sourceId]
+                    val entityB = nodes[edge.targetId] ?: clusters[edge.targetId]
+                    // --- END MODIFICATION ---
+                    if (entityA == null || entityB == null) continue
+
+                    if (entityA.id == entityB.id) {
                         // Self-loop
-                        val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
-                        drawSelfLoop(nodeA, edge, index, textMeasurer, edgeLabelStyle)
-                        selfLoopDrawIndex[nodeA.id] = index + 1
+                        val index = selfLoopDrawIndex.getOrPut(entityA.id) { 0 }
+                        drawSelfLoop(entityA, edge, index, textMeasurer, edgeLabelStyle)
+                        selfLoopDrawIndex[entityA.id] = index + 1
                     } else {
                         // Standard edge
-                        val pair = Pair(nodeA.id, nodeB.id)
-                        val undirectedPair = if (nodeA.id < nodeB.id) Pair(nodeA.id, nodeB.id) else Pair(nodeB.id, nodeA.id)
+                        val pair = Pair(entityA.id, entityB.id)
+                        val undirectedPair = if (entityA.id < entityB.id) Pair(entityA.id, entityB.id) else Pair(entityB.id, entityA.id)
 
-                        val total = linkCounts[undirectedPair] ?: 1
-                        val index = pairDrawIndex.getOrPut(pair) { 0 }
+                        val total = macroLinkCounts[undirectedPair] ?: 1
+                        val index = macroPairDrawIndex.getOrPut(pair) { 0 }
 
-                        drawCurvedEdge(nodeA, nodeB, edge, index, total, textMeasurer, edgeLabelStyle)
+                        drawCurvedEdge(entityA, entityB, edge, index, total, textMeasurer, edgeLabelStyle)
 
-                        pairDrawIndex[pair] = index + 1
+                        macroPairDrawIndex[pair] = index + 1
                     }
                 }
 
-                // --- 2. Draw Nodes ---
-                // (Nodes are drawn *after* edges)
-                drawNodes(nodes, textMeasurer, labelColor, selectionColor, transform.zoom, viewModel)
+                // --- 2b. Draw MICRO edges (only when zoomed in) ---
+                if (isZoomedIn) {
+                    val microEdgesByPair = microEdges.groupBy { Pair(it.sourceId, it.targetId) }
+                    val microLinkCounts = mutableMapOf<Pair<Long, Long>, Int>()
+                    val microUniquePairs = mutableSetOf<Pair<Long, Long>>()
+
+                    for (edge in microEdges) {
+                        if (edge.sourceId == edge.targetId) continue
+                        val pair = if (edge.sourceId < edge.targetId) Pair(edge.sourceId, edge.targetId) else Pair(edge.targetId, edge.sourceId)
+                        microUniquePairs.add(pair)
+                    }
+
+                    for (pair in microUniquePairs) {
+                        val count = (microEdgesByPair[pair]?.size ?: 0) + (microEdgesByPair[Pair(pair.second, pair.first)]?.size ?: 0)
+                        microLinkCounts[pair] = count
+                    }
+                    val microPairDrawIndex = mutableMapOf<Pair<Long, Long>, Int>()
+
+                    for (edge in microEdges) {
+                        // Micro edges only connect nodes, so no cluster check needed
+                        val nodeA = nodes[edge.sourceId]
+                        val nodeB = nodes[edge.targetId]
+                        if (nodeA == null || nodeB == null) continue
+
+                        if (nodeA.id == nodeB.id) {
+                            // Self-loop
+                            val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
+                            drawSelfLoop(nodeA, edge, index, textMeasurer, edgeLabelStyle)
+                            selfLoopDrawIndex[nodeA.id] = index + 1
+                        } else {
+                            // Standard edge
+                            val pair = Pair(nodeA.id, nodeB.id)
+                            val undirectedPair = if (nodeA.id < nodeB.id) Pair(nodeA.id, nodeB.id) else Pair(nodeB.id, nodeA.id)
+
+                            val total = microLinkCounts[undirectedPair] ?: 1
+                            val index = microPairDrawIndex.getOrPut(pair) { 0 }
+
+                            drawCurvedEdge(nodeA, nodeB, edge, index, total, textMeasurer, edgeLabelStyle)
+
+                            microPairDrawIndex[pair] = index + 1
+                        }
+                    }
+                }
+
+
+                // --- 3. Draw Nodes ---
+                drawNodes(
+                    nodes = nodes,
+                    textMeasurer = textMeasurer,
+                    labelColor = labelColor,
+                    selectionColor = selectionColor,
+                    zoom = transform.zoom,
+                    isZoomedIn = isZoomedIn, // Pass LOD flag
+                    viewModel = viewModel
+                )
             }
 
             // --- Draw UI Elements (outside transform) ---
@@ -207,7 +282,25 @@ fun GraphView(viewModel: GraphViewmodel) {
             )
         }
 
-        // --- ADDED: Floating Action Button Menu ---
+        // --- ADDED: Graph Settings Panel ---
+        AnimatedVisibility(
+            visible = showSettings,
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+        ) {
+            GraphSettingsView(
+                options = physicsOptions,
+                onGravityChange = viewModel::setGravity,
+                onRepulsionChange = viewModel::setRepulsion,
+                onSpringChange = viewModel::setSpring,
+                onDampingChange = viewModel::setDamping,
+                onBarnesHutThetaChange = viewModel::setBarnesHutTheta,
+                onToleranceChange = viewModel::setTolerance,
+                onInternalGravityChange = viewModel::setInternalGravity // ADDED
+            )
+        }
+
+
+        // --- Floating Action Button Menu ---
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -221,6 +314,16 @@ fun GraphView(viewModel: GraphViewmodel) {
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // --- ADDED: Settings Button ---
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.toggleSettings() },
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Toggle Settings"
+                        )
+                    }
                     // Create Node
                     SmallFloatingActionButton(
                         onClick = { viewModel.onFabCreateNodeClick() },
@@ -250,12 +353,39 @@ fun GraphView(viewModel: GraphViewmodel) {
     }
 }
 
+// --- ADDED: Interface for Graph Entities ---
+/**
+ * A shared interface for nodes and clusters,
+ * allowing them to be treated interchangeably for edge drawing.
+ */
+private interface IGraphEntity {
+    val id: Long
+    val pos: Offset
+    val radius: Float
+}
+
+// Make GraphNode and GraphCluster implement the interface
+private fun GraphNode.asGraphEntity() = object : IGraphEntity {
+    override val id = this@asGraphEntity.id
+    override val pos = this@asGraphEntity.pos
+    override val radius = this@asGraphEntity.radius
+}
+private fun GraphCluster.asGraphEntity() = object : IGraphEntity {
+    override val id = this@asGraphEntity.id
+    override val pos = this@asGraphEntity.pos
+    override val radius = this@asGraphEntity.radius
+}
+// --- END ADDED ---
+
+
 /**
  * Draws a self-referencing loop (edge from a node to itself).
  */
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawSelfLoop(
-    node: GraphNode,
+    // --- MODIFIED: Use interface ---
+    entity: IGraphEntity,
+    // --- END MODIFICATION ---
     edge: GraphEdge,
     index: Int,
     textMeasurer: TextMeasurer,
@@ -265,35 +395,28 @@ private fun DrawScope.drawSelfLoop(
     val strokeWidth = 2f
     val arrowSize = 6f
 
-    // Constants for loop shape
     val loopRadius = 25f + (index * 12f)
-    val loopSeparation = node.radius + 5f
+    val loopSeparation = entity.radius + 5f
 
-    // Calculate attachment points on the node's circumference
-    // We'll attach to the top-right quadrant
     val startAngle = (45f).degToRad()
     val endAngle = (-30f).degToRad()
 
-    val p1 = node.pos + Offset(cos(startAngle) * node.radius, sin(startAngle) * node.radius)
-    val p4 = node.pos + Offset(cos(endAngle) * node.radius, sin(endAngle) * node.radius)
+    val p1 = entity.pos + Offset(cos(startAngle) * entity.radius, sin(startAngle) * entity.radius)
+    val p4 = entity.pos + Offset(cos(endAngle) * entity.radius, sin(endAngle) * entity.radius)
 
-    // Calculate control points to make a nice loop
     val controlOffset = loopSeparation + loopRadius
     val p2 = p1 + Offset(cos(startAngle) * controlOffset, sin(startAngle) * controlOffset)
     val p3 = p4 + Offset(cos(endAngle) * controlOffset, sin(endAngle) * controlOffset)
 
-    // Draw the cubic Bezier curve
     val path = Path().apply {
         moveTo(p1.x, p1.y)
         cubicTo(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y)
     }
     drawPath(path, color, style = Stroke(strokeWidth))
 
-    // Draw arrowhead
     drawArrowhead(p3, p4, color, arrowSize)
 
-    // Draw label
-    val labelPos = (p2 + p3) / 2f // Position label at the apex of the loop
+    val labelPos = (p2 + p3) / 2f
     val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
     drawText(
         textLayoutResult = textLayoutResult,
@@ -308,8 +431,10 @@ private fun DrawScope.drawSelfLoop(
  */
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawCurvedEdge(
-    from: GraphNode,
-    to: GraphNode,
+    // --- MODIFIED: Use interface ---
+    from: IGraphEntity,
+    to: IGraphEntity,
+    // --- END MODIFICATION ---
     edge: GraphEdge,
     index: Int,
     total: Int,
@@ -323,20 +448,20 @@ private fun DrawScope.drawCurvedEdge(
     val start = from.pos
     val end = to.pos
     val delta = end - start
+    if (delta == Offset.Zero) return // Avoid division by zero if entities are on top of each other
+
     val midPoint = (start + end) / 2f
 
     val isStraight = (total == 1)
 
     if (isStraight) {
-        // --- Draw Straight Line ---
         val startWithRadius = from.pos + delta.normalized() * from.radius
         val endWithRadius = to.pos - delta.normalized() * to.radius
 
         drawLine(color, startWithRadius, endWithRadius, strokeWidth)
         drawArrowhead(startWithRadius, endWithRadius, color, arrowSize)
 
-        // Draw label
-        val labelOffset = Offset(0f, -10f) // Just above the line
+        val labelOffset = Offset(0f, -10f)
         val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
         drawText(
             textLayoutResult = textLayoutResult,
@@ -344,21 +469,22 @@ private fun DrawScope.drawCurvedEdge(
             color = color
         )
     } else {
-        // --- Draw Curved Line (Quadratic Bezier) ---
         val normal = Offset(-delta.y, delta.x).normalized()
-        val baseCurvature = 30f // Base height of the curve
+        val baseCurvature = 30f
 
-        // This maps index 0, 1, 2... to offsets 0, 1, -1, 2, -2...
         val curveSign = if (index % 2 == 0) -1 else 1
         val curveMagnitude = (index + 1) / 2
         val curveOffset = curveSign * curveMagnitude * (baseCurvature * 0.75f)
 
-        // Control point is offset from the midpoint along the normal
         val controlPoint = midPoint + normal * (baseCurvature + curveOffset)
 
         // Adjust start/end points to touch node radius, pointing towards control point
-        val startWithRadius = from.pos + (controlPoint - from.pos).normalized() * from.radius
-        val endWithRadius = to.pos + (controlPoint - to.pos).normalized() * to.radius
+        val startDelta = (controlPoint - from.pos)
+        val endDelta = (controlPoint - to.pos)
+        if (startDelta == Offset.Zero || endDelta == Offset.Zero) return // Avoid div by zero
+
+        val startWithRadius = from.pos + startDelta.normalized() * from.radius
+        val endWithRadius = to.pos + endDelta.normalized() * to.radius
 
         val path = Path().apply {
             moveTo(startWithRadius.x, startWithRadius.y)
@@ -366,11 +492,10 @@ private fun DrawScope.drawCurvedEdge(
         }
         drawPath(path, color, style = Stroke(strokeWidth))
 
-        // Draw arrowhead (approximating tangent)
         val tangent = (endWithRadius - controlPoint).normalized()
+        if (tangent == Offset.Zero) return // Avoid issues
         drawArrowhead(endWithRadius - (tangent * arrowSize * 2f), endWithRadius, color, arrowSize)
 
-        // Draw label at the control point
         val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
         drawText(
             textLayoutResult = textLayoutResult,
@@ -385,7 +510,7 @@ private fun DrawScope.drawCurvedEdge(
  */
 private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size: Float) {
     val delta = to - from
-    if (delta == Offset.Zero) return // Cannot draw arrowhead
+    if (delta == Offset.Zero) return
 
     val angle = atan2(delta.y, delta.x)
     val angleRad = angle.toFloat()
@@ -409,39 +534,46 @@ private fun DrawScope.drawNodes(
     labelColor: Color,
     selectionColor: Color,
     zoom: Float,
-    viewModel: GraphViewmodel // ADDED: To check selection state
+    isZoomedIn: Boolean, // ADDED
+    viewModel: GraphViewmodel
 ) {
     val minSize = 8.sp
     val maxSize = 14.sp
     val fontSize = ((12.sp.value / zoom.coerceAtLeast(0.1f)).coerceIn(minSize.value, maxSize.value)).sp
     val style = TextStyle(fontSize = fontSize, color = labelColor)
 
-    // Get selected items from the viewmodel
     val primaryId = (viewModel.metadataViewModel.primarySelectedItem.value as? NodeDisplayItem)?.id
     val secondaryId = (viewModel.metadataViewModel.secondarySelectedItem.value as? NodeDisplayItem)?.id
 
     for (node in nodes.values) {
-        val isSelected = node.id == primaryId || node.id == secondaryId
+        // --- MODIFIED: LOD Check ---
+        if (!isZoomedIn && node.clusterId != null) {
+            continue // Don't draw clustered nodes when zoomed out
+        }
+        // --- END MODIFICATION ---
 
-        // Draw circle
+        val isSelected = node.id == primaryId || node.id == secondaryId
+        val alpha = if (isZoomedIn) 1.0f else 0.8f // Nodes are slightly faded when zoomed in with clusters
+
         drawCircle(
             color = node.colorInfo.composeColor,
             radius = node.radius,
-            center = node.pos
+            center = node.pos,
+            alpha = alpha
         )
-        // Draw border
         drawCircle(
             color = if (isSelected) selectionColor else node.colorInfo.composeFontColor,
             radius = node.radius,
             center = node.pos,
-            style = Stroke(width = if (isSelected) 3f else 1f) // Thicker border if selected
+            style = Stroke(width = if (isSelected) 3f else 1f),
+            alpha = alpha
         )
 
-        // Draw label
+        // Draw label (only if zoomed in enough)
         if (zoom > 0.5f) {
             val textLayoutResult = textMeasurer.measure(
                 text = AnnotatedString(node.displayProperty),
-                style = style
+                style = style.copy(color = labelColor.copy(alpha = alpha))
             )
             drawText(
                 textLayoutResult = textLayoutResult,
@@ -453,6 +585,100 @@ private fun DrawScope.drawNodes(
         }
     }
 }
+
+// --- ADDED: Cluster Hull Drawing Function ---
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawClusterHulls(
+    clusters: Map<Long, GraphCluster>,
+    allNodes: Map<Long, GraphNode>,
+    textMeasurer: TextMeasurer,
+    zoom: Float,
+    isZoomedIn: Boolean
+) {
+    val clusterLabelColor = MaterialTheme.colorScheme.onSurface
+    val style = TextStyle(
+        fontSize = (16.sp.value / zoom.coerceAtLeast(0.1f)).coerceIn(12.sp.value, 24.sp.value).sp,
+        color = clusterLabelColor
+    )
+
+    // Get selected cluster
+    val selectedClusterId = (viewModel.metadataViewModel.primarySelectedItem.value as? ClusterDisplayItem)?.id
+
+
+    for (cluster in clusters.values) {
+        val microNodes = allNodes.values.filter { it.clusterId == cluster.id }
+        val isSelected = cluster.id == selectedClusterId
+
+        val (color, alpha, strokeWidth) = if (isZoomedIn) {
+            // Zoomed IN: Semi-transparent bubble
+            Triple(cluster.colorInfo.composeColor, 0.2f, if (isSelected) 3f else 1.5f)
+        } else {
+            // Zoomed OUT: Opaque super-node
+            Triple(cluster.colorInfo.composeColor, 1.0f, if (isSelected) 3f else 1.0f)
+        }
+
+        if (microNodes.size < 3 || isZoomedOut) {
+            // Draw a simple circle if < 3 nodes OR if zoomed out
+            drawCircle(
+                color = color,
+                radius = cluster.radius,
+                center = cluster.pos,
+                alpha = alpha
+            )
+            drawCircle(
+                color = if (isSelected) MaterialTheme.colorScheme.primary else cluster.colorInfo.composeFontColor,
+                radius = cluster.radius,
+                center = cluster.pos,
+                style = Stroke(width = strokeWidth),
+                alpha = if (isZoomedIn) 0.5f else 1.0f
+            )
+        } else {
+            // Draw Convex Hull if zoomed IN and >= 3 nodes
+            val points = microNodes.flatMap {
+                val nodeCenter = it.pos
+                listOf(
+                    nodeCenter + Offset(it.radius, 0f),
+                    nodeCenter + Offset(-it.radius, 0f),
+                    nodeCenter + Offset(0f, it.radius),
+                    nodeCenter + Offset(0f, -it.radius)
+                )
+            }
+            val hullPoints = ConvexHull.compute(points)
+
+            if (hullPoints.isNotEmpty()) {
+                val path = Path()
+                hullPoints.forEachIndexed { index, point ->
+                    if (index == 0) path.moveTo(point.x, point.y)
+                    else path.lineTo(point.x, point.y)
+                }
+                path.close()
+
+                drawPath(path, color, alpha = alpha)
+                drawPath(
+                    path,
+                    if (isSelected) MaterialTheme.colorScheme.primary else cluster.colorInfo.composeFontColor,
+                    alpha = 0.5f,
+                    style = Stroke(width = strokeWidth)
+                )
+            }
+        }
+
+        // Draw cluster label
+        val textLayoutResult = textMeasurer.measure(
+            text = AnnotatedString(cluster.displayProperty),
+            style = style.copy(color = style.color.copy(alpha = if (isZoomedIn) 0.7f else 1.0f))
+        )
+        drawText(
+            textLayoutResult = textLayoutResult,
+            topLeft = cluster.pos - Offset(
+                x = textLayoutResult.size.width / 2f,
+                y = textLayoutResult.size.height / 2f
+            )
+        )
+    }
+}
+// --- END ADDED ---
+
 
 // --- Math Helpers ---
 

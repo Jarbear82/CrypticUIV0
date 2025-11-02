@@ -52,6 +52,9 @@ class GraphViewmodel(
 
     // This is the single source of truth for all cluster physics states
     private val _graphClusters = MutableStateFlow<Map<Long, GraphCluster>>(emptyMap())
+    // --- MODIFIED: Expose clusters to the view ---
+    val graphClusters = _graphClusters.asStateFlow()
+    // --- END MODIFICATION ---
 
     private val _transform = MutableStateFlow(TransformState())
     val transform = _transform.asStateFlow()
@@ -73,6 +76,17 @@ class GraphViewmodel(
 
     // We need the canvas size to correctly calculate zoom center
     private var size = Size.Zero
+
+    // --- ADDED: Pre-processed edges for rendering ---
+    // These are remapped to point to clusters where appropriate
+    private val _macroEdges = MutableStateFlow<List<GraphEdge>>(emptyList())
+    val macroEdges = _macroEdges.asStateFlow()
+
+    // These are edges that exist *within* a cluster
+    private val _microEdges = MutableStateFlow<List<GraphEdge>>(emptyList())
+    val microEdges = _microEdges.asStateFlow()
+    // --- END ADDED ---
+
 
     init {
         // Observe changes in the metadata view model
@@ -113,8 +127,10 @@ class GraphViewmodel(
             val nodeClusterIdLookup = currentNodes.mapValues { it.value.clusterId }
 
             // 1b. Partition edges
+            val microEdgeList = mutableListOf<GraphEdge>() // MODIFIED
+            val macroEdgeList = mutableListOf<GraphEdge>() // MODIFIED
             val microEdgeGroups = mutableMapOf<Long, MutableList<GraphEdge>>()
-            val macroEdges = mutableListOf<GraphEdge>()
+
             for (edge in allEdges) {
                 val srcClusterId = nodeClusterIdLookup[edge.sourceId]
                 val dstClusterId = nodeClusterIdLookup[edge.targetId]
@@ -122,14 +138,20 @@ class GraphViewmodel(
                 if (srcClusterId != null && srcClusterId == dstClusterId) {
                     // This is an edge *within* a cluster
                     microEdgeGroups.getOrPut(srcClusterId) { mutableListOf() }.add(edge)
+                    microEdgeList.add(edge) // MODIFIED: Add to list for renderer
                 } else {
                     // This is a "macro" edge (free->free, free->cluster, cluster->free, cluster->cluster)
                     // We must remap the IDs to point to the cluster if it exists
                     val macroSourceId = srcClusterId ?: edge.sourceId
                     val macroTargetId = dstClusterId ?: edge.targetId
-                    macroEdges.add(edge.copy(sourceId = macroSourceId, targetId = macroTargetId))
+                    macroEdgeList.add(edge.copy(sourceId = macroSourceId, targetId = macroTargetId)) // MODIFIED
                 }
             }
+            // --- MODIFIED: Update rendering edge lists ---
+            _microEdges.value = microEdgeList
+            _macroEdges.value = macroEdgeList
+            // --- END MODIFICATION ---
+
 
             // 1c. Update clusters and create proxy nodes for macro sim
             val updatedClusters = mutableMapOf<Long, GraphCluster>()
@@ -147,8 +169,31 @@ class GraphViewmodel(
                     (mass to pos)
                 }
 
+                // --- MODIFIED: Calculate cluster radius from convex hull ---
+                val radius = if (microNodes.size < 3) {
+                    // Simple bounding circle for 0-2 nodes
+                    microNodes.map { (it.pos - newPos).getDistance() + it.radius }.maxOrNull() ?: 30f
+                } else {
+                    // Convex hull for 3+ nodes
+                    val points = microNodes.flatMap {
+                        // Sample 4 points around each node's radius
+                        val nodeCenter = it.pos
+                        listOf(
+                            nodeCenter + Offset(it.radius, 0f),
+                            nodeCenter + Offset(-it.radius, 0f),
+                            nodeCenter + Offset(0f, it.radius),
+                            nodeCenter + Offset(0f, -it.radius)
+                        )
+                    }
+                    val hullPoints = ConvexHull.compute(points)
+                    // Find max distance from center of mass to any hull point
+                    hullPoints.map { (it - newPos).getDistance() }.maxOrNull() ?: 30f
+                }.coerceAtLeast(30f) // Ensure a minimum radius
+                // --- END MODIFICATION ---
+
+
                 // Update the cluster state
-                val newCluster = cluster.copy(mass = newMass, pos = newPos)
+                val newCluster = cluster.copy(mass = newMass, pos = newPos, radius = radius) // MODIFIED: Set radius
                 updatedClusters[id] = newCluster
 
                 // Create the proxy GraphNode for the physics engine
@@ -159,7 +204,7 @@ class GraphViewmodel(
                     pos = newPos, // Use new center of mass
                     vel = cluster.vel,
                     mass = newMass, // Use new mass
-                    radius = cluster.radius, // TODO: This should be convex hull
+                    radius = radius, // MODIFIED: Use calculated radius
                     colorInfo = cluster.colorInfo,
                     isFixed = cluster.isFixed,
                     oldForce = cluster.oldForce,
@@ -175,7 +220,7 @@ class GraphViewmodel(
             val macroPhysicsBodiesMap = unClusteredNodes.associateBy { it.id } + macroProxyNodes
             val updatedMacroBodiesMap = physicsEngine.update(
                 macroPhysicsBodiesMap,
-                macroEdges,
+                macroEdgeList, // MODIFIED: Use macro edges
                 options,
                 dt.coerceAtMost(0.032f)
             )
@@ -215,6 +260,7 @@ class GraphViewmodel(
                     oldForce = updatedMacroBody.oldForce,
                     swinging = updatedMacroBody.swinging,
                     traction = updatedMacroBody.traction
+                    // Note: mass and radius are already set from step 1c
                 )
             }
 
@@ -246,10 +292,13 @@ class GraphViewmodel(
         // --- 1. Update Nodes ---
         val edgeCountByNodeId = mutableMapOf<Long, Int>()
         edgeList.forEach { edge ->
-            val srcId = (edge.src as? NodeDisplayItem)?.id
-            val dstId = (edge.dst as? NodeDisplayItem)?.id
-            if (srcId != null) edgeCountByNodeId[srcId] = (edgeCountByNodeId[srcId] ?: 0) + 1
-            if (dstId != null) edgeCountByNodeId[dstId] = (edgeCountByNodeId[dstId] ?: 0) + 1
+            // Only count edges where the source/target is a Node
+            (edge.src as? NodeDisplayItem)?.id?.let {
+                edgeCountByNodeId[it] = (edgeCountByNodeId[it] ?: 0) + 1
+            }
+            (edge.dst as? NodeDisplayItem)?.id?.let {
+                edgeCountByNodeId[it] = (edgeCountByNodeId[it] ?: 0) + 1
+            }
         }
 
         _graphNodes.value = nodeList.associate { node ->
@@ -305,23 +354,19 @@ class GraphViewmodel(
                     pos = Offset(Random.nextFloat() * 100 - 50, Random.nextFloat() * 100 - 50),
                     vel = Offset.Zero,
                     mass = 1f, // Initial mass
-                    radius = 50f, // TODO: Initial radius, will be replaced
+                    radius = 50f, // Initial radius
                     colorInfo = labelToColor(cluster.label)
                 )
             }
             id to newCluster
         }
 
-        // --- 3. Update Edges (for renderer) ---
-        // We use the raw edge data, the sim loop handles remapping
+        // --- 3. Update Edges (for simulation) ---
+        // The sim loop will handle remapping, so we just pass the raw edge list
         _graphEdges.value = edgeList.mapNotNull { edge ->
-            // Ensure src and dst are valid GraphEntityDisplayItems
             val srcId = edge.src.id
             val dstId = edge.dst.id
 
-            // This logic might need adjustment if edge.src can be a cluster
-            // For now, assume edgeList provides edges between nodes
-            // The sim loop will handle remapping node->cluster
             GraphEdge(
                 id = edge.id,
                 sourceId = srcId,
@@ -376,6 +421,17 @@ class GraphViewmodel(
         }
     }
 
+    // --- ADDED: Find cluster at world position ---
+    /** Finds the cluster at a given world position, if any */
+    private fun findClusterAt(worldPos: Offset): GraphCluster? {
+        // Iterate in reverse so clusters drawn on top are found first
+        return _graphClusters.value.values.reversed().find { cluster ->
+            val distance = (worldPos - cluster.pos).getDistance()
+            distance < cluster.radius // Use the cluster's calculated radius
+        }
+    }
+
+
     /**
      * Called when a drag gesture starts.
      * Checks if it's on a node or the canvas.
@@ -383,10 +439,10 @@ class GraphViewmodel(
      */
     fun onDragStart(screenPos: Offset): Boolean {
         val worldPos = screenToWorld(screenPos)
-        val tappedNode = findNodeAt(worldPos)
-        // TODO: Also check for dragging clusters
 
-        return if (tappedNode != null) {
+        // --- MODIFIED: Prioritize dragging nodes, then clusters ---
+        val tappedNode = findNodeAt(worldPos)
+        if (tappedNode != null) {
             _draggedNodeId.value = tappedNode.id
             _dragVelocity.value = Offset.Zero
             _graphNodes.update { allNodes ->
@@ -397,61 +453,116 @@ class GraphViewmodel(
                 }
                 newNodes
             }
-            true // It's a node drag
-        } else {
-            false // It's a pan
+            return true // It's a node drag
         }
+
+        val tappedCluster = findClusterAt(worldPos)
+        if (tappedCluster != null) {
+            _draggedNodeId.value = tappedCluster.id // Use the same draggedNodeId state
+            _dragVelocity.value = Offset.Zero
+            _graphClusters.update { allClusters ->
+                val newClusters = allClusters.toMutableMap()
+                val cluster = newClusters[tappedCluster.id]
+                if (cluster != null) {
+                    newClusters[tappedCluster.id] = cluster.copy(isFixed = true)
+                }
+                newClusters
+            }
+            return true // It's a cluster drag
+        }
+
+        return false // It's a pan
+        // --- END MODIFICATION ---
     }
 
-    /** Called when dragging a node */
+    /** Called when dragging a node or cluster */
     fun onDrag(screenDelta: Offset) {
-        val nodeId = _draggedNodeId.value ?: return
+        val id = _draggedNodeId.value ?: return
         val worldDelta = screenDeltaToWorldDelta(screenDelta)
         _dragVelocity.value = worldDelta // Store velocity for when we release
 
-        _graphNodes.update { allNodes ->
-            val newNodes = allNodes.toMutableMap()
-            val node = newNodes[nodeId]
-            if (node != null) {
-                newNodes[nodeId] = node.copy(pos = node.pos + worldDelta)
+        // --- MODIFIED: Check if it's a node or cluster ---
+        if (_graphNodes.value.containsKey(id)) {
+            _graphNodes.update { allNodes ->
+                val newNodes = allNodes.toMutableMap()
+                val node = newNodes[id]
+                if (node != null) {
+                    newNodes[id] = node.copy(pos = node.pos + worldDelta)
+                }
+                newNodes
             }
-            newNodes
+        } else if (_graphClusters.value.containsKey(id)) {
+            _graphClusters.update { allClusters ->
+                val newClusters = allClusters.toMutableMap()
+                val cluster = newClusters[id]
+                if (cluster != null) {
+                    newClusters[id] = cluster.copy(pos = cluster.pos + worldDelta)
+                }
+                newClusters
+            }
         }
-        // TODO: Handle dragging clusters
+        // --- END MODIFICATION ---
     }
 
     /** Called when the drag gesture ends */
     fun onDragEnd() {
-        val nodeId = _draggedNodeId.value ?: return
-        _graphNodes.update { allNodes ->
-            val newNodes = allNodes.toMutableMap()
-            val node = newNodes[nodeId]
-            if (node != null) {
-                newNodes[nodeId] = node.copy(
-                    isFixed = false,
-                    vel = _dragVelocity.value / (1f / 60f) // Apply velocity
-                )
+        val id = _draggedNodeId.value ?: return
+
+        // --- MODIFIED: Check if it's a node or cluster ---
+        if (_graphNodes.value.containsKey(id)) {
+            _graphNodes.update { allNodes ->
+                val newNodes = allNodes.toMutableMap()
+                val node = newNodes[id]
+                if (node != null) {
+                    newNodes[id] = node.copy(
+                        isFixed = false,
+                        vel = _dragVelocity.value / (1f / 60f) // Apply velocity
+                    )
+                }
+                newNodes
             }
-            newNodes
+        } else if (_graphClusters.value.containsKey(id)) {
+            _graphClusters.update { allClusters ->
+                val newClusters = allClusters.toMutableMap()
+                val cluster = newClusters[id]
+                if (cluster != null) {
+                    newClusters[id] = cluster.copy(
+                        isFixed = false,
+                        vel = _dragVelocity.value / (1f / 60f) // Apply velocity
+                    )
+                }
+                newClusters
+            }
         }
+        // --- END MODIFICATION ---
+
         _draggedNodeId.value = null
         _dragVelocity.value = Offset.Zero
-        // TODO: Handle dragging clusters
     }
 
     /** Called when the canvas is tapped */
     fun onTap(screenPos: Offset) {
         val worldPos = screenToWorld(screenPos)
-        val tappedNode = findNodeAt(worldPos)
-        // TODO: Also check for tapping clusters
 
+        // --- MODIFIED: Prioritize tapping nodes, then clusters ---
+        val tappedNode = findNodeAt(worldPos)
         if (tappedNode != null) {
-            // Find the corresponding NodeDisplayItem to pass to the metadataViewModel
             val displayItem = metadataViewModel.nodeList.value.find { it.id == tappedNode.id }
             if (displayItem != null) {
                 metadataViewModel.selectItem(displayItem)
             }
+            return // Found a node, stop here
         }
+
+        val tappedCluster = findClusterAt(worldPos)
+        if (tappedCluster != null) {
+            val displayItem = metadataViewModel.clusterList.value.find { it.id == tappedCluster.id }
+            if (displayItem != null) {
+                metadataViewModel.selectItem(displayItem)
+            }
+            return // Found a cluster, stop here
+        }
+        // --- END MODIFICATION ---
     }
 
     // --- UI Handlers ---
