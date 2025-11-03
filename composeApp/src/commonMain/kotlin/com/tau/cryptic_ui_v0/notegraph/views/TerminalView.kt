@@ -250,11 +250,12 @@ fun TerminalView(viewModel: TerminalViewModel) {
                                 }
                             }
                         },
-                        // UPDATED: Call the new request function
                         onDeleteNodeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onDeleteEdgeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.EDIT -> EditItemView(
                         // --- PASS THE NEW STATE ---

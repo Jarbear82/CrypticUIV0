@@ -3,8 +3,12 @@ package com.tau.cryptic_ui_v0.notegraph.views // UPDATED: Changed package to mat
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -21,8 +25,10 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.tau.cryptic_ui_v0.viewmodels.SchemaData
 import com.tau.cryptic_ui_v0.SchemaDefinitionItem
@@ -32,7 +38,6 @@ fun SchemaView(
     schema: SchemaData?,
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
-    // UPDATED: All parameters use the new SchemaDefinitionItem
     onNodeClick: (SchemaDefinitionItem) -> Unit,
     onEdgeClick: (SchemaDefinitionItem) -> Unit,
     onEditNodeClick: (SchemaDefinitionItem) -> Unit,
@@ -40,7 +45,9 @@ fun SchemaView(
     onDeleteNodeClick: (SchemaDefinitionItem) -> Unit,
     onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
-    onAddEdgeSchemaClick: () -> Unit
+    onAddEdgeSchemaClick: () -> Unit,
+    onAddNodeClick: () -> Unit,
+    onAddEdgeClick: () -> Unit,
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -74,11 +81,7 @@ fun SchemaView(
                             .padding(bottom = 8.dp)
                             .clickable { onNodeClick(table) }
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
-                        leadingContent = {
-                            IconButton(onClick = { onEditNodeClick(table) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Node Schema")
-                            }
-                        },
+
                         // UPDATED: Use new SchemaProperty fields
                         supportingContent = {
                             Text(
@@ -90,9 +93,21 @@ fun SchemaView(
                             )
                         },
                         trailingContent = {
-                            IconButton(onClick = { onDeleteNodeClick(table) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Node Schema")
-                            }
+                            // Action Buttons Per NodeSchema Item
+                            FlowRow(
+                                itemVerticalAlignment = Alignment.CenterVertically,
+                                content = {
+                                    IconButton(onClick = onAddNodeClick) {
+                                        Icon(Icons.Default.Add, contentDescription = "New Node")
+                                    }
+                                    IconButton(onClick = { onEditNodeClick(table) }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit Node Schema")
+                                    }
+                                    IconButton(onClick = { onDeleteNodeClick(table) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete Node Schema")
+                                    }
+                                }
+                                    )
                         },
                         colors = ListItemDefaults.colors( // Apply colors
                             containerColor = colorInfo.composeColor,
@@ -131,23 +146,39 @@ fun SchemaView(
                             .padding(bottom = 8.dp)
                             .clickable { onEdgeClick(table) }
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
-                        leadingContent = {
-                            IconButton(onClick = { onEditEdgeClick(table) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Edge Schema")
-                            }
-                        },
                         // UPDATED: Use table.connections (nullable)
                         supportingContent = {
                             Column {
                                 (table.connections ?: emptyList()).forEach {
-                                    Text("(${it.src}) -> (${it.dst})", style = MaterialTheme.typography.bodyMedium)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        content = {
+                                            Text("(${it.src}) -> (${it.dst})", style = MaterialTheme.typography.bodyMedium)
+                                            IconButton(
+                                                onClick = onAddEdgeClick,
+                                                /// modifier = Modifier.wrapContentHeight()
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = "New Edge", modifier = Modifier.size( with(LocalDensity.current) {
+                                                    MaterialTheme.typography.bodyMedium.fontSize.toDp()} )
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         },
                         trailingContent = {
-                            IconButton(onClick = { onDeleteEdgeClick(table) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Edge Schema")
-                            }
+                            FlowRow(
+                                itemVerticalAlignment = Alignment.CenterVertically,
+                                content = {
+                                    IconButton(onClick = { onEditEdgeClick(table) }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit Edge Schema")
+                                    }
+                                    IconButton(onClick = { onDeleteEdgeClick(table) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete Edge Schema")
+                                    }
+                                }
+                            )
                         },
                         colors = ListItemDefaults.colors(
                             // Apply colors based on edge label

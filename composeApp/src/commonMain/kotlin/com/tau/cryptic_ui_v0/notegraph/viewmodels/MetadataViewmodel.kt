@@ -13,11 +13,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.tau.cryptic_ui_v0.db.AppDatabase
 
-// UPDATED: Constructor now takes SqliteDbService
 class MetadataViewModel(
     private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
-    private val schemaViewModel: SchemaViewModel // Still needed to get schema names
+    private val schemaViewModel: SchemaViewModel
 ) {
     // REMOVED: DBMetaData logic. This is now handled by MainViewModel
     // private val _dbMetaData = MutableStateFlow<DBMetaData?>(null)
