@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
 import com.tau.nexus_note.datamodels.NodeDisplayItem
@@ -15,10 +16,13 @@ import com.tau.nexus_note.codex.crud.update.EditItemView
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView
 import com.tau.nexus_note.codex.schema.SchemaView
+import com.tau.nexus_note.codex.schema.SchemaData
 import com.tau.nexus_note.codex.DataViewTabs
 import com.tau.nexus_note.codex.CodexViewModel
 import com.tau.nexus_note.codex.ViewTabs
+import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.views.ListView
+import kotlinx.coroutines.launch
 
 @Composable
 fun CodexView(viewModel: CodexViewModel) {
@@ -41,21 +45,36 @@ fun CodexView(viewModel: CodexViewModel) {
 
     // --- Unified Save/Cancel Handlers ---
 
+    val scope = rememberCoroutineScope() // Make sure you have this import
     val onSave: () -> Unit = {
-        viewModel.editCreateViewModel.saveCurrent {
-            // This code now runs *after* the save is complete
-            // The edit state is already cleared by saveCurrent()
+        val state = viewModel.editCreateViewModel.editScreenState.value
+        // Get the original item to know where to navigate back to
+        val originalItem = viewModel.metadataViewModel.itemToEdit.value
 
-            // Navigate back to the correct tab
-            val originalItem = viewModel.metadataViewModel.itemToEdit.value
-            val targetTab = when (originalItem) {
-                is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
-                is SchemaDefinitionItem -> DataViewTabs.SCHEMA
-                else -> DataViewTabs.METADATA // Default
+        // Launch a coroutine to call the repository's suspend functions
+        scope.launch {
+            when (state) {
+                is EditScreenState.CreateNode -> viewModel.repository.createNode(state.state)
+                is EditScreenState.CreateEdge -> viewModel.repository.createEdge(state.state)
+                is EditScreenState.CreateNodeSchema -> viewModel.repository.createNodeSchema(state.state)
+                is EditScreenState.CreateEdgeSchema -> viewModel.repository.createEdgeSchema(state.state)
+                is EditScreenState.EditNode -> viewModel.repository.updateNode(state.state)
+                is EditScreenState.EditEdge -> viewModel.repository.updateEdge(state.state)
+                is EditScreenState.EditNodeSchema -> viewModel.repository.updateNodeSchema(state.state)
+                is EditScreenState.EditEdgeSchema -> viewModel.repository.updateEdgeSchema(state.state)
+                is EditScreenState.None -> {}
             }
-            viewModel.selectDataTab(targetTab)
-            viewModel.metadataViewModel.clearSelectedItem()
         }
+
+        // This part runs immediately after launching the save
+        viewModel.editCreateViewModel.cancelAllEditing()
+        viewModel.metadataViewModel.clearSelectedItem()
+        val targetTab = when (originalItem) {
+            is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
+            is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA // Handle "Create..." strings
+            else -> DataViewTabs.METADATA
+        }
+        viewModel.selectDataTab(targetTab)
     }
 
     val onCancel: () -> Unit = {

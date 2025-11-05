@@ -9,13 +9,16 @@ import com.tau.nexus_note.datamodels.EdgeCreationState
 import com.tau.nexus_note.datamodels.EdgeEditState
 import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
-import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.datamodels.NodeEditState
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.codex.metadata.MetadataViewModel
 import com.tau.nexus_note.codex.schema.SchemaViewModel
+import com.tau.nexus_note.CodexRepository
+import com.tau.nexus_note.codex.schema.SchemaData
+import com.tau.nexus_note.datamodels.EdgeDisplayItem
+import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +30,7 @@ import kotlin.collections.emptyList
 import kotlin.collections.get
 
 class EditCreateViewModel(
-    private val dbService: SqliteDbService,
+    private val repository: CodexRepository,
     private val viewModelScope: CoroutineScope,
     private val schemaViewModel: SchemaViewModel,
     private val metadataViewModel: MetadataViewModel,
@@ -97,37 +100,6 @@ class EditCreateViewModel(
                 this[key] = value
             }
             current.copy(state = current.state.copy(properties = newProperties))
-        }
-    }
-
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
-    fun createNodeFromState(onFinished: () -> Unit) {
-        viewModelScope.launch {
-            val state = (_editScreenState.value as? EditScreenState.CreateNode)?.state ?: return@launch
-
-            if (state.selectedSchema != null) {
-                try {
-                    // Serialize properties to JSON
-                    val propertiesJson = json.encodeToString(state.properties)
-
-                    // Find the display property's value
-                    val displayKey = state.selectedSchema.properties.firstOrNull { it.isDisplayProperty }?.name
-                    val displayLabel = state.properties[displayKey] ?: "Node" // Fallback
-
-                    // Call SQLDelight insert query
-                    dbService.database.appDatabaseQueries.insertNode(
-                        schema_id = state.selectedSchema.id,
-                        display_label = displayLabel,
-                        properties_json = propertiesJson
-                    )
-                    cancelAllEditing()
-                    metadataViewModel.listNodes()
-                    onFinished()
-                } catch (e: Exception) {
-                    println("Error creating node: ${e.message}")
-                    // TODO: Show user-facing error
-                }
-            }
         }
     }
 
@@ -201,34 +173,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
-    fun createEdgeFromState(onFinished: () -> Unit) {
-        viewModelScope.launch {
-            val state = (_editScreenState.value as? EditScreenState.CreateEdge)?.state ?: return@launch
-
-            if (state.selectedSchema != null && state.src != null && state.dst != null) {
-                try {
-                    // Serialize properties to JSON
-                    val propertiesJson = json.encodeToString(state.properties)
-
-                    // Call SQLDelight insert query
-                    dbService.database.appDatabaseQueries.insertEdge(
-                        schema_id = state.selectedSchema.id,
-                        from_node_id = state.src.id,
-                        to_node_id = state.dst.id,
-                        properties_json = propertiesJson
-                    )
-                    cancelAllEditing() // Exit creation mode
-                    metadataViewModel.listEdges() // Refresh the edge list
-                    onFinished()
-                } catch (e: Exception) {
-                    println("Error creating edge: ${e.message}")
-                    // TODO: Show user-facing error
-                }
-            }
-        }
-    }
-
     // --- Node Schema Creation ---
     fun initiateNodeSchemaCreation() {
         // FIX: Launch a coroutine *only* for the suspend call
@@ -276,31 +220,6 @@ class EditCreateViewModel(
                 removeAt(index)
             }
             current.copy(state = current.state.copy(properties = newProperties))
-        }
-    }
-
-    // UPDATED: Rewritten to serialize properties and call SQLDelight insert query
-    fun createNodeSchemaFromState(onFinished: () -> Unit) {
-        viewModelScope.launch {
-            val state = (_editScreenState.value as? EditScreenState.CreateNodeSchema)?.state ?: return@launch
-            try {
-                // Serialize properties
-                val propertiesJson = json.encodeToString(state.properties)
-
-                // Call SQLDelight insert query
-                dbService.database.appDatabaseQueries.insertSchema(
-                    type = "NODE",
-                    name = state.tableName,
-                    properties_json = propertiesJson,
-                    connections_json = null // Nodes don't have connections
-                )
-                onFinished()
-                cancelAllEditing()
-                schemaViewModel.showSchema()
-            } catch (e: Exception) {
-                println("Error creating node schema: ${e.message}")
-                // TODO: Show user-facing error
-            }
         }
     }
 
@@ -375,37 +294,17 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Rewritten to serialize properties AND connections and call SQLDelight insert query
-    fun createEdgeSchemaFromState(onFinished: () -> Unit) {
+    // --- Node Editing ---
+    fun initiateNodeEdit(item: NodeDisplayItem) {
         viewModelScope.launch {
-            val state = (_editScreenState.value as? EditScreenState.CreateEdgeSchema)?.state ?: return@launch
-            try {
-                // Serialize both properties and connections
-                val propertiesJson = json.encodeToString(state.properties)
-                val connectionsJson = json.encodeToString(state.connections)
-
-                // Call SQLDelight insert query
-                dbService.database.appDatabaseQueries.insertSchema(
-                    type = "EDGE",
-                    name = state.tableName,
-                    properties_json = propertiesJson,
-                    connections_json = connectionsJson
-                )
-                onFinished()
-                cancelAllEditing()
-                schemaViewModel.showSchema()
-            } catch (e: Exception) {
-                println("Error creating edge schema: ${e.message}")
-                // TODO: Show user-facing error
+            val editState = repository.getNodeEditState(item.id)
+            if (editState != null) {
+                _editScreenState.value = EditScreenState.EditNode(editState)
+                metadataViewModel.setItemToEdit(item) // For navigation
+            } else {
+                println("Error: Could not fetch node details for ${item.id}")
             }
         }
-    }
-
-    // --- Node Editing ---
-    // UPDATED: Signature uses new NodeEditState
-    fun initiateNodeEdit(node: NodeEditState) {
-        _editScreenState.value = EditScreenState.EditNode(node)
-        println("DEBUG: Initiated node edit for: ${node.schema.name}")
     }
 
     // UPDATED: Logic remains the same, but operates on NodeEditState
@@ -423,10 +322,16 @@ class EditCreateViewModel(
     }
 
     // --- Edge Editing ---
-    // UPDATED: Signature uses new EdgeEditState
-    fun initiateEdgeEdit(edge: EdgeEditState) {
-        _editScreenState.value = EditScreenState.EditEdge(edge)
-        println("DEBUG: Initiated edge edit for: ${edge.schema.name}")
+    fun initiateEdgeEdit(item: EdgeDisplayItem) {
+        viewModelScope.launch {
+            val editState = repository.getEdgeEditState(item)
+            if (editState != null) {
+                _editScreenState.value = EditScreenState.EditEdge(editState)
+                metadataViewModel.setItemToEdit(item) // For navigation
+            } else {
+                println("Error: Could not fetch edge details for ${item.id}")
+            }
+        }
     }
 
     // UPDATED: Logic remains the same, but operates on EdgeEditState

@@ -12,7 +12,7 @@ import com.tau.nexus_note.codex.graph.physics.PhysicsEngine
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
 import com.tau.nexus_note.utils.labelToColor
 import com.tau.nexus_note.codex.crud.EditCreateViewModel
-import com.tau.nexus_note.viewmodels.MetadataViewModel
+import com.tau.nexus_note.codex.metadata.MetadataViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

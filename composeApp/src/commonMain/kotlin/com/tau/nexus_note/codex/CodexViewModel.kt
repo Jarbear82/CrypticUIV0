@@ -21,7 +21,7 @@ class CodexViewModel(private val dbService: SqliteDbService) {
     // 2. Create child ViewModels, passing them the *repository*
     val schemaViewModel = SchemaViewModel(repository, viewModelScope)
     val metadataViewModel = MetadataViewModel(repository, viewModelScope)
-    val editCreateViewModel = EditCreateViewModel(repository, viewModelScope)
+    val editCreateViewModel = EditCreateViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
     // 3. GraphViewModel now observes MetadataViewModel, which observes the repo.
     // This dependency chain is fine.
