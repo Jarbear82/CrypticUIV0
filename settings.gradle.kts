@@ -1,4 +1,4 @@
-rootProject.name = "CrypticUIV0"
+rootProject.name = "NexusNote"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

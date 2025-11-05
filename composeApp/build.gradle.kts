@@ -41,12 +41,12 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "com.tau.cryptic_ui_v0.MainKt"
+        mainClass = "com.tau.nexus_note.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.AppImage)
 
-            packageName = "com.tau.cryptic_ui_v0"
+            packageName = "com.tau.nexus_note"
             packageVersion = "1.0.0"
 
         }
@@ -74,7 +74,7 @@ configurations.all {
 sqldelight {
     databases {
         create("AppDatabase") {
-            packageName.set("com.tau.cryptic_ui_v0.db")
+            packageName.set("com.tau.nexus_note.db")
         }
     }
 }

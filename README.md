@@ -1,19 +1,20 @@
-# CrypticGraph
+# Nexus Note
 ---
 A Visual Structured Notetaking Application.
-- **Graph Database:** Provides a centralized, schema-based approach to note taking.
-  This helps users aviod note duplication as well as fill in missing information.
+- **Schema Mandatory:** Schemas provide note blueprints, creating a centralized,
+approach to note-taking. This helps users avoid note duplication as well as fill in
+missing information.  
 - **Force-directed Graph:** Provides an at-a-glance comprehension of existing notes.
   While it can get messy, when viewing a large note graph, using certian queryies (or
   in the future, filters), allows the user to easily see and create connections between
   notes.
-- **Query Terminal:** Provides an efficient way for advanced users to query and view
+- **Query Terminal (Future Planned):** Provides an efficient way for advanced users to query and view
   desired portions of the graph.
 
 **Intended Audiences:**
 - Writers
 - DnD Worldbuilding
-- Anyone looking for a way to visualize a graph database.
+- Anyone looking for a way to visualize data in a graph.
 
 This is a Kotlin Multiplatform project targeting Desktop (JVM).
 
