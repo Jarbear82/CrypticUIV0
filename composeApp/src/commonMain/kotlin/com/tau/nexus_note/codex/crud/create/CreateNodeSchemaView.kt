@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.CRUD.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,8 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.NodeSchemaCreationState // UPDATED: Uses new state class
-import com.tau.nexus_note.SchemaProperty // UPDATED: Uses new property class
+import com.tau.nexus_note.datamodels.NodeSchemaCreationState
+import com.tau.nexus_note.datamodels.SchemaProperty
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

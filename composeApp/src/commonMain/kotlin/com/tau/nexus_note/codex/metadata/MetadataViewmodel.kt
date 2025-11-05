@@ -1,6 +1,13 @@
 package com.tau.nexus_note.viewmodels
 
-import com.tau.nexus_note.* // Imports new data classes: NodeDisplayItem, EdgeDisplayItem, etc.
+import com.tau.nexus_note.SqliteDbService
+import com.tau.nexus_note.datamodels.EdgeDisplayItem
+import com.tau.nexus_note.datamodels.EdgeEditState
+import com.tau.nexus_note.datamodels.EdgeSchemaEditState
+import com.tau.nexus_note.datamodels.NodeDisplayItem
+import com.tau.nexus_note.datamodels.NodeEditState
+import com.tau.nexus_note.datamodels.NodeSchemaEditState
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -214,7 +221,6 @@ class MetadataViewModel(
             }
             is EdgeDisplayItem -> {
                 val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
-                // UPDATED: Robust schema check
                 var schemaData = schemaViewModel.schema.value
                 if (schemaData == null) {
                     schemaViewModel.showSchema()

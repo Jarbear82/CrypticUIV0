@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.CRUD.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,12 +10,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.EdgeEditState // UPDATED: Uses new state class
+import com.tau.nexus_note.datamodels.EdgeEditState
 
 @Composable
 fun EditEdgeView(
     state: EdgeEditState,
-    onPropertyChange: (String, String) -> Unit, // UPDATED: Key is now a String
+    onPropertyChange: (String, String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {

@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.CRUD.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -12,25 +12,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.EdgeSchemaEditState // UPDATED: Uses new state class
-import com.tau.nexus_note.SchemaProperty // UPDATED: Uses new property class
+import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
+import com.tau.nexus_note.datamodels.SchemaProperty
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditEdgeSchemaView(
-    state: EdgeSchemaEditState,
-    onLabelChange: (String) -> Unit,
-    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
-    onAddProperty: () -> Unit,
-    onRemoveProperty: (Int) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
-    // ADDED: Handlers for editing connections
+fun CreateEdgeSchemaView(
+    state: EdgeSchemaCreationState,
+    onTableNameChange: (String) -> Unit,
+    // Callbacks for managing the connection pair list
     onAddConnection: (src: String, dst: String) -> Unit,
     onRemoveConnection: (Int) -> Unit,
-    allNodeSchemaNames: List<String> // ADDED: Need list of node schema names
+    // Callbacks for managing properties
+    onPropertyChange: (Int, SchemaProperty) -> Unit,
+    onAddProperty: () -> Unit,
+    onRemoveProperty: (Int) -> Unit,
+    // Create/Cancel
+    onCreate: (EdgeSchemaCreationState) -> Unit,
+    onCancel: () -> Unit
 ) {
     // UPDATED: Define your new supported types
     val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
@@ -42,18 +42,18 @@ fun EditEdgeSchemaView(
     var newDstExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Edit Edge Schema", style = MaterialTheme.typography.headlineSmall)
+        Text("Create Edge Schema", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = state.currentName, // UPDATED: Use currentName
-            onValueChange = onLabelChange,
+            value = state.tableName,
+            onValueChange = onTableNameChange,
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // UPDATED: Section for adding/removing connection pairs
+        // --- Section for adding new connection pairs ---
         Text("Connection Pairs", style = MaterialTheme.typography.titleMedium)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             // Source Table Dropdown
@@ -73,11 +73,12 @@ fun EditEdgeSchemaView(
                     expanded = newSrcExpanded,
                     onDismissRequest = { newSrcExpanded = false }
                 ) {
-                    allNodeSchemaNames.forEach { schemaName ->
+                    // UPDATED: Use new SchemaDefinitionItem and .name
+                    state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schemaName) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newSrcTable = schemaName
+                                newSrcTable = schema.name
                                 newSrcExpanded = false
                             }
                         )
@@ -102,11 +103,12 @@ fun EditEdgeSchemaView(
                     expanded = newDstExpanded,
                     onDismissRequest = { newDstExpanded = false }
                 ) {
-                    allNodeSchemaNames.forEach { schemaName ->
+                    // UPDATED: Use new SchemaDefinitionItem and .name
+                    state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schemaName) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newDstTable = schemaName
+                                newDstTable = schema.name
                                 newDstExpanded = false
                             }
                         )
@@ -118,6 +120,7 @@ fun EditEdgeSchemaView(
             IconButton(
                 onClick = {
                     onAddConnection(newSrcTable!!, newDstTable!!)
+                    // Reset local state
                     newSrcTable = null
                     newDstTable = null
                 },
@@ -151,22 +154,19 @@ fun EditEdgeSchemaView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Properties Section ---
         Text("Properties", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+        LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
             itemsIndexed(state.properties) { index, property ->
                 var expanded by remember { mutableStateOf(false) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        value = property.name, // UPDATED: Use name
+                        value = property.name,
                         onValueChange = {
                             onPropertyChange(index, property.copy(name = it))
                         },
                         label = { Text("Property Name") },
-                        modifier = Modifier.weight(1f),
-                        isError = property.name.isBlank()
+                        modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ExposedDropdownMenuBox(
@@ -174,11 +174,11 @@ fun EditEdgeSchemaView(
                         onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = property.type, // UPDATED: Use type
+                            value = property.type,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().width(120.dp),
+                            modifier = Modifier.menuAnchor().width(120.dp)
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
@@ -190,19 +190,23 @@ fun EditEdgeSchemaView(
                                     onClick = {
                                         onPropertyChange(index, property.copy(type = type))
                                         expanded = false
-                                    },
+                                    }
                                 )
                             }
                         }
                     }
-                    IconButton(onClick = { onRemoveProperty(index) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Property", tint = Color.Red)
+                    IconButton(onClick = {
+                        onRemoveProperty(index)
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Property")
                     }
                 }
             }
         }
 
-        Button(onClick = onAddProperty) {
+        Button(onClick = {
+            onAddProperty()
+        }) {
             Icon(Icons.Default.Add, contentDescription = "Add Property")
             Spacer(modifier = Modifier.width(4.dp))
             Text("Add Property")
@@ -210,9 +214,13 @@ fun EditEdgeSchemaView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Create/Cancel Buttons ---
         Row {
-            Button(onClick = onSave) {
-                Text("Save")
+            Button(
+                onClick = { onCreate(state) },
+                enabled = state.tableName.isNotBlank() && state.connections.isNotEmpty()
+            ) {
+                Text("Create")
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = onCancel) {

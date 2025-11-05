@@ -22,8 +22,7 @@ data class PhysicsOptions(
     val damping: Float = 0.9f,
     val nodeBaseRadius: Float = 15f,
     val nodeRadiusEdgeFactor: Float = 2.0f,
-    val minDistance: Float = 5.0f, // Extra buffer between nodes
-    // --- ADDED: Parameters for ForceAtlas2 optimizations ---
+    val minDistance: Float = 2.0f, // Extra buffer between nodes
     val barnesHutTheta: Float = 1.2f,
     val tolerance: Float = 1.0f
 )

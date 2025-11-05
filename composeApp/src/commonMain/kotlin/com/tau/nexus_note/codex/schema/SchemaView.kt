@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.viewmodels.SchemaData
-import com.tau.nexus_note.SchemaDefinitionItem
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.utils.labelToColor
 
 @Composable

@@ -1,6 +1,21 @@
-package com.tau.nexus_note.viewmodels
+package com.tau.nexus_note.codex.crud
 
-import com.tau.nexus_note.*
+import com.tau.nexus_note.SqliteDbService
+import com.tau.nexus_note.datamodels.ConnectionPair
+import com.tau.nexus_note.datamodels.EditScreenState
+import com.tau.nexus_note.datamodels.NodeCreationState
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+import com.tau.nexus_note.datamodels.EdgeCreationState
+import com.tau.nexus_note.datamodels.EdgeEditState
+import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
+import com.tau.nexus_note.datamodels.EdgeSchemaEditState
+import com.tau.nexus_note.datamodels.NodeDisplayItem
+import com.tau.nexus_note.datamodels.NodeEditState
+import com.tau.nexus_note.datamodels.NodeSchemaCreationState
+import com.tau.nexus_note.datamodels.NodeSchemaEditState
+import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.viewmodels.MetadataViewModel
+import com.tau.nexus_note.viewmodels.SchemaViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -8,8 +23,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.collections.emptyList
+import kotlin.collections.get
 
-// UPDATED: Constructor now takes SqliteDbService
 class EditCreateViewModel(
     private val dbService: SqliteDbService,
     private val viewModelScope: CoroutineScope,
@@ -54,7 +70,7 @@ class EditCreateViewModel(
     fun initiateNodeCreation() {
         // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
         // UPDATED: Fetches new SchemaData and filters for node schemas
-        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
             NodeCreationState(schemas = nodeSchemas)
@@ -119,7 +135,7 @@ class EditCreateViewModel(
     fun initiateEdgeCreation() {
         // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
         // UPDATED: Fetches new SchemaData and filters for edge schemas
-        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
+        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList<SchemaDefinitionItem>()
         if (metadataViewModel.nodeList.value.isEmpty()) {
             metadataViewModel.listNodes()
         }
@@ -291,7 +307,7 @@ class EditCreateViewModel(
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
         // UPDATED: Fetches new SchemaData and filters for node schemas
-        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
         // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
             metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic

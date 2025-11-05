@@ -1,12 +1,16 @@
-package com.tau.nexus_note.codex.CRUD.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.tau.nexus_note.* // UPDATED: Imports all new data classes
-import com.tau.nexus_note.codex.CRUD.create.CreateEdgeSchemaView
-import com.tau.nexus_note.codex.CRUD.create.CreateEdgeView
-import com.tau.nexus_note.codex.CRUD.create.CreateNodeSchemaView
-import com.tau.nexus_note.codex.CRUD.create.CreateNodeView
+import com.tau.nexus_note.codex.crud.create.CreateEdgeSchemaView
+import com.tau.nexus_note.codex.crud.create.CreateEdgeView
+import com.tau.nexus_note.codex.crud.create.CreateNodeSchemaView
+import com.tau.nexus_note.codex.crud.create.CreateNodeView
+import com.tau.nexus_note.datamodels.ConnectionPair
+import com.tau.nexus_note.datamodels.EditScreenState
+import com.tau.nexus_note.datamodels.NodeDisplayItem
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+import com.tau.nexus_note.datamodels.SchemaProperty
 
 @Composable
 fun EditItemView(

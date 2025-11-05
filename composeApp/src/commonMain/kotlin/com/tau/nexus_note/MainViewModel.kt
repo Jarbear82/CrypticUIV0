@@ -2,7 +2,7 @@ package com.tau.nexus_note.viewmodels
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.tau.nexus_note.CodexItem
+import com.tau.nexus_note.datamodels.CodexItem
 import com.tau.nexus_note.SqliteDbService
 import com.tau.nexus_note.utils.getFileName
 import com.tau.nexus_note.utils.getHomeDirectoryPath

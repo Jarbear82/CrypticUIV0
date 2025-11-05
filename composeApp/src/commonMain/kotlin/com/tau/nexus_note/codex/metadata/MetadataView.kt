@@ -17,8 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.EdgeDisplayItem
-import com.tau.nexus_note.NodeDisplayItem
+import com.tau.nexus_note.datamodels.EdgeDisplayItem
+import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.utils.labelToColor
 
 @OptIn(ExperimentalMaterial3Api::class)

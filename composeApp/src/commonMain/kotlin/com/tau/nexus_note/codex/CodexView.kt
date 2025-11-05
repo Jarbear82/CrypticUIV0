@@ -5,13 +5,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.EdgeEditState
-import com.tau.nexus_note.EdgeSchemaEditState
-import com.tau.nexus_note.NodeEditState
-import com.tau.nexus_note.NodeSchemaEditState
-import com.tau.nexus_note.SchemaDefinitionItem
-import com.tau.nexus_note.codex.CRUD.DeleteSchemaConfirmationDialog
-import com.tau.nexus_note.codex.CRUD.update.EditItemView
+import com.tau.nexus_note.datamodels.EdgeEditState
+import com.tau.nexus_note.datamodels.EdgeSchemaEditState
+import com.tau.nexus_note.datamodels.NodeEditState
+import com.tau.nexus_note.datamodels.NodeSchemaEditState
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+import com.tau.nexus_note.codex.crud.DeleteSchemaConfirmationDialog
+import com.tau.nexus_note.codex.crud.update.EditItemView
 // UPDATED: This now points to your new custom graph view
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView

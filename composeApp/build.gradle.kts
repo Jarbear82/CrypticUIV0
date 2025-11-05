@@ -50,15 +50,6 @@ compose.desktop {
 
         }
 
-//        // Add JVM args for KCEF
-//        jvmArgs("--add-opens", "java.desktop/sun.awt=ALL-UNNAMED")
-//        jvmArgs("--add-opens", "java.desktop/java.awt.peer=ALL-UNNAMED")
-//
-//        if (System.getProperty("os.name").contains("Mac")) {
-//            jvmArgs("--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED")
-//            jvmArgs("--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED")
-//        }
-
         // Add ProGuard rules for release builds
         buildTypes.release.proguard {
         }

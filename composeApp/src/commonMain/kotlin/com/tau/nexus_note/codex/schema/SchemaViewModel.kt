@@ -1,8 +1,8 @@
 package com.tau.nexus_note.viewmodels
 
-import com.tau.nexus_note.ConnectionPair
-import com.tau.nexus_note.SchemaDefinitionItem
-import com.tau.nexus_note.SchemaProperty
+import com.tau.nexus_note.datamodels.ConnectionPair
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.SqliteDbService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

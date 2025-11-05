@@ -47,9 +47,9 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.GraphNode
-import com.tau.nexus_note.GraphEdge
-import com.tau.nexus_note.NodeDisplayItem
+import com.tau.nexus_note.datamodels.GraphNode
+import com.tau.nexus_note.datamodels.GraphEdge
+import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos

@@ -2,11 +2,10 @@ package com.tau.nexus_note.codex.graph.physics
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import com.tau.nexus_note.GraphNode
-import com.tau.nexus_note.GraphEdge
+import com.tau.nexus_note.datamodels.GraphEdge
+import com.tau.nexus_note.datamodels.GraphNode
 import kotlin.math.sqrt
 
-// UPDATED: Constructor is now parameterless
 class PhysicsEngine() {
 
     /**
@@ -17,7 +16,6 @@ class PhysicsEngine() {
      * @param dt The time delta (e.g., 16ms).
      * @return A new map of updated nodes.
      */
-    // UPDATED: 'options' is now passed into the update method
     fun update(
         nodes: Map<Long, GraphNode>,
         edges: List<GraphEdge>,
@@ -41,12 +39,11 @@ class PhysicsEngine() {
             // Do not apply gravity to fixed (dragged) nodes
             if (node.isFixed) continue
 
-            // UPDATED: Using 'options' parameter
             val gravityForce = -node.pos * options.gravity * node.mass
             forces[node.id] = forces[node.id]!! + gravityForce
         }
 
-        // --- MODIFIED: 2b. Repulsion (Barnes-Hut Optimization) ---
+        // 2b. Repulsion (Barnes-Hut Optimization)
         // First, determine the boundaries of all nodes
         var minX = Float.POSITIVE_INFINITY
         var minY = Float.POSITIVE_INFINITY
@@ -76,11 +73,9 @@ class PhysicsEngine() {
             // Do not apply repulsion to fixed nodes (but they still repel others)
             if (node.isFixed) continue
 
-            // UPDATED: Using 'options' parameter
             val repulsionForce = quadTree.applyRepulsion(node, options, options.barnesHutTheta)
             forces[node.id] = forces[node.id]!! + repulsionForce
         }
-        // --- END MODIFICATION (Replaced O(n^2) loop) ---
 
 
         // 2c. Spring (from edges) (Hooke's Law)
@@ -97,11 +92,9 @@ class PhysicsEngine() {
                 if (dist == 0f) continue
 
                 // The "ideal" length of the spring is the sum of radii + a buffer
-                // UPDATED: Using 'options' parameter
                 val idealLength = nodeA.radius + nodeB.radius + (options.minDistance * 5)
 
                 val displacement = dist - idealLength
-                // UPDATED: Using 'options' parameter
                 val springForce = delta.normalized() * displacement * options.spring * edge.strength
 
                 forces[nodeA.id] = forces[nodeA.id]!! + springForce
@@ -109,7 +102,7 @@ class PhysicsEngine() {
             }
         }
 
-        // --- ADDED: 3. Calculate ForceAtlas2 Adaptive Speed (Swinging & Traction) ---
+        // 3. Calculate ForceAtlas2 Adaptive Speed (Swinging & Traction)
         var globalSwinging = 0f
         var globalTraction = 0f
 
@@ -137,7 +130,6 @@ class PhysicsEngine() {
         // 3e. Calculate Global Speed
         // This is the "adaptive cooling" part from FA2 paper
         val globalSpeed = if (globalSwinging > 0) {
-            // UPDATED: Using 'options' parameter
             options.tolerance * globalTraction / globalSwinging
         } else {
             0.1f // Default speed if no movement
@@ -161,10 +153,9 @@ class PhysicsEngine() {
             var newVel = node.vel + (acceleration * dt)
 
             // Apply damping
-            // UPDATED: Using 'options' parameter
             newVel *= options.damping
 
-            // --- MODIFIED: Apply FA2 Adaptive Speed ---
+            // Apply FA2 Adaptive Speed
             // 4a. Calculate Local Speed (slows down swinging nodes)
             val localSpeed = if (node.swinging > 0) {
                 (globalSpeed / (1f + globalSpeed * sqrt(node.swinging))).coerceAtLeast(0.01f)
@@ -176,7 +167,6 @@ class PhysicsEngine() {
             // We use the localSpeed as a multiplier on the time-step (dt * localSpeed)
             val displacement = newVel * (dt * localSpeed)
             val newPos = node.pos + displacement
-            // --- END MODIFICATION ---
 
             // Update the node in the map
             node.vel = newVel

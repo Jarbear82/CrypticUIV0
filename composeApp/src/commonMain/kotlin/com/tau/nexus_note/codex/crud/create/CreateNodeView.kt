@@ -1,18 +1,18 @@
-package com.tau.nexus_note.codex.CRUD.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.NodeCreationState // UPDATED: Uses new state class
-import com.tau.nexus_note.SchemaDefinitionItem // UPDATED: Uses new schema class
+import com.tau.nexus_note.datamodels.NodeCreationState
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNodeView(
     nodeCreationState: NodeCreationState,
-    onSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
+    onSchemaSelected: (SchemaDefinitionItem) -> Unit,
     onPropertyChanged: (String, String) -> Unit,
     onCreateClick: () -> Unit,
     onCancelClick: () -> Unit
@@ -28,7 +28,7 @@ fun CreateNodeView(
             onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
-                value = nodeCreationState.selectedSchema?.name ?: "Select Schema", // UPDATED: Use .name
+                value = nodeCreationState.selectedSchema?.name ?: "Select Schema",
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -53,9 +53,9 @@ fun CreateNodeView(
         // UPDATED: Iterate over properties from selectedSchema
         nodeCreationState.selectedSchema?.properties?.forEach { property ->
             OutlinedTextField(
-                value = nodeCreationState.properties[property.name] ?: "", // UPDATED: Use property.name
-                onValueChange = { onPropertyChanged(property.name, it) }, // UPDATED: Use property.name
-                label = { Text("${property.name}: ${property.type}") }, // UPDATED: Use property.name and .type
+                value = nodeCreationState.properties[property.name] ?: "",
+                onValueChange = { onPropertyChanged(property.name, it) },
+                label = { Text("${property.name}: ${property.type}") },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             )
         }

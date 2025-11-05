@@ -1,7 +1,7 @@
 package com.tau.nexus_note.utils
 
 import androidx.compose.ui.graphics.Color
-import com.tau.nexus_note.ColorInfo
+import com.tau.nexus_note.datamodels.ColorInfo
 
 /**
  * Generates a consistent hex color string and RGB array from a label string.

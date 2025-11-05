@@ -1,20 +1,21 @@
-package com.tau.nexus_note.codex.CRUD.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.ConnectionPair
-import com.tau.nexus_note.EdgeCreationState // UPDATED: Uses new state class
-import com.tau.nexus_note.NodeDisplayItem
-import com.tau.nexus_note.SchemaDefinitionItem // UPDATED: Uses new schema class
+import com.tau.nexus_note.datamodels.ConnectionPair
+import com.tau.nexus_note.datamodels.EdgeCreationState
+import com.tau.nexus_note.datamodels.NodeDisplayItem
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateEdgeView(
     edgeCreationState: EdgeCreationState,
-    onSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
+    onSchemaSelected: (SchemaDefinitionItem) -> Unit,
     onConnectionSelected: (ConnectionPair) -> Unit,
     onSrcSelected: (NodeDisplayItem) -> Unit,
     onDstSelected: (NodeDisplayItem) -> Unit,

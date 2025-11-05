@@ -1,13 +1,13 @@
 package com.tau.nexus_note.viewmodels
 
 import com.tau.nexus_note.SqliteDbService // IMPORTED: Changed from KuzuDBService
+import com.tau.nexus_note.codex.crud.EditCreateViewModel
 import com.tau.nexus_note.codex.graph.GraphViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// UPDATED: Constructor now takes SqliteDbService
 class CodexViewModel(private val dbService: SqliteDbService) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
