@@ -14,8 +14,8 @@ import com.tau.nexus_note.datamodels.NodeEditState
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
-import com.tau.nexus_note.viewmodels.MetadataViewModel
-import com.tau.nexus_note.viewmodels.SchemaViewModel
+import com.tau.nexus_note.codex.metadata.MetadataViewModel
+import com.tau.nexus_note.codex.schema.SchemaViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
