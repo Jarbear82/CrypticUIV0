@@ -32,7 +32,6 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.kcef)
             implementation(libs.sqldelight.sqlite.driver)
         }
     }
@@ -51,18 +50,17 @@ compose.desktop {
 
         }
 
-        // Add JVM args for KCEF
-        jvmArgs("--add-opens", "java.desktop/sun.awt=ALL-UNNAMED")
-        jvmArgs("--add-opens", "java.desktop/java.awt.peer=ALL-UNNAMED")
-
-        if (System.getProperty("os.name").contains("Mac")) {
-            jvmArgs("--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED")
-            jvmArgs("--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED")
-        }
+//        // Add JVM args for KCEF
+//        jvmArgs("--add-opens", "java.desktop/sun.awt=ALL-UNNAMED")
+//        jvmArgs("--add-opens", "java.desktop/java.awt.peer=ALL-UNNAMED")
+//
+//        if (System.getProperty("os.name").contains("Mac")) {
+//            jvmArgs("--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED")
+//            jvmArgs("--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED")
+//        }
 
         // Add ProGuard rules for release builds
         buildTypes.release.proguard {
-            configurationFiles.from("compose-desktop.pro")
         }
     }
 }

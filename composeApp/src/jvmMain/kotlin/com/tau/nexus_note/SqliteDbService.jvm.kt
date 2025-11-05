@@ -5,7 +5,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.tau.nexus_note.db.AppDatabase
 import java.io.File
 
-actual class SqliteDbService actual constructor() { // <-- See Fix 2
+actual class SqliteDbService actual constructor() {
     private var driver: SqlDriver? = null
 
     // Store the database in a private, nullable backing field
@@ -14,7 +14,6 @@ actual class SqliteDbService actual constructor() { // <-- See Fix 2
     // Implement the 'expect val' with a custom getter
     actual val database: AppDatabase
         get() = _database ?: throw IllegalStateException("Database not initialized. Call initialize() first.")
-    // --- END FIX ---
 
     actual fun initialize(path: String) {
         val isMemoryDb = path == ":memory:"
