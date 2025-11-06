@@ -31,7 +31,7 @@ fun CreateCodexDialog(
                     label = { Text("Codex Name") },
                     singleLine = true,
                     placeholder = { Text("my-database") },
-                    suffix = { Text(".kuzu") }
+                    suffix = { Text(".sqlite") }
                 )
             }
         },
