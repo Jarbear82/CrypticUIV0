@@ -1,86 +1,73 @@
 # Nexus Note
----
-A Visual Structured Notetaking Application.
-- **Schema Mandatory:** Schemas provide note blueprints, creating a centralized,
-approach to note-taking. This helps users avoid note duplication as well as fill in
-missing information.  
-- **Force-directed Graph:** Provides an at-a-glance comprehension of existing notes.
-  While it can get messy, when viewing a large note graph, ~~using certian queries~~ (or
-  in the future, filters), allows the user to easily see and create connections between
-  notes.
-- ~~**Query Terminal (Future Planned):** Provides an efficient way for advanced users to query and view
-  desired portions of the graph.~~
 
-## **Intended Audiences:**
-- Writers
-- DnD Worldbuilding
-- Anyone looking for a way to visualize data in a graph.
-- ~~Those wanting to visualize documents~~ **(Planned)**
+A visual, schema-driven, and structured notetaking application.
 
-## Feature Wishlist
-- **Graph**
-  - "Detangle" option using layout algorithms
-  - Cypher Query mode (add support for cypher language)
-  - Screenshot of Graph
-  - Button Controls
-  - Dropdown configuraton for phsyics options
-- **Document to Graph**
-  - Preview graph (for imports)
-  - Parse Document to Graph
-    - `.docx`
-    - `.odt`
-  - Parse Markdown to Graph
-    - [Obsidian Flavor](https://help.obsidian.md/obsidian-flavored-markdown)
-    - [CommonMark Flavor](https://spec.commonmark.org/)
-    - [Github Flavor](https://github.github.com/gfm/)
-  - Parse PDF to Graph
-  - Parse AsciiDoc to Graph
-- **Import/Export**
-  - Sql
-  - JSON
-  - Cypher (No Media)
-- **Data Sync**
-  - Peer to Peer
-  - Cloud Storage
-  - other options?
-- **Platforms**
-  - Android
-  - Ios
-- **Node/Edge Creation**
-  - Autofill from schema
-  - Node and Edge searches in listview
-  - Schema based filtering (hide/show)
-  - individual Node/Edge filtering (hide/show)
-- **Settings**
-  - Settings page
-  - Light/Dark Theme
-  - Desktop/Mobile Toggle (overrieds auto-detected)
-- **Other**
-  - Separate Mobile and Desktop UI (determined by screen ratio)
-  - Flush out metadata tab
+Nexus Note helps you build a knowledge graph by enforcing a structured approach. Instead of just writing notes, you define *types* of notes (Schemas) and link them together. This creates a centralized, queryable, and visual database of your ideas.
 
-This is a Kotlin Multiplatform project targeting Desktop (JVM).
+## Core Features
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+* **Schema-First Design:** Define your data structure upfront. Create "Person," "Location," or "Project" schemas with custom properties. This prevents note duplication and ensures consistency.
+* **Force-Directed Graph:** Automatically visualizes your notes as a graph. See the connections between your ideas at a glance.
+* **Data Management:** Full create, read, update, and delete (CRUD) operations for your Schemas, Nodes (notes), and Edges (links).
+* **Local-First:** All data is stored locally in a `.sqlite` file, giving you full control.
 
-## Build and Run Desktop (JVM) Application
+## Intended Audiences
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
+* **Writers & World-Builders:** Keep track of characters, locations, and timelines.
+* **Students & Researchers:** Link concepts, papers, and authors.
+* **Anyone** looking for a way to visualize connected data in a graph.
+
+## Technology Stack
+
+This is a Kotlin Multiplatform project built with modern tools:
+
+* **Kotlin Multiplatform:** Shared logic written 100% in Kotlin.
+* **Compose Multiplatform:** A single, declarative UI for Desktop (and soon, more).
+* **SQLDelight:** Generates type-safe Kotlin APIs from your SQL database schema.
+* **ViewModel/Repository Pattern:** A clean and scalable architecture.
+
+## Build and Run (Desktop)
+
+To build and run the development version of the desktop app:
+
+* **on macOS/Linux:**
   ```shell
   ./gradlew :composeApp:run
   ```
-- on Windows
+* **on Windows:**
   ```shell
   .\gradlew.bat :composeApp:run
   ```
 
----
+## Roadmap (Feature Wishlist)
+
+This project is in active development. Here's a look at what's planned:
+
+#### Core Usability
+
+* Search and filtering in list views
+* Schema-based graph filtering
+* Graph UI controls (zoom buttons, physics settings)
+* A "Settings" page with Light/Dark theme support
+
+#### Feature Expansion
+
+* Import/Export data (JSON, SQL)
+* Take a screenshot of the graph
+* **Document to Graph**
+    - Preview graph (for imports)
+    - Parse Document to Graph
+        - `.docx`
+        - `.odt`
+    - Parse Markdown to Graph
+        - [Obsidian Flavor](https://help.obsidian.md/obsidian-flavored-markdown)
+        - [CommonMark Flavor](https://spec.commonmark.org/)
+        - [Github Flavor](https://github.github.com/gfm/)
+    - Parse PDF to Graph
+    - Parse AsciiDoc to Graph
+
+#### Long-Term
+
+* Android & iOS support
+* Data synchronization (Cloud or P2P)
+* Advanced query support (Cypher)
