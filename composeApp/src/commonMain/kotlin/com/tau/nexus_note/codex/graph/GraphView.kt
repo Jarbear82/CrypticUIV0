@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.GraphNode
 import com.tau.nexus_note.datamodels.GraphEdge
-import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -58,9 +57,17 @@ import kotlin.math.sin
 
 @OptIn(ExperimentalGraphicsApi::class, ExperimentalTextApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun GraphView(viewModel: GraphViewmodel) {
-    val nodes by viewModel.graphNodes.collectAsState()
-    val edges by viewModel.graphEdges.collectAsState()
+fun GraphView(
+    viewModel: GraphViewmodel,
+    nodes: Map<Long, GraphNode>,
+    edges: List<GraphEdge>,
+    primarySelectedId: Long?,
+    secondarySelectedId: Long?,
+    onNodeTap: (Long) -> Unit,
+    onAddNodeClick: () -> Unit,
+    onAddEdgeClick: () -> Unit
+) {
+    // REMOVED: nodes and edges .collectAsState()
     val transform by viewModel.transform.collectAsState()
     val showFabMenu by viewModel.showFabMenu.collectAsState()
 
@@ -69,10 +76,8 @@ fun GraphView(viewModel: GraphViewmodel) {
     val crosshairColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
     val selectionColor = MaterialTheme.colorScheme.primary
 
-    // ADDED: State to distinguish node drag from pan
     var isDraggingNode by remember { mutableStateOf(false) }
 
-    // MODIFIED: Split into LaunchedEffect (to start) and DisposableEffect (to stop)
     LaunchedEffect(Unit) {
         viewModel.runSimulationLoop()
     }
@@ -87,10 +92,8 @@ fun GraphView(viewModel: GraphViewmodel) {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                // Combined gesture detector for drag and tap
                 detectDragGestures(
                     onDragStart = { offset ->
-                        // Check if we started on a node
                         isDraggingNode = viewModel.onDragStart(offset)
                     },
                     onDrag = { change, dragAmount ->
@@ -110,15 +113,13 @@ fun GraphView(viewModel: GraphViewmodel) {
                 )
             }
             .pointerInput(Unit) {
-                // Tap detector for selection
                 detectTapGestures(
                     onTap = { offset ->
-                        viewModel.onTap(offset)
+                        viewModel.onTap(offset, onNodeTap)
                     }
                 )
             }
             .onPointerEvent(PointerEventType.Scroll) {
-                // Zoom
                 it.changes.firstOrNull()?.let { change ->
                     val zoomDelta = if (change.scrollDelta.y < 0) 1.2f else 0.8f
                     viewModel.onZoom(zoomDelta, change.position)
@@ -130,7 +131,6 @@ fun GraphView(viewModel: GraphViewmodel) {
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // --- Draw Graph Elements (inside transform) ---
             withTransform({
                 translate(left = center.x, top = center.y)
                 scale(scaleX = transform.zoom, scaleY = transform.zoom, pivot = Offset.Zero)
@@ -138,8 +138,6 @@ fun GraphView(viewModel: GraphViewmodel) {
             }) {
 
                 // --- 1. Draw Edges ---
-
-                // Pre-process edges to find counts for curving
                 val edgesByPair = edges.groupBy { Pair(it.sourceId, it.targetId) }
                 val linkCounts = mutableMapOf<Pair<Long, Long>, Int>()
                 val uniquePairs = mutableSetOf<Pair<Long, Long>>()
@@ -158,7 +156,6 @@ fun GraphView(viewModel: GraphViewmodel) {
                 val pairDrawIndex = mutableMapOf<Pair<Long, Long>, Int>()
                 val selfLoopDrawIndex = mutableMapOf<Long, Int>()
 
-                // Style for edge labels
                 val edgeLabelStyle = TextStyle(
                     fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
                     color = labelColor.copy(alpha = 0.8f)
@@ -170,12 +167,10 @@ fun GraphView(viewModel: GraphViewmodel) {
                     if (nodeA == null || nodeB == null) continue
 
                     if (nodeA.id == nodeB.id) {
-                        // Self-loop
                         val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
                         drawSelfLoop(nodeA, edge, index, textMeasurer, edgeLabelStyle)
                         selfLoopDrawIndex[nodeA.id] = index + 1
                     } else {
-                        // Standard edge
                         val pair = Pair(nodeA.id, nodeB.id)
                         val undirectedPair = if (nodeA.id < nodeB.id) Pair(nodeA.id, nodeB.id) else Pair(nodeB.id, nodeA.id)
 
@@ -189,8 +184,15 @@ fun GraphView(viewModel: GraphViewmodel) {
                 }
 
                 // --- 2. Draw Nodes ---
-                // (Nodes are drawn *after* edges)
-                drawNodes(nodes, textMeasurer, labelColor, selectionColor, transform.zoom, viewModel)
+                drawNodes(
+                    nodes,
+                    textMeasurer,
+                    labelColor,
+                    selectionColor,
+                    transform.zoom,
+                    primarySelectedId,   // MODIFIED
+                    secondarySelectedId  // MODIFIED
+                )
             }
 
             // --- Draw UI Elements (outside transform) ---
@@ -209,7 +211,7 @@ fun GraphView(viewModel: GraphViewmodel) {
             )
         }
 
-        // --- ADDED: Floating Action Button Menu ---
+        // --- Floating Action Button Menu ---
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -217,7 +219,6 @@ fun GraphView(viewModel: GraphViewmodel) {
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Animated menu items
             AnimatedVisibility(visible = showFabMenu) {
                 Column(
                     horizontalAlignment = Alignment.End,
@@ -225,14 +226,14 @@ fun GraphView(viewModel: GraphViewmodel) {
                 ) {
                     // Create Node
                     SmallFloatingActionButton(
-                        onClick = { viewModel.onFabCreateNodeClick() },
+                        onClick = { onAddNodeClick() }, // MODIFIED
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Icon(Icons.Default.Hub, contentDescription = "Create Node")
                     }
                     // Create Edge
                     SmallFloatingActionButton(
-                        onClick = { viewModel.onFabCreateEdgeClick() },
+                        onClick = { onAddEdgeClick() }, // MODIFIED
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Create Edge")
@@ -252,9 +253,6 @@ fun GraphView(viewModel: GraphViewmodel) {
     }
 }
 
-/**
- * Draws a self-referencing loop (edge from a node to itself).
- */
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawSelfLoop(
     node: GraphNode,
@@ -266,36 +264,27 @@ private fun DrawScope.drawSelfLoop(
     val color = edge.colorInfo.composeColor.copy(alpha = 0.7f)
     val strokeWidth = 2f
     val arrowSize = 6f
-
-    // Constants for loop shape
     val loopRadius = 25f + (index * 12f)
     val loopSeparation = node.radius + 5f
-
-    // Calculate attachment points on the node's circumference
-    // We'll attach to the top-right quadrant
     val startAngle = (45f).degToRad()
     val endAngle = (-30f).degToRad()
 
     val p1 = node.pos + Offset(cos(startAngle) * node.radius, sin(startAngle) * node.radius)
     val p4 = node.pos + Offset(cos(endAngle) * node.radius, sin(endAngle) * node.radius)
 
-    // Calculate control points to make a nice loop
     val controlOffset = loopSeparation + loopRadius
     val p2 = p1 + Offset(cos(startAngle) * controlOffset, sin(startAngle) * controlOffset)
     val p3 = p4 + Offset(cos(endAngle) * controlOffset, sin(endAngle) * controlOffset)
 
-    // Draw the cubic Bezier curve
     val path = Path().apply {
         moveTo(p1.x, p1.y)
         cubicTo(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y)
     }
     drawPath(path, color, style = Stroke(strokeWidth))
 
-    // Draw arrowhead
     drawArrowhead(p3, p4, color, arrowSize)
 
-    // Draw label
-    val labelPos = (p2 + p3) / 2f // Position label at the apex of the loop
+    val labelPos = (p2 + p3) / 2f
     val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
     drawText(
         textLayoutResult = textLayoutResult,
@@ -304,10 +293,6 @@ private fun DrawScope.drawSelfLoop(
     )
 }
 
-/**
- * Draws a directed edge between two different nodes.
- * Handles curving for multiple edges.
- */
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawCurvedEdge(
     from: GraphNode,
@@ -330,15 +315,13 @@ private fun DrawScope.drawCurvedEdge(
     val isStraight = (total == 1)
 
     if (isStraight) {
-        // --- Draw Straight Line ---
         val startWithRadius = from.pos + delta.normalized() * from.radius
         val endWithRadius = to.pos - delta.normalized() * to.radius
 
         drawLine(color, startWithRadius, endWithRadius, strokeWidth)
         drawArrowhead(startWithRadius, endWithRadius, color, arrowSize)
 
-        // Draw label
-        val labelOffset = Offset(0f, -10f) // Just above the line
+        val labelOffset = Offset(0f, -10f)
         val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
         drawText(
             textLayoutResult = textLayoutResult,
@@ -346,19 +329,12 @@ private fun DrawScope.drawCurvedEdge(
             color = color
         )
     } else {
-        // --- Draw Curved Line (Quadratic Bezier) ---
         val normal = Offset(-delta.y, delta.x).normalized()
-        val baseCurvature = 30f // Base height of the curve
-
-        // This maps index 0, 1, 2... to offsets 0, 1, -1, 2, -2...
+        val baseCurvature = 30f
         val curveSign = if (index % 2 == 0) -1 else 1
         val curveMagnitude = (index + 1) / 2
         val curveOffset = curveSign * curveMagnitude * (baseCurvature * 0.75f)
-
-        // Control point is offset from the midpoint along the normal
         val controlPoint = midPoint + normal * (baseCurvature + curveOffset)
-
-        // Adjust start/end points to touch node radius, pointing towards control point
         val startWithRadius = from.pos + (controlPoint - from.pos).normalized() * from.radius
         val endWithRadius = to.pos + (controlPoint - to.pos).normalized() * to.radius
 
@@ -368,11 +344,9 @@ private fun DrawScope.drawCurvedEdge(
         }
         drawPath(path, color, style = Stroke(strokeWidth))
 
-        // Draw arrowhead (approximating tangent)
         val tangent = (endWithRadius - controlPoint).normalized()
         drawArrowhead(endWithRadius - (tangent * arrowSize * 2f), endWithRadius, color, arrowSize)
 
-        // Draw label at the control point
         val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
         drawText(
             textLayoutResult = textLayoutResult,
@@ -382,12 +356,9 @@ private fun DrawScope.drawCurvedEdge(
     }
 }
 
-/**
- * Draws a small arrowhead at the 'to' point, oriented from 'from'.
- */
 private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size: Float) {
     val delta = to - from
-    if (delta == Offset.Zero) return // Cannot draw arrowhead
+    if (delta == Offset.Zero) return
 
     val angle = atan2(delta.y, delta.x)
     val angleRad = angle.toFloat()
@@ -411,51 +382,45 @@ private fun DrawScope.drawNodes(
     labelColor: Color,
     selectionColor: Color,
     zoom: Float,
-    viewModel: GraphViewmodel // ADDED: To check selection state
+    primarySelectedId: Long?,
+    secondarySelectedId: Long?
 ) {
     val minSize = 8.sp
     val maxSize = 14.sp
     val fontSize = ((12.sp.value / zoom.coerceAtLeast(0.1f)).coerceIn(minSize.value, maxSize.value)).sp
     val style = TextStyle(fontSize = fontSize, color = labelColor)
 
-    // Get selected items from the viewmodel
-    val primaryId = (viewModel.metadataViewModel.primarySelectedItem.value as? NodeDisplayItem)?.id
-    val secondaryId = (viewModel.metadataViewModel.secondarySelectedItem.value as? NodeDisplayItem)?.id
+    val primaryId = primarySelectedId
+    val secondaryId = secondarySelectedId
 
     for (node in nodes.values) {
         val isSelected = node.id == primaryId || node.id == secondaryId
 
-        // Draw circle
         drawCircle(
             color = node.colorInfo.composeColor,
             radius = node.radius,
             center = node.pos
         )
-        // Draw border
         drawCircle(
             color = if (isSelected) selectionColor else node.colorInfo.composeFontColor,
             radius = node.radius,
             center = node.pos,
-            style = Stroke(width = if (isSelected) 3f else 1f) // Thicker border if selected
+            style = Stroke(width = if (isSelected) 3f else 1f)
         )
 
-        // Draw label
         if (zoom > 0.5f) {
             val textLayoutResult = textMeasurer.measure(
                 text = AnnotatedString(node.displayProperty),
                 style = style
             )
-
-            // MODIFICATION: Logic to draw text below the node
-            val textPadding = 3f // Small padding in world space
+            val textPadding = 3f
             drawText(
                 textLayoutResult = textLayoutResult,
                 topLeft = Offset(
-                    x = node.pos.x - (textLayoutResult.size.width / 2f), // Center horizontally
-                    y = node.pos.y + node.radius + textPadding // Position below the node
+                    x = node.pos.x - (textLayoutResult.size.width / 2f),
+                    y = node.pos.y + node.radius + textPadding
                 )
             )
-            // END MODIFICATION
         }
     }
 }

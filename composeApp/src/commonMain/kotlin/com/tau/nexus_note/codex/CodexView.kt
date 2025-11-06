@@ -5,25 +5,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.rememberCoroutineScope
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
-import com.tau.nexus_note.datamodels.EdgeSchemaEditState
 import com.tau.nexus_note.datamodels.NodeDisplayItem
-import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.codex.crud.DeleteSchemaConfirmationDialog
 import com.tau.nexus_note.codex.crud.update.EditItemView
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView
 import com.tau.nexus_note.codex.schema.SchemaView
-import com.tau.nexus_note.codex.schema.SchemaData
-import com.tau.nexus_note.codex.DataViewTabs
-import com.tau.nexus_note.codex.CodexViewModel
-import com.tau.nexus_note.codex.ViewTabs
-import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.views.ListView
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 @Composable
 fun CodexView(viewModel: CodexViewModel) {
@@ -44,14 +35,12 @@ fun CodexView(viewModel: CodexViewModel) {
 
     val graphViewModel = viewModel.graphViewModel
 
-    // --- ADDED: Effect to handle navigation after save ---
     LaunchedEffect(viewModel.editCreateViewModel) {
         viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
-            // This is triggered *after* save completes in the ViewModel
             val originalItem = viewModel.metadataViewModel.itemToEdit.value
             val targetTab = when (originalItem) {
                 is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
-                is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA // Handle "Create..." strings
+                is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA
                 else -> DataViewTabs.METADATA
             }
             viewModel.selectDataTab(targetTab)
@@ -59,25 +48,19 @@ fun CodexView(viewModel: CodexViewModel) {
     }
 
 
-    // --- Unified Save/Cancel Handlers ---
-
-    // UPDATED: onSave now just calls the ViewModel
     val onSave: () -> Unit = {
         viewModel.editCreateViewModel.saveCurrentState()
-        // Navigation logic is now handled in the LaunchedEffect above
     }
 
-    // UPDATED: onCancel clears VM state and then navigates
     val onCancel: () -> Unit = {
         val originalItem = viewModel.metadataViewModel.itemToEdit.value
         viewModel.editCreateViewModel.cancelAllEditing()
         viewModel.metadataViewModel.clearSelectedItem()
 
-        // Navigate back to the correct tab
         val targetTab = when (originalItem) {
             is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
             is SchemaDefinitionItem -> DataViewTabs.SCHEMA
-            is String -> DataViewTabs.SCHEMA // Handle "Create..." strings
+            is String -> DataViewTabs.SCHEMA
             else -> DataViewTabs.METADATA
         }
         viewModel.selectDataTab(targetTab)
@@ -110,16 +93,13 @@ fun CodexView(viewModel: CodexViewModel) {
                             onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                             onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
                             onEditNodeClick = { item ->
-                                // UPDATED: Call EditCreateViewModel directly
                                 viewModel.editCreateViewModel.initiateNodeEdit(item)
                                 viewModel.selectDataTab(DataViewTabs.EDIT)
                             },
                             onEditEdgeClick = { item ->
-                                // UPDATED: Call EditCreateViewModel directly
                                 viewModel.editCreateViewModel.initiateEdgeEdit(item)
                                 viewModel.selectDataTab(DataViewTabs.EDIT)
                             },
-                            // UPDATED: Call MetadataViewModel to delete
                             onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                             onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                             onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
@@ -127,8 +107,39 @@ fun CodexView(viewModel: CodexViewModel) {
                         )
                     }
                     ViewTabs.GRAPH -> {
+                        // MODIFIED: Pass data and callbacks into GraphView
                         graphViewModel?.let {
-                            GraphView(graphViewModel)
+                            val nodesState by it.graphNodes.collectAsState()
+                            val edgesState by it.graphEdges.collectAsState()
+                            val primary = primarySelectedItem
+                            val secondary = secondarySelectedItem
+
+                            // Get selected IDs
+                            val primaryId = (primary as? NodeDisplayItem)?.id
+                            val secondaryId = (secondary as? NodeDisplayItem)?.id
+
+                            GraphView(
+                                viewModel = it,
+                                nodes = nodesState,
+                                edges = edgesState,
+                                primarySelectedId = primaryId,
+                                secondarySelectedId = secondaryId,
+                                onNodeTap = { nodeId ->
+                                    // Find the NodeDisplayItem and select it
+                                    val node = viewModel.metadataViewModel.nodeList.value.find { it.id == nodeId }
+                                    if (node != null) {
+                                        viewModel.metadataViewModel.selectItem(node)
+                                    }
+                                },
+                                onAddNodeClick = {
+                                    viewModel.editCreateViewModel.initiateNodeCreation()
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                },
+                                onAddEdgeClick = {
+                                    viewModel.editCreateViewModel.initiateEdgeCreation()
+                                    viewModel.selectDataTab(DataViewTabs.EDIT)
+                                }
+                            )
                         } ?: Text("Loading Graph...")
                     }
                 }
@@ -168,12 +179,10 @@ fun CodexView(viewModel: CodexViewModel) {
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEditNodeClick = { item ->
-                            // UPDATED
                             viewModel.editCreateViewModel.initiateNodeEdit(item)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
                         },
                         onEditEdgeClick = { item ->
-                            // UPDATED
                             viewModel.editCreateViewModel.initiateEdgeEdit(item)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
                         },
@@ -192,16 +201,13 @@ fun CodexView(viewModel: CodexViewModel) {
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEdgeClick = { viewModel.metadataViewModel.selectItem(it) },
                         onEditNodeClick = { item ->
-                            // UPDATED
                             viewModel.editCreateViewModel.initiateNodeSchemaEdit(item)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
                         },
                         onEditEdgeClick = { item ->
-                            // UPDATED
                             viewModel.editCreateViewModel.initiateEdgeSchemaEdit(item)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
                         },
-                        // UPDATED: Call SchemaViewModel to request delete
                         onDeleteNodeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onDeleteEdgeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
@@ -210,7 +216,6 @@ fun CodexView(viewModel: CodexViewModel) {
                         onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.EDIT -> EditItemView(
-                        // UPDATED: Simplified parameters
                         editScreenState = editScreenState,
                         onSaveClick = onSave,
                         onCancelClick = onCancel,
