@@ -221,8 +221,8 @@ class CodexRepository(
                     properties_json = propertiesJson,
                     connections_json = null
                 )
-                refreshSchema() // Refresh schema
-                refreshNodes() // Refresh nodes in case display labels changed
+                refreshSchema()
+                refreshNodes()
             } catch (e: Exception) {
                 println("Error updating node schema: ${e.message}")
             }
@@ -240,8 +240,8 @@ class CodexRepository(
                     properties_json = propertiesJson,
                     connections_json = connectionsJson
                 )
-                refreshSchema() // Refresh schema
-                refreshEdges() // Refresh edges
+                refreshSchema()
+                refreshEdges()
             } catch (e: Exception) {
                 println("Error updating edge schema: ${e.message}")
             }
@@ -294,18 +294,29 @@ class CodexRepository(
                     display_label = displayLabel,
                     properties_json = propertiesJson
                 )
-                refreshNodes() // Refresh node list
+                refreshNodes()
             } catch (e: Exception) {
                 println("Error updating node: ${e.message}")
             }
         }
     }
 
+    /**
+     * Deletes a node and its cascading edges.
+     * This implementation is optimized to perform an in-memory update
+     * for the node list and only re-query the edge list.
+     */
     fun deleteNode(itemId: Long) {
         repositoryScope.launch {
             try {
+                // 1. Delete node from DB (this will cascade delete edges)
                 dbService.database.appDatabaseQueries.deleteNodeById(itemId)
-                refreshAll() // Nodes disappearing can affect edges
+
+                // 2. Update node from list in-memory
+                _nodeList.update { it.filterNot { node -> node.id == itemId } }
+
+                // 3. Refresh only edges, which were affected by the cascade
+                refreshEdges()
             } catch (e: Exception) {
                 println("Error deleting node: ${e.message}")
             }
@@ -325,7 +336,7 @@ class CodexRepository(
                     to_node_id = state.dst.id,
                     properties_json = propertiesJson
                 )
-                refreshEdges() // Only refresh edges
+                refreshEdges()
             } catch (e: Exception) {
                 println("Error creating edge: ${e.message}")
             }
@@ -352,18 +363,27 @@ class CodexRepository(
                     id = state.id,
                     properties_json = propertiesJson
                 )
-                refreshEdges() // Refresh edge list
+                refreshEdges()
             } catch (e: Exception) {
                 println("Error updating edge: ${e.message}")
             }
         }
     }
 
+    /**
+     * Deletes an edge.
+     * This implementation is optimized to perform an in-memory update
+     * and avoid any subsequent database reads.
+     */
     fun deleteEdge(itemId: Long) {
         repositoryScope.launch {
             try {
+                // 1. Delete edge from DB
                 dbService.database.appDatabaseQueries.deleteEdgeById(itemId)
-                refreshEdges() // Only refresh edges
+
+                // 2. Update edge list in-memory.
+                _edgeList.update { it.filterNot { edge -> edge.id == itemId } }
+
             } catch (e: Exception) {
                 println("Error deleting edge: ${e.message}")
             }
