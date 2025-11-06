@@ -22,6 +22,7 @@ import com.tau.nexus_note.codex.CodexViewModel
 import com.tau.nexus_note.codex.ViewTabs
 import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.views.ListView
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,40 +44,30 @@ fun CodexView(viewModel: CodexViewModel) {
 
     val graphViewModel = viewModel.graphViewModel
 
-    // --- Unified Save/Cancel Handlers ---
-
-    val scope = rememberCoroutineScope() // Make sure you have this import
-    val onSave: () -> Unit = {
-        val state = viewModel.editCreateViewModel.editScreenState.value
-        // Get the original item to know where to navigate back to
-        val originalItem = viewModel.metadataViewModel.itemToEdit.value
-
-        // Launch a coroutine to call the repository's suspend functions
-        scope.launch {
-            when (state) {
-                is EditScreenState.CreateNode -> viewModel.repository.createNode(state.state)
-                is EditScreenState.CreateEdge -> viewModel.repository.createEdge(state.state)
-                is EditScreenState.CreateNodeSchema -> viewModel.repository.createNodeSchema(state.state)
-                is EditScreenState.CreateEdgeSchema -> viewModel.repository.createEdgeSchema(state.state)
-                is EditScreenState.EditNode -> viewModel.repository.updateNode(state.state)
-                is EditScreenState.EditEdge -> viewModel.repository.updateEdge(state.state)
-                is EditScreenState.EditNodeSchema -> viewModel.repository.updateNodeSchema(state.state)
-                is EditScreenState.EditEdgeSchema -> viewModel.repository.updateEdgeSchema(state.state)
-                is EditScreenState.None -> {}
+    // --- ADDED: Effect to handle navigation after save ---
+    LaunchedEffect(viewModel.editCreateViewModel) {
+        viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
+            // This is triggered *after* save completes in the ViewModel
+            val originalItem = viewModel.metadataViewModel.itemToEdit.value
+            val targetTab = when (originalItem) {
+                is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
+                is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA // Handle "Create..." strings
+                else -> DataViewTabs.METADATA
             }
+            viewModel.selectDataTab(targetTab)
         }
-
-        // This part runs immediately after launching the save
-        viewModel.editCreateViewModel.cancelAllEditing()
-        viewModel.metadataViewModel.clearSelectedItem()
-        val targetTab = when (originalItem) {
-            is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
-            is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA // Handle "Create..." strings
-            else -> DataViewTabs.METADATA
-        }
-        viewModel.selectDataTab(targetTab)
     }
 
+
+    // --- Unified Save/Cancel Handlers ---
+
+    // UPDATED: onSave now just calls the ViewModel
+    val onSave: () -> Unit = {
+        viewModel.editCreateViewModel.saveCurrentState()
+        // Navigation logic is now handled in the LaunchedEffect above
+    }
+
+    // UPDATED: onCancel clears VM state and then navigates
     val onCancel: () -> Unit = {
         val originalItem = viewModel.metadataViewModel.itemToEdit.value
         viewModel.editCreateViewModel.cancelAllEditing()
@@ -219,6 +210,7 @@ fun CodexView(viewModel: CodexViewModel) {
                         onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
                     )
                     DataViewTabs.EDIT -> EditItemView(
+                        // UPDATED: Simplified parameters
                         editScreenState = editScreenState,
                         onSaveClick = onSave,
                         onCancelClick = onCancel,
@@ -226,7 +218,6 @@ fun CodexView(viewModel: CodexViewModel) {
                         // Node Creation
                         onNodeCreationSchemaSelected = { viewModel.editCreateViewModel.updateNodeCreationSchema(it) },
                         onNodeCreationPropertyChanged = { k, v -> viewModel.editCreateViewModel.updateNodeCreationProperty(k, v) },
-                        onNodeCreationCreateClick = onSave, // Create and Save are the same action now
 
                         // Edge Creation
                         onEdgeCreationSchemaSelected = { viewModel.editCreateViewModel.updateEdgeCreationSchema(it) },
@@ -234,17 +225,14 @@ fun CodexView(viewModel: CodexViewModel) {
                         onEdgeCreationSrcSelected = { viewModel.editCreateViewModel.updateEdgeCreationSrc(it) },
                         onEdgeCreationDstSelected = { viewModel.editCreateViewModel.updateEdgeCreationDst(it) },
                         onEdgeCreationPropertyChanged = { k, v -> viewModel.editCreateViewModel.updateEdgeCreationProperty(k, v) },
-                        onEdgeCreationCreateClick = onSave, // Create and Save are the same action now
 
                         // Node Schema Creation
-                        onNodeSchemaCreationCreateClick = onSave, // Create and Save are the same action now
                         onNodeSchemaTableNameChange = { viewModel.editCreateViewModel.onNodeSchemaTableNameChange(it) },
                         onNodeSchemaPropertyChange = { i, p -> viewModel.editCreateViewModel.onNodeSchemaPropertyChange(i, p) },
                         onAddNodeSchemaProperty = { viewModel.editCreateViewModel.onAddNodeSchemaProperty() },
                         onRemoveNodeSchemaProperty = { viewModel.editCreateViewModel.onRemoveNodeSchemaProperty(it) },
 
                         // Edge Schema Creation
-                        onEdgeSchemaCreationCreateClick = onSave, // Create and Save are the same action now
                         onEdgeSchemaTableNameChange = { viewModel.editCreateViewModel.onEdgeSchemaTableNameChange(it) },
                         onEdgeSchemaCreationAddConnection = { s, d -> viewModel.editCreateViewModel.onAddEdgeSchemaConnection(s, d) },
                         onEdgeSchemaCreationRemoveConnection = { viewModel.editCreateViewModel.onRemoveEdgeSchemaConnection(it) },

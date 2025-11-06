@@ -1,6 +1,5 @@
 package com.tau.nexus_note.codex.crud
 
-import com.tau.nexus_note.SqliteDbService
 import com.tau.nexus_note.datamodels.ConnectionPair
 import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.datamodels.NodeCreationState
@@ -20,7 +19,9 @@ import com.tau.nexus_note.codex.schema.SchemaData
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,6 +40,10 @@ class EditCreateViewModel(
     private val _editScreenState = MutableStateFlow<EditScreenState>(EditScreenState.None)
     val editScreenState = _editScreenState.asStateFlow()
 
+    // This will be used to tell the CodexView to navigate *after* a save is complete.
+    private val _navigationEvent = MutableSharedFlow<Unit>(replay = 0)
+    val navigationEventFlow = _navigationEvent.asSharedFlow()
+
     // ADDED: JSON serializer instance
     private val json = Json {
         ignoreUnknownKeys = true
@@ -46,6 +51,38 @@ class EditCreateViewModel(
         coerceInputValues = true
         encodeDefaults = true // Ensure all fields are present
     }
+
+    // --- ADDED: Central Save Function ---
+
+    /**
+     * Saves the currently active state (create or edit) to the repository.
+     * After saving, it emits a navigation event and clears the edit state.
+     */
+    fun saveCurrentState() {
+        val stateToSave = _editScreenState.value
+        if (stateToSave is EditScreenState.None) return
+
+        viewModelScope.launch {
+            // Perform the database operation based on the current state
+            when (stateToSave) {
+                is EditScreenState.CreateNode -> repository.createNode(stateToSave.state)
+                is EditScreenState.CreateEdge -> repository.createEdge(stateToSave.state)
+                is EditScreenState.CreateNodeSchema -> repository.createNodeSchema(stateToSave.state)
+                is EditScreenState.CreateEdgeSchema -> repository.createEdgeSchema(stateToSave.state)
+                is EditScreenState.EditNode -> repository.updateNode(stateToSave.state)
+                is EditScreenState.EditEdge -> repository.updateEdge(stateToSave.state)
+                is EditScreenState.EditNodeSchema -> repository.updateNodeSchema(stateToSave.state)
+                is EditScreenState.EditEdgeSchema -> repository.updateEdgeSchema(stateToSave.state)
+                is EditScreenState.None -> {} // Should not happen due to check above
+            }
+
+            // After the suspend function completes, clear the state and signal navigation
+            cancelAllEditing() // Resets editScreenState to None
+            metadataViewModel.clearSelectedItem()
+            _navigationEvent.emit(Unit) // Tell CodexView to handle navigation
+        }
+    }
+
 
     /**
      * Returns the currently active *edited* item state (not creation state).
@@ -71,8 +108,6 @@ class EditCreateViewModel(
 
     // --- Node Creation ---
     fun initiateNodeCreation() {
-        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
-        // UPDATED: Fetches new SchemaData and filters for node schemas
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
@@ -80,7 +115,6 @@ class EditCreateViewModel(
         )
     }
 
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun updateNodeCreationSchema(schemaNode: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNode) return@update current
@@ -105,8 +139,7 @@ class EditCreateViewModel(
 
     // --- Edge Creation ---
     fun initiateEdgeCreation() {
-        // REMOVED: Unnecessary viewModelScope.launch wrapper to fix race condition
-        // UPDATED: Fetches new SchemaData and filters for edge schemas
+        // Fetches new SchemaData and filters for edge schemas
         val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList<SchemaDefinitionItem>()
         if (metadataViewModel.nodeList.value.isEmpty()) {
             metadataViewModel.listNodes()
@@ -120,7 +153,6 @@ class EditCreateViewModel(
         )
     }
 
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun updateEdgeCreationSchema(schemaEdge: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdge) return@update current
@@ -142,7 +174,8 @@ class EditCreateViewModel(
             current.copy(
                 state = current.state.copy(
                     selectedConnection = connection,
-                    src = null, // Reset src/dst when connection type changes
+                    // Reset src/dst when connection type changes
+                    src = null,
                     dst = null
                 )
             )
@@ -175,11 +208,9 @@ class EditCreateViewModel(
 
     // --- Node Schema Creation ---
     fun initiateNodeSchemaCreation() {
-        // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
             metadataViewModel.setItemToEdit("CreateNodeSchema") // Keep this for cancel logic
         }
-        // UPDATED: Uses new NodeSchemaCreationState with default SchemaProperty
         _editScreenState.value = EditScreenState.CreateNodeSchema(
             NodeSchemaCreationState(
                 properties = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
@@ -194,7 +225,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun onNodeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
@@ -205,7 +235,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Adds new SchemaProperty
     fun onAddNodeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
@@ -225,9 +254,7 @@ class EditCreateViewModel(
 
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
-        // UPDATED: Fetches new SchemaData and filters for node schemas
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
-        // FIX: Launch a coroutine *only* for the suspend call
         viewModelScope.launch {
             metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic
         }
@@ -265,7 +292,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun onEdgeSchemaPropertyChange(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -276,7 +302,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Adds new SchemaProperty
     fun onAddEdgeSchemaProperty() {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -307,7 +332,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Logic remains the same, but operates on NodeEditState
     fun updateNodeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNode) return@update current
@@ -334,7 +358,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Logic remains the same, but operates on EdgeEditState
     fun updateEdgeEditProperty(key: String, value: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdge) return@update current
@@ -349,7 +372,6 @@ class EditCreateViewModel(
     }
 
     // --- Node Schema Editing ---
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun initiateNodeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditNodeSchema(
             NodeSchemaEditState(
@@ -389,7 +411,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun updateNodeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
@@ -401,7 +422,6 @@ class EditCreateViewModel(
     }
 
     // --- Edge Schema Editing ---
-    // UPDATED: Signature uses new SchemaDefinitionItem
     fun initiateEdgeSchemaEdit(schema: SchemaDefinitionItem) {
         _editScreenState.value = EditScreenState.EditEdgeSchema(
             EdgeSchemaEditState(
@@ -442,7 +462,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Signature uses new SchemaProperty
     fun updateEdgeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
@@ -453,7 +472,7 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Add/Remove Connections for Edge Schema Editing
+    // Add/Remove Connections for Edge Schema Editing
     fun updateEdgeSchemaEditAddConnection(src: String, dst: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
@@ -476,4 +495,3 @@ class EditCreateViewModel(
         }
     }
 }
-
