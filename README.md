@@ -22,11 +22,19 @@ missing information.
   - "Detangle" option using layout algorithms
   - Cypher Query mode (add support for cypher language)
   - Screenshot of Graph
+  - Button Controls
+  - Dropdown configuraton for phsyics options
 - **Document to Graph**
   - Preview graph (for imports)
   - Parse Document to Graph
+    - `.docx`
+    - `.odt`
   - Parse Markdown to Graph
+    - [Obsidian Flavor](https://help.obsidian.md/obsidian-flavored-markdown)
+    - [CommonMark Flavor](https://spec.commonmark.org/)
+    - [Github Flavor](https://github.github.com/gfm/)
   - Parse PDF to Graph
+  - Parse AsciiDoc to Graph
 - **Import/Export**
   - Sql
   - JSON
@@ -49,6 +57,7 @@ missing information.
   - Desktop/Mobile Toggle (overrieds auto-detected)
 - **Other**
   - Separate Mobile and Desktop UI (determined by screen ratio)
+  - Flush out metadata tab
 
 This is a Kotlin Multiplatform project targeting Desktop (JVM).
 
