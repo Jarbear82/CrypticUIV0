@@ -5,6 +5,7 @@ import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SchemaData(
@@ -25,6 +26,18 @@ class SchemaViewModel(
 
     private val _schemaDependencyCount = MutableStateFlow(0L)
     val schemaDependencyCount = _schemaDependencyCount.asStateFlow()
+
+    // --- ADDED: Search State ---
+    private val _nodeSchemaSearchText = MutableStateFlow("")
+    val nodeSchemaSearchText = _nodeSchemaSearchText.asStateFlow()
+
+    private val _edgeSchemaSearchText = MutableStateFlow("")
+    val edgeSchemaSearchText = _edgeSchemaSearchText.asStateFlow()
+
+    // --- ADDED: Visibility State ---
+    private val _schemaVisibility = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+    val schemaVisibility = _schemaVisibility.asStateFlow()
+
 
     fun showSchema() {
         // Pass-through to repository
@@ -59,5 +72,23 @@ class SchemaViewModel(
     fun clearDeleteSchemaRequest() {
         _schemaToDelete.value = null
         _schemaDependencyCount.value = 0
+    }
+
+    // --- ADDED: Search Handlers ---
+    fun onNodeSchemaSearchChange(text: String) {
+        _nodeSchemaSearchText.value = text
+    }
+
+    fun onEdgeSchemaSearchChange(text: String) {
+        _edgeSchemaSearchText.value = text
+    }
+
+    // --- ADDED: Toggle Function ---
+    fun toggleSchemaVisibility(schemaId: Long) {
+        _schemaVisibility.update {
+            val newMap = it.toMutableMap()
+            newMap[schemaId] = !(it[schemaId] ?: true) // Default to visible
+            newMap
+        }
     }
 }

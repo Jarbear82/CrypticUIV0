@@ -125,7 +125,7 @@ class CodexRepository(
                         println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
                         null
                     } else {
-                        NodeDisplayItem(dbNode.id, nodeSchema.name, dbNode.display_label)
+                        NodeDisplayItem(dbNode.id, nodeSchema.name, dbNode.display_label, nodeSchema.id)
                     }
                 }
             } catch (e: Exception) {
@@ -158,7 +158,7 @@ class CodexRepository(
                         println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
                         null
                     } else {
-                        EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode)
+                        EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode, schema.id)
                     }
                 }
             } catch (e: Exception) {

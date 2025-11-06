@@ -7,11 +7,13 @@ import androidx.compose.ui.graphics.Color
  * @param id The unique ID from the SQLite 'Node' table.
  * @param label The name of the schema (e.g., "Person", "Note").
  * @param displayProperty The user-friendly text to show (e.g., a person's name, a note's title).
+ * @param schemaId The ID of the schema this node belongs to.
  */
 data class NodeDisplayItem(
     val id: Long,
     val label: String,
-    val displayProperty: String
+    val displayProperty: String,
+    val schemaId: Long
 )
 
 /**
@@ -20,12 +22,14 @@ data class NodeDisplayItem(
  * @param label The name of the schema (e.g., "KNOWS", "REFERENCES").
  * @param src The source Node.
  * @param dst The destination Node.
+ * @param schemaId The ID of the schema this edge belongs to.
  */
 data class EdgeDisplayItem(
     val id: Long,
     val label: String,
     val src: NodeDisplayItem,
-    val dst: NodeDisplayItem
+    val dst: NodeDisplayItem,
+    val schemaId: Long
 )
 
 /**

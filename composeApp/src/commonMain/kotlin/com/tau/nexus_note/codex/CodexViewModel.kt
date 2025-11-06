@@ -38,14 +38,46 @@ class CodexViewModel(private val dbService: SqliteDbService) {
         // Trigger initial data load
         repository.refreshAll()
 
+        // Combine lists with visibility state
         viewModelScope.launch {
             combine(
                 metadataViewModel.nodeList,
-                metadataViewModel.edgeList
-            ) { nodes, edges ->
-                nodes to edges
-            }.collectLatest { (nodeList, edgeList) ->
-                graphViewModel.updateGraphData(nodeList, edgeList)
+                metadataViewModel.edgeList,
+                metadataViewModel.nodeVisibility,
+                metadataViewModel.edgeVisibility
+            ) { nodes, edges, nodeViz, edgeViz ->
+
+                // Filter nodes based on their own visibility
+                val visibleNodes = nodes.filter { nodeViz[it.id] ?: true }
+                val visibleNodeIds = visibleNodes.map { it.id }.toSet()
+
+                // Filter edges based on their own visibility AND their nodes' visibility
+                val visibleEdges = edges.filter {
+                    (edgeViz[it.id] ?: true) &&
+                            (it.src.id in visibleNodeIds) &&
+                            (it.dst.id in visibleNodeIds)
+                }
+
+                // Pass the *filtered* lists to the graph
+                visibleNodes to visibleEdges
+
+            }.collectLatest { (visibleNodes, visibleEdges) ->
+                graphViewModel.updateGraphData(visibleNodes, visibleEdges)
+            }
+        }
+
+        // Correlate Schema visibility with Item visibility
+        viewModelScope.launch {
+            schemaViewModel.schemaVisibility.collectLatest { schemaVizMap ->
+                schemaVizMap.forEach { (schemaId, isVisible) ->
+                    // Find if this schema is for nodes or edges
+                    val isNodeSchema = repository.schema.value?.nodeSchemas?.any { it.id == schemaId } ?: false
+                    if (isNodeSchema) {
+                        metadataViewModel.setNodeVisibilityForSchema(schemaId, isVisible)
+                    } else {
+                        metadataViewModel.setEdgeVisibilityForSchema(schemaId, isVisible)
+                    }
+                }
             }
         }
     }

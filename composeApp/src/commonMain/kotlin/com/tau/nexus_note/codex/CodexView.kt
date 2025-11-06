@@ -38,6 +38,16 @@ fun CodexView(viewModel: CodexViewModel) {
 
     val showDetangleDialog by graphViewModel?.showDetangleDialog?.collectAsState() ?: mutableStateOf(false)
 
+    val nodeSearchText by viewModel.metadataViewModel.nodeSearchText.collectAsState()
+    val edgeSearchText by viewModel.metadataViewModel.edgeSearchText.collectAsState()
+    val nodeSchemaSearchText by viewModel.schemaViewModel.nodeSchemaSearchText.collectAsState()
+    val edgeSchemaSearchText by viewModel.schemaViewModel.edgeSchemaSearchText.collectAsState()
+
+    val nodeVisibility by viewModel.metadataViewModel.nodeVisibility.collectAsState()
+    val edgeVisibility by viewModel.metadataViewModel.edgeVisibility.collectAsState()
+    val schemaVisibility by viewModel.schemaViewModel.schemaVisibility.collectAsState()
+
+
     LaunchedEffect(viewModel.editCreateViewModel) {
         viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
             val originalItem = viewModel.metadataViewModel.itemToEdit.value
@@ -106,7 +116,15 @@ fun CodexView(viewModel: CodexViewModel) {
                             onDeleteNodeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                             onDeleteEdgeClick = { viewModel.metadataViewModel.deleteDisplayItem(it) },
                             onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                            onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                            onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
+                            nodeSearchText = nodeSearchText,
+                            onNodeSearchChange = viewModel.metadataViewModel::onNodeSearchChange,
+                            edgeSearchText = edgeSearchText,
+                            onEdgeSearchChange = viewModel.metadataViewModel::onEdgeSearchChange,
+                            nodeVisibility = nodeVisibility,
+                            onToggleNodeVisibility = viewModel.metadataViewModel::toggleNodeVisibility,
+                            edgeVisibility = edgeVisibility,
+                            onToggleEdgeVisibility = viewModel.metadataViewModel::toggleEdgeVisibility
                         )
                     }
                     ViewTabs.GRAPH -> {
@@ -218,14 +236,20 @@ fun CodexView(viewModel: CodexViewModel) {
                         onDeleteEdgeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddNodeClick = { item -> // UPDATED
+                        onAddNodeClick = { item ->
                             viewModel.editCreateViewModel.initiateNodeCreation(item)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
                         },
-                        onAddEdgeClick = { schema, connection -> // UPDATED
+                        onAddEdgeClick = { schema, connection ->
                             viewModel.editCreateViewModel.initiateEdgeCreation(schema, connection)
                             viewModel.selectDataTab(DataViewTabs.EDIT)
-                        }
+                        },
+                        nodeSchemaSearchText = nodeSchemaSearchText,
+                        onNodeSchemaSearchChange = viewModel.schemaViewModel::onNodeSchemaSearchChange,
+                        edgeSchemaSearchText = edgeSchemaSearchText,
+                        onEdgeSchemaSearchChange = viewModel.schemaViewModel::onEdgeSchemaSearchChange,
+                        schemaVisibility = schemaVisibility,
+                        onToggleSchemaVisibility = viewModel.schemaViewModel::toggleSchemaVisibility
                     )
                     DataViewTabs.EDIT -> EditItemView(
                         editScreenState = editScreenState,

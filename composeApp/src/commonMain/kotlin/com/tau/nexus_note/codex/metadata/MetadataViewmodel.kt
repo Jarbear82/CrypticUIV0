@@ -6,6 +6,7 @@ import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MetadataViewModel(
@@ -27,6 +28,20 @@ class MetadataViewModel(
     // This state is just a marker for *what* to edit, used by EditCreateViewModel
     private val _itemToEdit = MutableStateFlow<Any?>(null)
     val itemToEdit = _itemToEdit.asStateFlow()
+
+    // --- ADDED: Search State ---
+    private val _nodeSearchText = MutableStateFlow("")
+    val nodeSearchText = _nodeSearchText.asStateFlow()
+
+    private val _edgeSearchText = MutableStateFlow("")
+    val edgeSearchText = _edgeSearchText.asStateFlow()
+
+    // --- ADDED: Visibility State ---
+    private val _nodeVisibility = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+    val nodeVisibility = _nodeVisibility.asStateFlow()
+
+    private val _edgeVisibility = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+    val edgeVisibility = _edgeVisibility.asStateFlow()
 
     // --- Public API ---
 
@@ -90,5 +105,54 @@ class MetadataViewModel(
         _itemToEdit.value = null
         _primarySelectedItem.value = null
         _secondarySelectedItem.value = null
+    }
+
+    // --- ADDED: Search Handlers ---
+    fun onNodeSearchChange(text: String) {
+        _nodeSearchText.value = text
+    }
+
+    fun onEdgeSearchChange(text: String) {
+        _edgeSearchText.value = text
+    }
+
+    // --- ADDED: Visibility Toggle Functions ---
+    fun toggleNodeVisibility(id: Long) {
+        _nodeVisibility.update {
+            val newMap = it.toMutableMap()
+            newMap[id] = !(it[id] ?: true) // Default to visible
+            newMap
+        }
+    }
+
+    fun toggleEdgeVisibility(id: Long) {
+        _edgeVisibility.update {
+            val newMap = it.toMutableMap()
+            newMap[id] = !(it[id] ?: true) // Default to visible
+            newMap
+        }
+    }
+
+    // --- ADDED: Bulk update functions ---
+    fun setNodeVisibilityForSchema(schemaId: Long, isVisible: Boolean) {
+        val affectedNodeIds = nodeList.value.filter { it.schemaId == schemaId }.map { it.id }
+        _nodeVisibility.update {
+            val newMap = it.toMutableMap()
+            for (id in affectedNodeIds) {
+                newMap[id] = isVisible
+            }
+            newMap
+        }
+    }
+
+    fun setEdgeVisibilityForSchema(schemaId: Long, isVisible: Boolean) {
+        val affectedEdgeIds = edgeList.value.filter { it.schemaId == schemaId }.map { it.id }
+        _edgeVisibility.update {
+            val newMap = it.toMutableMap()
+            for (id in affectedEdgeIds) {
+                newMap[id] = isVisible
+            }
+            newMap
+        }
     }
 }
