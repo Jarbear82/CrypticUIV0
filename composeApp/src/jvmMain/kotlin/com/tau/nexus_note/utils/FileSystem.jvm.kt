@@ -3,6 +3,7 @@ package com.tau.nexus_note.utils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import java.io.File
+import java.io.IOException
 import javax.swing.JFileChooser
 
 /**
@@ -43,17 +44,26 @@ actual fun DirectoryPicker(
 
 /**
  * JVM implementation for listing files with a specific extension.
+ * @throws IOException if an error occurs while listing files.
  */
 actual fun listFilesWithExtension(path: String, extension: String): List<String> {
-    return try {
-        File(path).listFiles { file ->
+    try {
+        val dir = File(path)
+        if (!dir.exists()) throw IOException("Directory does not exist: $path")
+        if (!dir.isDirectory) throw IOException("Path is not a directory: $path")
+
+        return dir.listFiles { file ->
             file.isFile && file.name.endsWith(extension)
         }?.map { it.absolutePath } ?: emptyList()
+    } catch (e: SecurityException) {
+        // Catch security exceptions and re-throw as IOException
+        throw IOException("Permission denied for directory: $path", e)
     } catch (e: Exception) {
-        println("Error listing files: ${e.message}")
-        emptyList()
+        // Catch other potential IO errors
+        throw IOException("Error listing files in: $path", e)
     }
 }
+
 
 /**
  * JVM implementation for getting a file name.

@@ -26,11 +26,13 @@ class CodexViewModel(private val dbService: SqliteDbService) {
     val metadataViewModel = MetadataViewModel(repository, viewModelScope)
     val editCreateViewModel = EditCreateViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
-    // 3. GraphViewModel is now decoupled
     val graphViewModel = GraphViewmodel(
         viewModelScope = viewModelScope
-        // REMOVED: Dependencies
     )
+
+    // Expose Repository Error Flow
+    val errorFlow = repository.errorFlow
+    fun clearError() = repository.clearError()
 
     init {
         // Trigger initial data load

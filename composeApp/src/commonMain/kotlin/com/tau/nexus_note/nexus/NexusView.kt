@@ -21,7 +21,7 @@ import com.tau.nexus_note.viewmodels.MainViewModel
 import com.tau.nexus_note.utils.labelToColor
 
 @Composable
-fun HomeView(viewModel: MainViewModel) {
+fun NexusView(viewModel: MainViewModel) {
     val codeices by viewModel.codicies.collectAsState()
     val baseDirectory by viewModel.codexBaseDirectory.collectAsState()
     val showNameDialog by viewModel.showNameDialog.collectAsState()

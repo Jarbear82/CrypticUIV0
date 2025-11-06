@@ -21,12 +21,17 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -40,9 +45,39 @@ import kotlinx.coroutines.launch
 fun MainView(mainViewModel: MainViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val selectedScreen by mainViewModel.selectedScreen.collectAsState()
     val codexViewModel by mainViewModel.codexViewModel.collectAsState()
+
+    // --- Error Handling Observers ---
+    val mainError by mainViewModel.errorFlow.collectAsState()
+    val codexError by codexViewModel?.errorFlow?.collectAsState() ?: mutableStateOf<String?>(null)
+
+    LaunchedEffect(mainError) {
+        mainError?.let {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = it,
+                    withDismissAction = true
+                )
+            }
+            mainViewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(codexError) {
+        codexError?.let {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = it,
+                    withDismissAction = true
+                )
+            }
+            codexViewModel?.clearError()
+        }
+    }
+    // --- End Error Handling ---
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -57,21 +92,21 @@ fun MainView(mainViewModel: MainViewModel) {
 
                 // Home Item
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    selected = selectedScreen == Screen.HOME,
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Nexus") },
+                    label = { Text("Nexus") },
+                    selected = selectedScreen == Screen.NEXUS,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        // This will close the terminal if one is open
+                        // This will close the codex if one is open
                         mainViewModel.closeTerminal()
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
-                // Terminal Item
+                // Codex Item
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Terminal, contentDescription = "Terminal") },
-                    label = { Text("Terminal") },
+                    icon = { Icon(Icons.Default.Terminal, contentDescription = "Codex") },
+                    label = { Text("Codex") },
                     selected = selectedScreen == Screen.CODEX,
                     onClick = {
                         if (codexViewModel != null) {
@@ -89,11 +124,12 @@ fun MainView(mainViewModel: MainViewModel) {
         }
     ) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = {
                         val title = when (selectedScreen) {
-                            Screen.HOME -> "Nexus"
+                            Screen.NEXUS -> "Nexus"
                             Screen.CODEX -> "Codex"
                         }
                         Text(title.toString())
@@ -126,7 +162,7 @@ fun MainView(mainViewModel: MainViewModel) {
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
                 when (selectedScreen) {
-                    Screen.HOME -> HomeView(
+                    Screen.NEXUS -> NexusView(
                         viewModel = mainViewModel
                     )
                     Screen.CODEX -> {
@@ -135,7 +171,7 @@ fun MainView(mainViewModel: MainViewModel) {
                             CodexView(viewModel = vm)
                         } else {
                             // Fallback in case state is somehow incorrect
-                            HomeView(viewModel = mainViewModel)
+                            NexusView(viewModel = mainViewModel)
                         }
                     }
                 }

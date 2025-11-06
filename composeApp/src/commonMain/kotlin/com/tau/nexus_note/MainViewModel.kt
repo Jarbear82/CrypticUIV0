@@ -16,18 +16,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    HOME,
+    NEXUS,
     CODEX
 }
 
 class MainViewModel {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    private val _selectedScreen = MutableStateFlow(Screen.HOME)
+    private val _selectedScreen = MutableStateFlow(Screen.NEXUS)
     val selectedScreen = _selectedScreen.asStateFlow()
 
     private val _codexViewModel = MutableStateFlow<CodexViewModel?>(null)
     val codexViewModel = _codexViewModel.asStateFlow()
+
+    // --- Error State Flow ---
+    private val _errorFlow = MutableStateFlow<String?>(null)
+    val errorFlow = _errorFlow.asStateFlow()
+
+    fun clearError() {
+        _errorFlow.value = null
+    }
 
     // --- Codex Management State ---
 
@@ -51,15 +59,21 @@ class MainViewModel {
      * Scans the base directory for valid SQLiteDB files (.sqlite).
      */
     fun loadCodicies() {
-        viewModelScope.launch(Dispatchers.IO) { // Use IO for file scanning
-            // UPDATED: Look for .sqlite files
-            val files = listFilesWithExtension(_codexBaseDirectory.value, ".sqlite")
-            val graphs = files.map {
-                CodexItem(getFileName(it), it)
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            // Use IO for file scanning
+            try {
+                val files = listFilesWithExtension(_codexBaseDirectory.value, ".sqlite")
+                val graphs = files.map {
+                    CodexItem(getFileName(it), it)
+                }
 
-            viewModelScope.launch(Dispatchers.Main) { // Switch back to Main to update state
-                _codicies.value = graphs
+                viewModelScope.launch(Dispatchers.Main) { // Switch back to Main to update state
+                    _codicies.value = graphs
+                }
+            } catch (e: Exception) {
+                viewModelScope.launch(Dispatchers.Main) {
+                    _errorFlow.value = "Error loading codex list: ${e.message}"
+                }
             }
         }
     }
@@ -99,7 +113,6 @@ class MainViewModel {
 
         // Sanitize the name and ENSURE it ends with .sqlite
         val dbName = name.trim().replace(Regex("[^a-zA-Z0-9_-]"), "_")
-        // UPDATED: Use .sqlite
         val finalName = if (dbName.endsWith(".sqlite")) dbName else "$dbName.sqlite"
 
         val newPath = "${_codexBaseDirectory.value}/$finalName"
@@ -126,14 +139,12 @@ class MainViewModel {
         viewModelScope.launch {
             try {
                 _codexViewModel.value?.onCleared() // Close previous one
-                // UPDATED: Use new SqliteDbService
                 val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
                 _codexViewModel.value = CodexViewModel(newService)
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
-                println("Failed to open codex '${item.path}': ${e.message}")
-                // TODO: Add a user-facing error message here
+                _errorFlow.value = "Failed to open codex '${item.path}': ${e.message}"
             }
         }
     }
@@ -149,13 +160,15 @@ class MainViewModel {
      */
     fun openInMemoryTerminal() {
         viewModelScope.launch {
-            _codexViewModel.value?.onCleared()
-            // UPDATED: Use new SqliteDbService
-            val newService = SqliteDbService()
-            // UPDATED: Pass special string for in-memory DB
-            newService.initialize(":memory:")
-            _codexViewModel.value = CodexViewModel(newService)
-            _selectedScreen.value = Screen.CODEX
+            try {
+                _codexViewModel.value?.onCleared()
+                val newService = SqliteDbService()
+                newService.initialize(":memory:")
+                _codexViewModel.value = CodexViewModel(newService)
+                _selectedScreen.value = Screen.CODEX
+            } catch (e: Exception) {
+                _errorFlow.value = "Failed to open in-memory database: ${e.message}"
+            }
         }
     }
 
@@ -163,11 +176,13 @@ class MainViewModel {
         viewModelScope.launch {
             _codexViewModel.value?.onCleared()
             _codexViewModel.value = null
-            _selectedScreen.value = Screen.HOME
+            _selectedScreen.value = Screen.NEXUS
             // Refresh the list in case a new DB was created
             loadCodicies()
         }
     }
+
+
 
     fun onDispose() {
         // This will be called from the main App composable's onDispose

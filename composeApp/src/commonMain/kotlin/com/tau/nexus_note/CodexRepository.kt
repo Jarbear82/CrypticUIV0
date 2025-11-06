@@ -44,6 +44,10 @@ class CodexRepository(
     private val _edgeList = MutableStateFlow<List<EdgeDisplayItem>>(emptyList())
     val edgeList = _edgeList.asStateFlow()
 
+    // --- Error State Flow ---
+    private val _errorFlow = MutableStateFlow<String?>(null)
+    val errorFlow = _errorFlow.asStateFlow()
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -52,6 +56,10 @@ class CodexRepository(
     }
 
     // --- Public API ---
+
+    fun clearError() {
+        _errorFlow.value = null
+    }
 
     fun refreshAll() {
         repositoryScope.launch {
@@ -71,7 +79,11 @@ class CodexRepository(
                 dbSchemas.forEach { dbSchema ->
                     val properties = try {
                         json.decodeFromString<List<SchemaProperty>>(dbSchema.properties_json)
-                    } catch (e: Exception) { emptyList() }
+                    } catch (e: Exception) {
+                        // Log this error but continue
+                        _errorFlow.value = "Failed to parse schema properties for '${dbSchema.name}': ${e.message}"
+                        emptyList()
+                    }
 
                     if (dbSchema.type == "NODE") {
                         nodeSchemas.add(
@@ -80,7 +92,11 @@ class CodexRepository(
                     } else if (dbSchema.type == "EDGE") {
                         val connections = try {
                             dbSchema.connections_json?.let { json.decodeFromString<List<ConnectionPair>>(it) } ?: emptyList()
-                        } catch (e: Exception) { emptyList() }
+                        } catch (e: Exception) {
+                            // Log this error but continue
+                            _errorFlow.value = "Failed to parse schema connections for '${dbSchema.name}': ${e.message}"
+                            emptyList()
+                        }
                         edgeSchemas.add(
                             SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, connections)
                         )
@@ -88,7 +104,7 @@ class CodexRepository(
                 }
                 _schema.value = SchemaData(nodeSchemas, edgeSchemas)
             } catch (e: Exception) {
-                println("Error refreshing schema: ${e.message}")
+                _errorFlow.value = "Error refreshing schema: ${e.message}"
                 _schema.value = SchemaData(emptyList(), emptyList())
             }
         }
@@ -113,7 +129,7 @@ class CodexRepository(
                     }
                 }
             } catch (e: Exception) {
-                println("Error refreshing nodes: ${e.message}")
+                _errorFlow.value = "Error refreshing nodes: ${e.message}"
                 _nodeList.value = emptyList()
             }
         }
@@ -146,7 +162,7 @@ class CodexRepository(
                     }
                 }
             } catch (e: Exception) {
-                println("Error refreshing edges: ${e.message}")
+                _errorFlow.value = "Error refreshing edges: ${e.message}"
                 _edgeList.value = emptyList()
             }
         }
@@ -160,7 +176,7 @@ class CodexRepository(
             val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(schemaId).executeAsOne()
             nodeCount + edgeCount
         } catch (e: Exception) {
-            println("Error checking schema dependencies: ${e.message}")
+            _errorFlow.value = "Error checking schema dependencies: ${e.message}"
             -1L // Indicate error
         }
     }
@@ -171,7 +187,7 @@ class CodexRepository(
                 dbService.database.appDatabaseQueries.deleteSchemaById(schemaId)
                 refreshAll() // Deleting schema cascades, refresh everything
             } catch (e: Exception) {
-                println("Error deleting schema: ${e.message}")
+                _errorFlow.value = "Error deleting schema: ${e.message}"
             }
         }
     }
@@ -188,7 +204,7 @@ class CodexRepository(
                 )
                 refreshSchema()
             } catch (e: Exception) {
-                println("Error creating node schema: ${e.message}")
+                _errorFlow.value = "Error creating node schema: ${e.message}"
             }
         }
     }
@@ -206,7 +222,7 @@ class CodexRepository(
                 )
                 refreshSchema()
             } catch (e: Exception) {
-                println("Error creating edge schema: ${e.message}")
+                _errorFlow.value = "Error creating edge schema: ${e.message}"
             }
         }
     }
@@ -224,7 +240,7 @@ class CodexRepository(
                 refreshSchema()
                 refreshNodes()
             } catch (e: Exception) {
-                println("Error updating node schema: ${e.message}")
+                _errorFlow.value = "Error updating node schema: ${e.message}"
             }
         }
     }
@@ -243,7 +259,7 @@ class CodexRepository(
                 refreshSchema()
                 refreshEdges()
             } catch (e: Exception) {
-                println("Error updating edge schema: ${e.message}")
+                _errorFlow.value = "Error updating edge schema: ${e.message}"
             }
         }
     }
@@ -263,9 +279,9 @@ class CodexRepository(
                     display_label = displayLabel,
                     properties_json = propertiesJson
                 )
-                refreshNodes() // Only refresh nodes
+                refreshNodes()
             } catch (e: Exception) {
-                println("Error creating node: ${e.message}")
+                _errorFlow.value = "Error creating node: ${e.message}"
             }
         }
     }
@@ -276,7 +292,7 @@ class CodexRepository(
         val properties = try {
             json.decodeFromString<Map<String, String>>(dbNode.properties_json)
         } catch (e: Exception) {
-            println("Error parsing node properties: ${e.message}")
+            _errorFlow.value = "Error parsing node properties: ${e.message}"
             emptyMap()
         }
         return NodeEditState(id = dbNode.id, schema = schema, properties = properties)
@@ -296,7 +312,7 @@ class CodexRepository(
                 )
                 refreshNodes()
             } catch (e: Exception) {
-                println("Error updating node: ${e.message}")
+                _errorFlow.value = "Error updating node: ${e.message}"
             }
         }
     }
@@ -318,7 +334,7 @@ class CodexRepository(
                 // 3. Refresh only edges, which were affected by the cascade
                 refreshEdges()
             } catch (e: Exception) {
-                println("Error deleting node: ${e.message}")
+                _errorFlow.value = "Error deleting node: ${e.message}"
             }
         }
     }
@@ -338,7 +354,7 @@ class CodexRepository(
                 )
                 refreshEdges()
             } catch (e: Exception) {
-                println("Error creating edge: ${e.message}")
+                _errorFlow.value = "Error creating edge: ${e.message}"
             }
         }
     }
@@ -349,7 +365,7 @@ class CodexRepository(
         val properties = try {
             json.decodeFromString<Map<String, String>>(dbEdge.properties_json)
         } catch (e: Exception) {
-            println("Error parsing edge properties: ${e.message}")
+            _errorFlow.value = "Error parsing edge properties: ${e.message}"
             emptyMap()
         }
         return EdgeEditState(id = dbEdge.id, schema = schema, src = item.src, dst = item.dst, properties = properties)
@@ -365,7 +381,7 @@ class CodexRepository(
                 )
                 refreshEdges()
             } catch (e: Exception) {
-                println("Error updating edge: ${e.message}")
+                _errorFlow.value = "Error updating edge: ${e.message}"
             }
         }
     }
@@ -385,7 +401,7 @@ class CodexRepository(
                 _edgeList.update { it.filterNot { edge -> edge.id == itemId } }
 
             } catch (e: Exception) {
-                println("Error deleting edge: ${e.message}")
+                _errorFlow.value = "Error deleting edge: ${e.message}"
             }
         }
     }
