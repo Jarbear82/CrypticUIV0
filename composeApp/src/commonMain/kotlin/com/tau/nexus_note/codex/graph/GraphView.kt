@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,8 +72,15 @@ fun GraphView(viewModel: GraphViewmodel) {
     // ADDED: State to distinguish node drag from pan
     var isDraggingNode by remember { mutableStateOf(false) }
 
+    // MODIFIED: Split into LaunchedEffect (to start) and DisposableEffect (to stop)
     LaunchedEffect(Unit) {
         viewModel.runSimulationLoop()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopSimulation()
+        }
     }
 
     Box(
@@ -437,13 +445,17 @@ private fun DrawScope.drawNodes(
                 text = AnnotatedString(node.displayProperty),
                 style = style
             )
+
+            // MODIFICATION: Logic to draw text below the node
+            val textPadding = 3f // Small padding in world space
             drawText(
                 textLayoutResult = textLayoutResult,
-                topLeft = node.pos - Offset(
-                    x = textLayoutResult.size.width / 2f,
-                    y = textLayoutResult.size.height / 2f
+                topLeft = Offset(
+                    x = node.pos.x - (textLayoutResult.size.width / 2f), // Center horizontally
+                    y = node.pos.y + node.radius + textPadding // Position below the node
                 )
             )
+            // END MODIFICATION
         }
     }
 }

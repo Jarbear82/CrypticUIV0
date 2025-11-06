@@ -47,7 +47,7 @@ class GraphViewmodel(
     val transform = _transform.asStateFlow()
 
     // Ticker for the physics simulation
-    private val _simulationRunning = MutableStateFlow(true)
+    private val _simulationRunning = MutableStateFlow(false) // MODIFIED: Start as false
 
     // ADDED: State for node dragging
     private val _draggedNodeId = MutableStateFlow<Long?>(null)
@@ -79,6 +79,10 @@ class GraphViewmodel(
     }
 
     suspend fun runSimulationLoop() {
+        // MODIFIED: Set running to true when loop starts
+        if (_simulationRunning.value) return // Don't run multiple loops
+        _simulationRunning.value = true
+
         var lastTimeNanos = withFrameNanos { it }
         while (_simulationRunning.value) {
             val currentTimeNanos = withFrameNanos { it }
@@ -330,8 +334,12 @@ class GraphViewmodel(
     }
 
 
-    fun onCleared() {
+    // ADDED: Public function to stop simulation
+    fun stopSimulation() {
         _simulationRunning.value = false
     }
-}
 
+    fun onCleared() {
+        stopSimulation() // MODIFIED: Call stopSimulation
+    }
+}
