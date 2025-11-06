@@ -5,16 +5,50 @@ A Visual Structured Notetaking Application.
 approach to note-taking. This helps users avoid note duplication as well as fill in
 missing information.  
 - **Force-directed Graph:** Provides an at-a-glance comprehension of existing notes.
-  While it can get messy, when viewing a large note graph, using certian queryies (or
+  While it can get messy, when viewing a large note graph, ~~using certian queries~~ (or
   in the future, filters), allows the user to easily see and create connections between
   notes.
-- **Query Terminal (Future Planned):** Provides an efficient way for advanced users to query and view
-  desired portions of the graph.
+- ~~**Query Terminal (Future Planned):** Provides an efficient way for advanced users to query and view
+  desired portions of the graph.~~
 
-**Intended Audiences:**
+## **Intended Audiences:**
 - Writers
 - DnD Worldbuilding
 - Anyone looking for a way to visualize data in a graph.
+- ~~Those wanting to visualize documents~~ **(Planned)**
+
+## Feature Wishlist
+- **Graph**
+  - "Detangle" option using layout algorithms
+  - Cypher Query mode (add support for cypher language)
+  - Screenshot of Graph
+- **Document to Graph**
+  - Preview graph (for imports)
+  - Parse Document to Graph
+  - Parse Markdown to Graph
+  - Parse PDF to Graph
+- **Import/Export**
+  - Sql
+  - JSON
+  - Cypher (No Media)
+- **Data Sync**
+  - Peer to Peer
+  - Cloud Storage
+  - other options?
+- **Platforms**
+  - Android
+  - Ios
+- **Node/Edge Creation**
+  - Autofill from schema
+  - Node and Edge searches in listview
+  - Schema based filtering (hide/show)
+  - individual Node/Edge filtering (hide/show)
+- **Settings**
+  - Settings page
+  - Light/Dark Theme
+  - Desktop/Mobile Toggle (overrieds auto-detected)
+- **Other**
+  - Separate Mobile and Desktop UI (determined by screen ratio)
 
 This is a Kotlin Multiplatform project targeting Desktop (JVM).
 
@@ -27,7 +61,7 @@ This is a Kotlin Multiplatform project targeting Desktop (JVM).
     Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
     folder is the appropriate location.
 
-### Build and Run Desktop (JVM) Application
+## Build and Run Desktop (JVM) Application
 
 To build and run the development version of the desktop app, use the run configuration from the run widget
 in your IDE’s toolbar or run it directly from the terminal:
@@ -41,5 +75,3 @@ in your IDE’s toolbar or run it directly from the terminal:
   ```
 
 ---
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…

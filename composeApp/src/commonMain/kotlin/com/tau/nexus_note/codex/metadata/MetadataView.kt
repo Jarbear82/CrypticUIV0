@@ -103,6 +103,6 @@ fun MetadataView(
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-        
+
     }
 }
