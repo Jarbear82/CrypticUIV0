@@ -71,3 +71,5 @@ This project is in active development. Here's a look at what's planned:
 * Android & iOS support
 * Data synchronization (Cloud or P2P)
 * Advanced query support (Cypher)
+* Composite Nodes (Made up of multiple node schemas)
+* Clusters

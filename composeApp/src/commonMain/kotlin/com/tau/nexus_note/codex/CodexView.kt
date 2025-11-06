@@ -42,9 +42,9 @@ fun CodexView(viewModel: CodexViewModel) {
         viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
             val originalItem = viewModel.metadataViewModel.itemToEdit.value
             val targetTab = when (originalItem) {
-                is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
+                is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.SCHEMA
                 is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA
-                else -> DataViewTabs.METADATA
+                else -> DataViewTabs.SCHEMA
             }
             viewModel.selectDataTab(targetTab)
         }
@@ -61,10 +61,10 @@ fun CodexView(viewModel: CodexViewModel) {
         viewModel.metadataViewModel.clearSelectedItem()
 
         val targetTab = when (originalItem) {
-            is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.METADATA
+            is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.SCHEMA
             is SchemaDefinitionItem -> DataViewTabs.SCHEMA
             is String -> DataViewTabs.SCHEMA
-            else -> DataViewTabs.METADATA
+            else -> DataViewTabs.SCHEMA
         }
         viewModel.selectDataTab(targetTab)
     }
@@ -218,8 +218,14 @@ fun CodexView(viewModel: CodexViewModel) {
                         onDeleteEdgeClick = { viewModel.schemaViewModel.requestDeleteSchema(it) },
                         onAddNodeSchemaClick = { viewModel.editCreateViewModel.initiateNodeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
                         onAddEdgeSchemaClick = { viewModel.editCreateViewModel.initiateEdgeSchemaCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddNodeClick = { viewModel.editCreateViewModel.initiateNodeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) },
-                        onAddEdgeClick = { viewModel.editCreateViewModel.initiateEdgeCreation(); viewModel.selectDataTab(DataViewTabs.EDIT) }
+                        onAddNodeClick = { item -> // UPDATED
+                            viewModel.editCreateViewModel.initiateNodeCreation(item)
+                            viewModel.selectDataTab(DataViewTabs.EDIT)
+                        },
+                        onAddEdgeClick = { schema, connection -> // UPDATED
+                            viewModel.editCreateViewModel.initiateEdgeCreation(schema, connection)
+                            viewModel.selectDataTab(DataViewTabs.EDIT)
+                        }
                     )
                     DataViewTabs.EDIT -> EditItemView(
                         editScreenState = editScreenState,

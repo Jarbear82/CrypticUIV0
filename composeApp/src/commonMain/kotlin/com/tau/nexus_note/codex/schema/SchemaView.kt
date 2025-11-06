@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.schema // UPDATED: Changed package to match your new structure
+package com.tau.nexus_note.codex.schema
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.codex.schema.SchemaData
+import com.tau.nexus_note.datamodels.ConnectionPair
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.utils.labelToColor
 
@@ -46,8 +47,8 @@ fun SchemaView(
     onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit,
     onAddNodeSchemaClick: () -> Unit,
     onAddEdgeSchemaClick: () -> Unit,
-    onAddNodeClick: () -> Unit,
-    onAddEdgeClick: () -> Unit,
+    onAddNodeClick: (SchemaDefinitionItem) -> Unit,
+    onAddEdgeClick: (SchemaDefinitionItem, ConnectionPair) -> Unit,
 ) {
     if (schema == null) {
         Text("Schema not loaded.")
@@ -69,20 +70,16 @@ fun SchemaView(
 
             HorizontalDivider(color = Color.Black)
             LazyColumn {
-                // UPDATED: Use schema.nodeSchemas
                 items(schema.nodeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    // UPDATED: Use table.name
                     val colorInfo = labelToColor(table.name)
                     ListItem(
-                        // UPDATED: Use table.name
                         headlineContent = { Text(table.name, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
                             .padding(bottom = 8.dp)
                             .clickable { onNodeClick(table) }
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
 
-                        // UPDATED: Use new SchemaProperty fields
                         supportingContent = {
                             Text(
                                 text = table.properties.joinToString(separator = "\n") { prop ->
@@ -97,7 +94,7 @@ fun SchemaView(
                             FlowRow(
                                 itemVerticalAlignment = Alignment.CenterVertically,
                                 content = {
-                                    IconButton(onClick = onAddNodeClick) {
+                                    IconButton(onClick = { onAddNodeClick(table) }) { // UPDATED
                                         Icon(Icons.Default.Add, contentDescription = "New Node")
                                     }
                                     IconButton(onClick = { onEditNodeClick(table) }) {
@@ -107,7 +104,7 @@ fun SchemaView(
                                         Icon(Icons.Default.Delete, contentDescription = "Delete Node Schema")
                                     }
                                 }
-                                    )
+                            )
                         },
                         colors = ListItemDefaults.colors( // Apply colors
                             containerColor = colorInfo.composeColor,
@@ -124,7 +121,7 @@ fun SchemaView(
         // --- Edge Schemas ---
         Column(modifier = Modifier.weight(1f).padding(8.dp)) {
             ListItem(
-                leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Edge Schema")}, // Fixed content description
+                leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Edge Schema")},
                 headlineContent = { Text("Edge Schemas:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) } ,
                 trailingContent = {
                     IconButton(onClick = onAddEdgeSchemaClick) {
@@ -137,16 +134,13 @@ fun SchemaView(
                 // UPDATED: Use schema.edgeSchemas
                 items(schema.edgeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    // UPDATED: Use table.name
                     val colorInfo = labelToColor(table.name)
                     ListItem(
-                        // UPDATED: Use table.name
                         headlineContent = { Text(table.name, style = MaterialTheme.typography.titleMedium) },
                         modifier = Modifier
                             .padding(bottom = 8.dp)
                             .clickable { onEdgeClick(table) }
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
-                        // UPDATED: Use table.connections (nullable)
                         supportingContent = {
                             Column {
                                 (table.connections ?: emptyList()).forEach {
@@ -155,7 +149,7 @@ fun SchemaView(
                                         content = {
                                             Text("(${it.src}) -> (${it.dst})", style = MaterialTheme.typography.bodyMedium)
                                             IconButton(
-                                                onClick = onAddEdgeClick,
+                                                onClick = { onAddEdgeClick(table, it) },
                                                 /// modifier = Modifier.wrapContentHeight()
                                             ) {
                                                 Icon(Icons.Default.Add, contentDescription = "New Edge", modifier = Modifier.size( with(LocalDensity.current) {

@@ -50,7 +50,7 @@ class CodexViewModel(private val dbService: SqliteDbService) {
         }
     }
 
-    private val _selectedDataTab = MutableStateFlow(DataViewTabs.METADATA)
+    private val _selectedDataTab = MutableStateFlow(DataViewTabs.SCHEMA)
     val selectedDataTab = _selectedDataTab.asStateFlow()
 
     fun selectDataTab(tab: DataViewTabs) {

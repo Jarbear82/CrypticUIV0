@@ -44,15 +44,12 @@ class EditCreateViewModel(
     private val _navigationEvent = MutableSharedFlow<Unit>(replay = 0)
     val navigationEventFlow = _navigationEvent.asSharedFlow()
 
-    // ADDED: JSON serializer instance
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true
         encodeDefaults = true // Ensure all fields are present
     }
-
-    // --- ADDED: Central Save Function ---
 
     /**
      * Saves the currently active state (create or edit) to the repository.
@@ -115,6 +112,20 @@ class EditCreateViewModel(
         )
     }
 
+    /**
+     * Initiates node creation with a pre-selected schema.
+     */
+    fun initiateNodeCreation(schema: SchemaDefinitionItem) {
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        metadataViewModel.clearSelectedItem()
+        _editScreenState.value = EditScreenState.CreateNode(
+            NodeCreationState(
+                schemas = nodeSchemas,
+                selectedSchema = schema
+            )
+        )
+    }
+
     fun updateNodeCreationSchema(schemaNode: SchemaDefinitionItem) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNode) return@update current
@@ -149,6 +160,28 @@ class EditCreateViewModel(
             EdgeCreationState(
                 schemas = edgeSchemas,
                 availableNodes = metadataViewModel.nodeList.value
+            )
+        )
+    }
+
+    /**
+     * Initiates edge creation with a pre-selected schema and connection pair.
+     */
+    fun initiateEdgeCreation(schema: SchemaDefinitionItem, connection: ConnectionPair) {
+        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
+        if (metadataViewModel.nodeList.value.isEmpty()) {
+            metadataViewModel.listNodes()
+        }
+        metadataViewModel.clearSelectedItem()
+        _editScreenState.value = EditScreenState.CreateEdge(
+            EdgeCreationState(
+                schemas = edgeSchemas,
+                availableNodes = metadataViewModel.nodeList.value,
+                selectedSchema = schema,
+                selectedConnection = connection,
+                src = null,
+                dst = null,
+                properties = emptyMap()
             )
         )
     }
