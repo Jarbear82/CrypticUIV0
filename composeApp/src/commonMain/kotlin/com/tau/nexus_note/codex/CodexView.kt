@@ -10,6 +10,7 @@ import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.codex.crud.DeleteSchemaConfirmationDialog
 import com.tau.nexus_note.codex.crud.update.EditItemView
+import com.tau.nexus_note.codex.graph.DetangleSettingsDialog
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView
 import com.tau.nexus_note.codex.schema.SchemaView
@@ -34,6 +35,8 @@ fun CodexView(viewModel: CodexViewModel) {
     val selectedViewTab by viewModel.selectedViewTab.collectAsState()
 
     val graphViewModel = viewModel.graphViewModel
+
+    val showDetangleDialog by graphViewModel?.showDetangleDialog?.collectAsState() ?: mutableStateOf(false)
 
     LaunchedEffect(viewModel.editCreateViewModel) {
         viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
@@ -138,6 +141,9 @@ fun CodexView(viewModel: CodexViewModel) {
                                 onAddEdgeClick = {
                                     viewModel.editCreateViewModel.initiateEdgeCreation()
                                     viewModel.selectDataTab(DataViewTabs.EDIT)
+                                },
+                                onDetangleClick = {
+                                    it.onShowDetangleDialog()
                                 }
                             )
                         } ?: Text("Loading Graph...")
@@ -267,6 +273,18 @@ fun CodexView(viewModel: CodexViewModel) {
                         allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList()
                     )
                 }
+            }
+        }
+
+        // This dialog floats over everything
+        if (showDetangleDialog) {
+            graphViewModel?.let { gvm ->
+                DetangleSettingsDialog(
+                    onDismiss = { gvm.onDismissDetangleDialog() },
+                    onDetangle = { alg, params ->
+                        gvm.startDetangle(alg, params)
+                    }
+                )
             }
         }
     }

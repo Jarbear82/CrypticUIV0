@@ -2,22 +2,28 @@ package com.tau.nexus_note.codex.graph
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,11 +71,20 @@ fun GraphView(
     secondarySelectedId: Long?,
     onNodeTap: (Long) -> Unit,
     onAddNodeClick: () -> Unit,
-    onAddEdgeClick: () -> Unit
+    onAddEdgeClick: () -> Unit,
+    onDetangleClick: () -> Unit // <-- ADDED
 ) {
     // REMOVED: nodes and edges .collectAsState()
     val transform by viewModel.transform.collectAsState()
     val showFabMenu by viewModel.showFabMenu.collectAsState()
+
+    // --- ADDED: Collect new state ---
+    val isDetangling by viewModel.isDetangling.collectAsState()
+    val physicsOptions by viewModel.physicsOptions.collectAsState()
+    val showSettings by viewModel.showSettings.collectAsState()
+    // --- ADDED: Collect simulation state ---
+    val isSimulationRunning by viewModel.simulationRunning.collectAsState()
+    // --- END ADDED ---
 
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurface
@@ -78,9 +93,13 @@ fun GraphView(
 
     var isDraggingNode by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.runSimulationLoop()
+    // --- MODIFIED: This effect now keys off isSimulationRunning ---
+    LaunchedEffect(isSimulationRunning) {
+        if (isSimulationRunning) {
+            viewModel.runSimulationLoop() // This runs in the Composable's context
+        }
     }
+    // --- END MODIFIED ---
 
     DisposableEffect(Unit) {
         onDispose {
@@ -210,6 +229,60 @@ fun GraphView(
                 strokeWidth = 2f
             )
         }
+
+        // --- ADDED: Detangling Lockout Overlay ---
+        AnimatedVisibility(
+            visible = isDetangling,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                    // This empty pointerInput consumes all gestures, "locking" the UI
+                    .pointerInput(Unit) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Detangling Graph... (Interaction Disabled)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+        // --- END ADDED ---
+
+
+        // --- ADDED: Settings Toggle and Panel ---
+        SmallFloatingActionButton(
+            onClick = { viewModel.toggleSettings() },
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Icon(Icons.Default.Settings, "Graph Settings")
+        }
+
+        AnimatedVisibility(
+            visible = showSettings,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 16.dp)
+        ) {
+            GraphSettingsView(
+                options = physicsOptions,
+                onGravityChange = { viewModel.setGravity(it) },
+                onRepulsionChange = { viewModel.setRepulsion(it) },
+                onSpringChange = { viewModel.setSpring(it) },
+                onDampingChange = { viewModel.setDamping(it) },
+                onBarnesHutThetaChange = { viewModel.setBarnesHutTheta(it) },
+                onToleranceChange = { viewModel.setTolerance(it) },
+                onDetangleClick = onDetangleClick // <-- Pass the handler
+            )
+        }
+        // --- END ADDED ---
+
 
         // --- Floating Action Button Menu ---
         Column(
