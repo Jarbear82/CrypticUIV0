@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings // ADDED
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.codex.CodexView
+import com.tau.nexus_note.settings.SettingsView // ADDED
 import com.tau.nexus_note.viewmodels.MainViewModel
 import com.tau.nexus_note.viewmodels.Screen
 import kotlinx.coroutines.launch
@@ -119,7 +121,17 @@ fun MainView(mainViewModel: MainViewModel) {
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                // Add other items here later (e.g., Settings, Import/Export)
+                // --- ADDED: Settings Item ---
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    label = { Text("Settings") },
+                    selected = selectedScreen == Screen.SETTINGS,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        mainViewModel.navigateTo(Screen.SETTINGS)
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
             }
         }
     ) {
@@ -131,6 +143,7 @@ fun MainView(mainViewModel: MainViewModel) {
                         val title = when (selectedScreen) {
                             Screen.NEXUS -> "Nexus"
                             Screen.CODEX -> "Codex"
+                            Screen.SETTINGS -> "Settings" // ADDED
                         }
                         Text(title.toString())
                     },
@@ -173,6 +186,14 @@ fun MainView(mainViewModel: MainViewModel) {
                             // Fallback in case state is somehow incorrect
                             NexusView(viewModel = mainViewModel)
                         }
+                    }
+                    // --- ADDED: Settings Screen Case ---
+                    Screen.SETTINGS -> {
+                        val settings by mainViewModel.appSettings.collectAsState()
+                        SettingsView(
+                            settings = settings,
+                            viewModel = mainViewModel.settingsViewModel
+                        )
                     }
                 }
             }

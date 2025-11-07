@@ -5,6 +5,8 @@ import androidx.compose.runtime.remember
 import com.tau.nexus_note.datamodels.CodexItem
 import com.tau.nexus_note.codex.CodexViewModel
 import com.tau.nexus_note.SqliteDbService
+import com.tau.nexus_note.settings.SettingsData
+import com.tau.nexus_note.settings.SettingsViewModel
 import com.tau.nexus_note.utils.getFileName
 import com.tau.nexus_note.utils.getHomeDirectoryPath
 import com.tau.nexus_note.utils.listFilesWithExtension
@@ -17,7 +19,8 @@ import kotlinx.coroutines.launch
 
 enum class Screen {
     NEXUS,
-    CODEX
+    CODEX,
+    SETTINGS
 }
 
 class MainViewModel {
@@ -32,6 +35,11 @@ class MainViewModel {
     // --- Error State Flow ---
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow = _errorFlow.asStateFlow()
+
+    private val _appSettings = MutableStateFlow(SettingsData.Default)
+    val appSettings = _appSettings.asStateFlow()
+
+    val settingsViewModel = SettingsViewModel(_appSettings)
 
     fun clearError() {
         _errorFlow.value = null

@@ -28,3 +28,25 @@ fun getFontColor(rgb: IntArray): String {
     // Use white text on dark backgrounds, black text on light backgrounds
     return if (luminance < 0.5) "#FFFFFF" else "#000000"
 }
+
+/**
+ * Parses a hex color string (e.g., "#FFFFFF" or "FFFFFF") into a Compose Color.
+ * Returns Color.Magenta on parse failure.
+ */
+fun hexToColor(hex: String): Color {
+    return try {
+        val cleanHex = hex.removePrefix("#")
+        val colorLong = cleanHex.toLong(16)
+        if (cleanHex.length == 6) {
+            // No alpha
+            Color(colorLong or 0xFF000000)
+        } else if (cleanHex.length == 8) {
+            // With alpha
+            Color(colorLong)
+        } else {
+            Color.Magenta // Invalid length
+        }
+    } catch (e: Exception) {
+        Color.Magenta // Parse error
+    }
+}
