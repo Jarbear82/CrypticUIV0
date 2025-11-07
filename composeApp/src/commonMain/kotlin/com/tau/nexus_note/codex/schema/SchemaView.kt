@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
@@ -85,74 +87,27 @@ fun SchemaView(
                 }
                 items(filteredNodeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    val colorInfo = labelToColor(table.name)
 
-                    // --- Main layout is a Column ---
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNodeClick(table) }
-                            .background(colorInfo.composeColor)
-                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier)
-                            .padding(top = 4.dp, bottom = 0.dp, start = 10.dp, end = 10.dp)
-                    ) {
-
-                        // --- Text Content Column  ---
-                        Text(
-                            text = table.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colorInfo.composeFontColor
-                        )
-
-                        HorizontalDivider(color = colorInfo.composeFontColor)
-
-                        Text(
-                            text = table.properties.joinToString(separator = "\n") { prop ->
-                                val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
-                                "  - ${prop.name}: ${prop.type}$suffix"
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = colorInfo.composeFontColor
-                        )
-
-                        HorizontalDivider(color = colorInfo.composeFontColor)
-
-                        // --- Button Content ---
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
-                                val isVisible = schemaVisibility[table.id] ?: true
-                                Icon(
-                                    imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
-                                    tint = colorInfo.composeFontColor,
-                                )
-                            }
-                            IconButton(onClick = { onAddNodeClick(table) }) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "New Node",
-                                    tint = colorInfo.composeFontColor,
-                                )
-                            }
-                            IconButton(onClick = { onEditNodeClick(table) }) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Edit Node Schema",
-                                    tint = colorInfo.composeFontColor,
-                                )
-                            }
-                            IconButton(onClick = { onDeleteNodeClick(table) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete Node Schema",
-                                    tint = colorInfo.composeFontColor,
-                                )
-                            }
+                    SchemaListItem(
+                        item = table,
+                        isSelected = isSelected,
+                        onClick = { onNodeClick(table) },
+                        modifier = Modifier.padding(top = 4.dp, bottom = 0.dp, start = 10.dp, end = 10.dp),
+                        content = { fontColor ->
+                            NodeSchemaContent(table = table, fontColor = fontColor)
+                        },
+                        actions = { fontColor ->
+                            NodeSchemaActions(
+                                table = table,
+                                fontColor = fontColor,
+                                schemaVisibility = schemaVisibility,
+                                onToggleSchemaVisibility = onToggleSchemaVisibility,
+                                onAddNodeClick = onAddNodeClick,
+                                onEditNodeClick = onEditNodeClick,
+                                onDeleteNodeClick = onDeleteNodeClick
+                            )
                         }
-                    }
+                    )
                 }
             }
         }
@@ -175,84 +130,220 @@ fun SchemaView(
                 }
                 items(filteredEdgeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
-                    val colorInfo = labelToColor(table.name)
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onEdgeClick(table) }
-                            .background(colorInfo.composeColor)
-                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier)
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = table.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colorInfo.composeFontColor
-                        )
-
-                        HorizontalDivider(color = colorInfo.composeFontColor)
-
-                        Column {
-                            (table.connections ?: emptyList()).forEach {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        "(${it.src}) -> (${it.dst})",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = colorInfo.composeFontColor
-                                    )
-                                    IconButton(
-                                        onClick = { onAddEdgeClick(table, it) },
-                                        modifier = Modifier.wrapContentHeight()
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            contentDescription = "New Edge",
-                                            modifier = Modifier.size( with(LocalDensity.current) {
-                                                MaterialTheme.typography.bodyMedium.fontSize.toDp()}
-                                            ),
-                                            tint = colorInfo.composeFontColor
-                                        )
-                                    }
-                                }
-                            }
+                    SchemaListItem(
+                        item = table,
+                        isSelected = isSelected,
+                        onClick = { onEdgeClick(table) },
+                        modifier = Modifier.padding(top = 4.dp, bottom = 0.dp, start = 10.dp, end = 10.dp),
+                        content = { fontColor ->
+                            EdgeSchemaContent(
+                                table = table,
+                                fontColor = fontColor,
+                                onAddEdgeClick = onAddEdgeClick
+                            )
+                        },
+                        actions = { fontColor ->
+                            EdgeSchemaActions(
+                                table = table,
+                                fontColor = fontColor,
+                                schemaVisibility = schemaVisibility,
+                                onToggleSchemaVisibility = onToggleSchemaVisibility,
+                                onEditEdgeClick = onEditEdgeClick,
+                                onDeleteEdgeClick = onDeleteEdgeClick
+                            )
                         }
-
-                        HorizontalDivider(color = colorInfo.composeFontColor)
-
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            itemVerticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
-                                val isVisible = schemaVisibility[table.id] ?: true
-                                Icon(
-                                    imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
-                                    tint = colorInfo.composeFontColor
-                                )
-                            }
-                            IconButton(onClick = { onEditEdgeClick(table) }) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Edit Edge Schema",
-                                    tint = colorInfo.composeFontColor
-                                )
-                            }
-                            IconButton(onClick = { onDeleteEdgeClick(table) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete Edge Schema",
-                                    tint = colorInfo.composeFontColor
-                                )
-                            }
-                        }
-                    }
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * A reusable composable that provides the common frame (background, border, title, dividers)
+ * for a schema list item, accepting unique content and actions via slots.
+ */
+@Composable
+private fun SchemaListItem(
+    item: SchemaDefinitionItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable (fontColor: Color) -> Unit,
+    actions: @Composable (fontColor: Color) -> Unit
+) {
+    val colorInfo = labelToColor(item.name)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .background(colorInfo.composeColor)
+            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier)
+            .then(modifier) // Apply caller-specific padding
+    ) {
+        // Title
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+            content = {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colorInfo.composeFontColor,
+                )
+            }
+        )
+
+        HorizontalDivider(color = colorInfo.composeFontColor)
+
+        // Unique Content Slot
+        content(colorInfo.composeFontColor)
+
+        HorizontalDivider(color = colorInfo.composeFontColor)
+
+        // Unique Actions Slot
+        actions(colorInfo.composeFontColor)
+    }
+}
+
+/**
+ * Displays the specific content for a Node Schema (its properties).
+ */
+@Composable
+private fun NodeSchemaContent(table: SchemaDefinitionItem, fontColor: Color) {
+    Text(
+        text = table.properties.joinToString(separator = "\n") { prop ->
+            val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
+            "  - ${prop.name}: ${prop.type}$suffix"
+        },
+        style = MaterialTheme.typography.bodyLarge,
+        color = fontColor
+    )
+}
+
+/**
+ * Displays the specific action buttons for a Node Schema.
+ */
+@Composable
+private fun NodeSchemaActions(
+    table: SchemaDefinitionItem,
+    fontColor: Color,
+    schemaVisibility: Map<Long, Boolean>,
+    onToggleSchemaVisibility: (Long) -> Unit,
+    onAddNodeClick: (SchemaDefinitionItem) -> Unit,
+    onEditNodeClick: (SchemaDefinitionItem) -> Unit,
+    onDeleteNodeClick: (SchemaDefinitionItem) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
+            val isVisible = schemaVisibility[table.id] ?: true
+            Icon(
+                imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
+                tint = fontColor,
+            )
+        }
+        IconButton(onClick = { onAddNodeClick(table) }) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "New Node",
+                tint = fontColor,
+            )
+        }
+        IconButton(onClick = { onEditNodeClick(table) }) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Edit Node Schema",
+                tint = fontColor,
+            )
+        }
+        IconButton(onClick = { onDeleteNodeClick(table) }) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = "Delete Node Schema",
+                tint = fontColor,
+            )
+        }
+    }
+}
+
+/**
+ * Displays the specific content for an Edge Schema (its connection pairs).
+ */
+@Composable
+private fun EdgeSchemaContent(
+    table: SchemaDefinitionItem,
+    fontColor: Color,
+    onAddEdgeClick: (SchemaDefinitionItem, ConnectionPair) -> Unit
+) {
+    Column {
+        (table.connections ?: emptyList()).forEach {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "(${it.src}) -> (${it.dst})",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = fontColor
+                )
+                IconButton(
+                    onClick = { onAddEdgeClick(table, it) },
+                    modifier = Modifier.wrapContentHeight()
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "New Edge",
+                        tint = fontColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Displays the specific action buttons for an Edge Schema.
+ */
+@Composable
+private fun EdgeSchemaActions(
+    table: SchemaDefinitionItem,
+    fontColor: Color,
+    schemaVisibility: Map<Long, Boolean>,
+    onToggleSchemaVisibility: (Long) -> Unit,
+    onEditEdgeClick: (SchemaDefinitionItem) -> Unit,
+    onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        itemVerticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
+            val isVisible = schemaVisibility[table.id] ?: true
+            Icon(
+                imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
+                tint = fontColor
+            )
+        }
+        IconButton(onClick = { onEditEdgeClick(table) }) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Edit Edge Schema",
+                tint = fontColor
+            )
+        }
+        IconButton(onClick = { onDeleteEdgeClick(table) }) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = "Delete Edge Schema",
+                tint = fontColor
+            )
         }
     }
 }
