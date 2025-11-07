@@ -1,18 +1,21 @@
 -- AppDatabase.sq
+import com.tau.nexus_note.datamodels.SchemaProperty;
+import com.tau.nexus_note.datamodels.ConnectionPair;
+import kotlin.collections.List;
 
 CREATE TABLE SchemaDefinition (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
     name TEXT NOT NULL UNIQUE,
-    properties_json TEXT NOT NULL,
-    connections_json TEXT
+    properties_json TEXT AS List<SchemaProperty> NOT NULL,
+    connections_json TEXT AS List<ConnectionPair>
 );
 
 CREATE TABLE Node (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     schema_id INTEGER NOT NULL,
     display_label TEXT NOT NULL,
-    properties_json TEXT NOT NULL,
+    properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
     -- ADDED: ON DELETE CASCADE
     FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
 );
@@ -22,8 +25,8 @@ CREATE TABLE Edge (
     schema_id INTEGER NOT NULL,
     from_node_id INTEGER NOT NULL,
     to_node_id INTEGER NOT NULL,
-    properties_json TEXT NOT NULL,
-    -- ADDED: ON DELETE CASCADE
+    properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
+    -- ON DELETE CASCADE
     FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
     FOREIGN KEY(from_node_id) REFERENCES Node(id) ON DELETE CASCADE,
     FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE

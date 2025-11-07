@@ -19,8 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+
 
 /**
  * Centralizes all database logic and state for an open Codex.
@@ -48,12 +47,7 @@ class CodexRepository(
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow = _errorFlow.asStateFlow()
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        coerceInputValues = true
-        encodeDefaults = true
-    }
+
 
     // --- Public API ---
 
@@ -77,26 +71,14 @@ class CodexRepository(
                 val edgeSchemas = mutableListOf<SchemaDefinitionItem>()
 
                 dbSchemas.forEach { dbSchema ->
-                    val properties = try {
-                        json.decodeFromString<List<SchemaProperty>>(dbSchema.properties_json)
-                    } catch (e: Exception) {
-                        // Log this error but continue
-                        _errorFlow.value = "Failed to parse schema properties for '${dbSchema.name}': ${e.message}"
-                        emptyList()
-                    }
+                    val properties = dbSchema.properties_json
 
                     if (dbSchema.type == "NODE") {
                         nodeSchemas.add(
                             SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, null)
                         )
                     } else if (dbSchema.type == "EDGE") {
-                        val connections = try {
-                            dbSchema.connections_json?.let { json.decodeFromString<List<ConnectionPair>>(it) } ?: emptyList()
-                        } catch (e: Exception) {
-                            // Log this error but continue
-                            _errorFlow.value = "Failed to parse schema connections for '${dbSchema.name}': ${e.message}"
-                            emptyList()
-                        }
+                        val connections = dbSchema.connections_json ?: emptyList()
                         edgeSchemas.add(
                             SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, connections)
                         )
@@ -195,11 +177,10 @@ class CodexRepository(
     fun createNodeSchema(state: NodeSchemaCreationState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
                 dbService.database.appDatabaseQueries.insertSchema(
                     type = "NODE",
                     name = state.tableName,
-                    properties_json = propertiesJson,
+                    properties_json = state.properties,
                     connections_json = null
                 )
                 refreshSchema()
@@ -212,13 +193,11 @@ class CodexRepository(
     fun createEdgeSchema(state: EdgeSchemaCreationState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
-                val connectionsJson = json.encodeToString(state.connections)
                 dbService.database.appDatabaseQueries.insertSchema(
                     type = "EDGE",
                     name = state.tableName,
-                    properties_json = propertiesJson,
-                    connections_json = connectionsJson
+                    properties_json = state.properties,
+                    connections_json = state.connections
                 )
                 refreshSchema()
             } catch (e: Exception) {
@@ -230,11 +209,10 @@ class CodexRepository(
     fun updateNodeSchema(state: NodeSchemaEditState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
                 dbService.database.appDatabaseQueries.updateSchema(
                     id = state.originalSchema.id,
                     name = state.currentName,
-                    properties_json = propertiesJson,
+                    properties_json = state.properties,
                     connections_json = null
                 )
                 refreshSchema()
@@ -248,13 +226,12 @@ class CodexRepository(
     fun updateEdgeSchema(state: EdgeSchemaEditState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
-                val connectionsJson = json.encodeToString(state.connections)
+
                 dbService.database.appDatabaseQueries.updateSchema(
                     id = state.originalSchema.id,
                     name = state.currentName,
-                    properties_json = propertiesJson,
-                    connections_json = connectionsJson
+                    properties_json = state.properties,
+                    connections_json = state.connections
                 )
                 refreshSchema()
                 refreshEdges()
@@ -270,14 +247,13 @@ class CodexRepository(
         repositoryScope.launch {
             if (state.selectedSchema == null) return@launch
             try {
-                val propertiesJson = json.encodeToString(state.properties)
                 val displayKey = state.selectedSchema.properties.firstOrNull { it.isDisplayProperty }?.name
                 val displayLabel = state.properties[displayKey] ?: "Node"
 
                 dbService.database.appDatabaseQueries.insertNode(
                     schema_id = state.selectedSchema.id,
                     display_label = displayLabel,
-                    properties_json = propertiesJson
+                    properties_json = state.properties
                 )
                 refreshNodes()
             } catch (e: Exception) {
@@ -289,26 +265,20 @@ class CodexRepository(
     suspend fun getNodeEditState(itemId: Long): NodeEditState? {
         val dbNode = dbService.database.appDatabaseQueries.selectNodeById(itemId).executeAsOneOrNull() ?: return null
         val schema = _schema.value?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
-        val properties = try {
-            json.decodeFromString<Map<String, String>>(dbNode.properties_json)
-        } catch (e: Exception) {
-            _errorFlow.value = "Error parsing node properties: ${e.message}"
-            emptyMap()
-        }
+        val properties = dbNode.properties_json
         return NodeEditState(id = dbNode.id, schema = schema, properties = properties)
     }
 
     fun updateNode(state: NodeEditState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
                 val displayKey = state.schema.properties.firstOrNull { it.isDisplayProperty }?.name
                 val displayLabel = state.properties[displayKey] ?: "Node ${state.id}"
 
                 dbService.database.appDatabaseQueries.updateNodeProperties(
                     id = state.id,
                     display_label = displayLabel,
-                    properties_json = propertiesJson
+                    properties_json = state.properties
                 )
                 refreshNodes()
             } catch (e: Exception) {
@@ -345,12 +315,11 @@ class CodexRepository(
         repositoryScope.launch {
             if (state.selectedSchema == null || state.src == null || state.dst == null) return@launch
             try {
-                val propertiesJson = json.encodeToString(state.properties)
                 dbService.database.appDatabaseQueries.insertEdge(
                     schema_id = state.selectedSchema.id,
                     from_node_id = state.src.id,
                     to_node_id = state.dst.id,
-                    properties_json = propertiesJson
+                    properties_json = state.properties
                 )
                 refreshEdges()
             } catch (e: Exception) {
@@ -362,22 +331,17 @@ class CodexRepository(
     suspend fun getEdgeEditState(item: EdgeDisplayItem): EdgeEditState? {
         val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
         val schema = _schema.value?.edgeSchemas?.firstOrNull { it.id == dbEdge.schema_id } ?: return null
-        val properties = try {
-            json.decodeFromString<Map<String, String>>(dbEdge.properties_json)
-        } catch (e: Exception) {
-            _errorFlow.value = "Error parsing edge properties: ${e.message}"
-            emptyMap()
-        }
+        val properties = dbEdge.properties_json
         return EdgeEditState(id = dbEdge.id, schema = schema, src = item.src, dst = item.dst, properties = properties)
     }
 
     fun updateEdge(state: EdgeEditState) {
         repositoryScope.launch {
             try {
-                val propertiesJson = json.encodeToString(state.properties)
+
                 dbService.database.appDatabaseQueries.updateEdgeProperties(
                     id = state.id,
-                    properties_json = propertiesJson
+                    properties_json = state.properties
                 )
                 refreshEdges()
             } catch (e: Exception) {
