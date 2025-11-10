@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.datamodels.SchemaPropertyTypes // <-- ADDED IMPORT
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,8 +26,8 @@ fun CreateNodeSchemaView(
     onCancel: () -> Unit,
     onCreate: (NodeSchemaCreationState) -> Unit
 ) {
-    // UPDATED: Define your new supported types
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
+    // UPDATED: Use the new SchemaPropertyTypes object
+    val dataTypes = SchemaPropertyTypes.getCreatableTypes()
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Create Node Schema", style = MaterialTheme.typography.headlineSmall)

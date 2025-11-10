@@ -36,11 +36,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ExperimentalGraphicsApi
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
@@ -54,8 +57,9 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.datamodels.GraphNode
 import com.tau.nexus_note.datamodels.GraphEdge
+import com.tau.nexus_note.datamodels.GraphNode
+import com.tau.nexus_note.datamodels.InternalGraph
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -72,19 +76,14 @@ fun GraphView(
     onNodeTap: (Long) -> Unit,
     onAddNodeClick: () -> Unit,
     onAddEdgeClick: () -> Unit,
-    onDetangleClick: () -> Unit // <-- ADDED
+    onDetangleClick: () -> Unit
 ) {
-    // REMOVED: nodes and edges .collectAsState()
     val transform by viewModel.transform.collectAsState()
     val showFabMenu by viewModel.showFabMenu.collectAsState()
-
-    // --- ADDED: Collect new state ---
     val isDetangling by viewModel.isDetangling.collectAsState()
     val physicsOptions by viewModel.physicsOptions.collectAsState()
     val showSettings by viewModel.showSettings.collectAsState()
-    // --- ADDED: Collect simulation state ---
     val isSimulationRunning by viewModel.simulationRunning.collectAsState()
-    // --- END ADDED ---
 
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurface
@@ -93,13 +92,11 @@ fun GraphView(
 
     var isDraggingNode by remember { mutableStateOf(false) }
 
-    // --- MODIFIED: This effect now keys off isSimulationRunning ---
     LaunchedEffect(isSimulationRunning) {
         if (isSimulationRunning) {
-            viewModel.runSimulationLoop() // This runs in the Composable's context
+            viewModel.runSimulationLoop()
         }
     }
-    // --- END MODIFIED ---
 
     DisposableEffect(Unit) {
         onDispose {
@@ -157,6 +154,7 @@ fun GraphView(
             }) {
 
                 // --- 1. Draw Edges ---
+                // (Edge drawing logic remains unchanged)
                 val edgesByPair = edges.groupBy { Pair(it.sourceId, it.targetId) }
                 val linkCounts = mutableMapOf<Pair<Long, Long>, Int>()
                 val uniquePairs = mutableSetOf<Pair<Long, Long>>()
@@ -202,15 +200,15 @@ fun GraphView(
                     }
                 }
 
-                // --- 2. Draw Nodes ---
+                // --- 2. Draw Nodes (MODIFIED) ---
                 drawNodes(
                     nodes,
                     textMeasurer,
                     labelColor,
                     selectionColor,
                     transform.zoom,
-                    primarySelectedId,   // MODIFIED
-                    secondarySelectedId  // MODIFIED
+                    primarySelectedId,
+                    secondarySelectedId
                 )
             }
 
@@ -230,7 +228,7 @@ fun GraphView(
             )
         }
 
-        // --- ADDED: Detangling Lockout Overlay ---
+        // --- Detangling Lockout Overlay ---
         AnimatedVisibility(
             visible = isDetangling,
             modifier = Modifier.fillMaxSize()
@@ -239,7 +237,6 @@ fun GraphView(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                    // This empty pointerInput consumes all gestures, "locking" the UI
                     .pointerInput(Unit) {},
                 contentAlignment = Alignment.Center
             ) {
@@ -254,10 +251,8 @@ fun GraphView(
                 }
             }
         }
-        // --- END ADDED ---
 
-
-        // --- ADDED: Settings Toggle and Panel ---
+        // --- Settings Toggle and Panel ---
         SmallFloatingActionButton(
             onClick = { viewModel.toggleSettings() },
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
@@ -278,10 +273,9 @@ fun GraphView(
                 onDampingChange = { viewModel.setDamping(it) },
                 onBarnesHutThetaChange = { viewModel.setBarnesHutTheta(it) },
                 onToleranceChange = { viewModel.setTolerance(it) },
-                onDetangleClick = onDetangleClick // <-- Pass the handler
+                onDetangleClick = onDetangleClick
             )
         }
-        // --- END ADDED ---
 
 
         // --- Floating Action Button Menu ---
@@ -297,23 +291,20 @@ fun GraphView(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Create Node
                     SmallFloatingActionButton(
-                        onClick = { onAddNodeClick() }, // MODIFIED
+                        onClick = { onAddNodeClick() },
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Icon(Icons.Default.Hub, contentDescription = "Create Node")
                     }
-                    // Create Edge
                     SmallFloatingActionButton(
-                        onClick = { onAddEdgeClick() }, // MODIFIED
+                        onClick = { onAddEdgeClick() },
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Create Edge")
                     }
                 }
             }
-            // Main FAB
             FloatingActionButton(
                 onClick = { viewModel.onFabClick() }
             ) {
@@ -326,6 +317,7 @@ fun GraphView(
     }
 }
 
+// (drawSelfLoop and drawCurvedEdge remain unchanged)
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawSelfLoop(
     node: GraphNode,
@@ -448,6 +440,10 @@ private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size
     drawPath(path, color)
 }
 
+/**
+ * Main node drawing function.
+ * This now acts as a router, calling drawSupernode or drawRegularNode.
+ */
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawNodes(
     nodes: Map<Long, GraphNode>,
@@ -463,38 +459,146 @@ private fun DrawScope.drawNodes(
     val fontSize = ((12.sp.value / zoom.coerceAtLeast(0.1f)).coerceIn(minSize.value, maxSize.value)).sp
     val style = TextStyle(fontSize = fontSize, color = labelColor)
 
-    val primaryId = primarySelectedId
-    val secondaryId = secondarySelectedId
-
     for (node in nodes.values) {
-        val isSelected = node.id == primaryId || node.id == secondaryId
+        val isSelected = node.id == primarySelectedId || node.id == secondarySelectedId
 
-        drawCircle(
-            color = node.colorInfo.composeColor,
-            radius = node.radius,
-            center = node.pos
-        )
-        drawCircle(
-            color = if (isSelected) selectionColor else node.colorInfo.composeFontColor,
-            radius = node.radius,
-            center = node.pos,
-            style = Stroke(width = if (isSelected) 3f else 1f)
-        )
-
-        if (zoom > 0.5f) {
-            val textLayoutResult = textMeasurer.measure(
-                text = AnnotatedString(node.displayProperty),
-                style = style
+        if (node.isSupernode && node.internalGraph != null) {
+            drawSupernode(
+                node = node,
+                internalGraph = node.internalGraph,
+                isSelected = isSelected,
+                textMeasurer = textMeasurer,
+                labelStyle = style,
+                selectionColor = selectionColor
             )
-            val textPadding = 3f
-            drawText(
-                textLayoutResult = textLayoutResult,
-                topLeft = Offset(
-                    x = node.pos.x - (textLayoutResult.size.width / 2f),
-                    y = node.pos.y + node.radius + textPadding
-                )
+        } else {
+            drawRegularNode(
+                node = node,
+                isSelected = isSelected,
+                textMeasurer = textMeasurer,
+                labelStyle = style,
+                selectionColor = selectionColor,
+                zoom = zoom
             )
         }
+    }
+}
+
+/**
+ * NEW: Draws a Supernode container and its internal graph.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawSupernode(
+    node: GraphNode,
+    internalGraph: InternalGraph,
+    isSelected: Boolean,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    selectionColor: Color
+) {
+    // 1. Draw Container
+    drawCircle(
+        color = node.colorInfo.composeColor.copy(alpha = 0.5f), // Make container semi-transparent
+        radius = node.radius,
+        center = node.pos
+    )
+    drawCircle(
+        color = if (isSelected) selectionColor else node.colorInfo.composeFontColor,
+        radius = node.radius,
+        center = node.pos,
+        style = Stroke(width = if (isSelected) 3f else 1f)
+    )
+
+    // 2. Draw Supernode's main label (outside)
+    val textLayoutResult = textMeasurer.measure(
+        text = AnnotatedString(node.displayProperty),
+        style = labelStyle
+    )
+    val textPadding = 3f
+    drawText(
+        textLayoutResult = textLayoutResult,
+        topLeft = Offset(
+            x = node.pos.x - (textLayoutResult.size.width / 2f),
+            y = node.pos.y + node.radius + textPadding
+        )
+    )
+
+    // 3. Draw Internal Graph (clipped and translated)
+    clipRect(
+        left = node.pos.x - node.radius,
+        top = node.pos.y - node.radius,
+        right = node.pos.x + node.radius,
+        bottom = node.pos.y + node.radius
+    ) {
+        // Translate the coordinate system's (0,0) to the supernode's center
+        translate(left = node.pos.x, top = node.pos.y) {
+
+            // Draw internal edges
+            for (edge in internalGraph.edges) {
+                val nodeA = internalGraph.nodes[edge.sourceId]
+                val nodeB = internalGraph.nodes[edge.targetId]
+                if (nodeA == null || nodeB == null) continue
+
+                // nodeA.pos and nodeB.pos are already relative to (0,0)
+                drawLine(
+                    color = edge.colorInfo.composeColor,
+                    start = nodeA.pos,
+                    end = nodeB.pos,
+                    strokeWidth = 1f
+                )
+            }
+
+            // Draw internal nodes
+            for (internalNode in internalGraph.nodes.values) {
+                // Scale internal radius to be smaller
+                val internalRadius = (internalNode.radius / 3f).coerceAtLeast(2f)
+                drawCircle(
+                    color = internalNode.colorInfo.composeColor,
+                    radius = internalRadius,
+                    center = internalNode.pos // Already relative to (0,0)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The original logic for drawing a single node.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun DrawScope.drawRegularNode(
+    node: GraphNode,
+    isSelected: Boolean,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    selectionColor: Color,
+    zoom: Float
+) {
+    drawCircle(
+        color = node.colorInfo.composeColor,
+        radius = node.radius,
+        center = node.pos
+    )
+    drawCircle(
+        color = if (isSelected) selectionColor else node.colorInfo.composeFontColor,
+        radius = node.radius,
+        center = node.pos,
+        style = Stroke(width = if (isSelected) 3f else 1f)
+    )
+
+    if (zoom > 0.5f) {
+        val textLayoutResult = textMeasurer.measure(
+            text = AnnotatedString(node.displayProperty),
+            style = labelStyle
+        )
+        val textPadding = 3f
+        drawText(
+            textLayoutResult = textLayoutResult,
+            topLeft = Offset(
+                x = node.pos.x - (textLayoutResult.size.width / 2f),
+                y = node.pos.y + node.radius + textPadding
+            )
+        )
     }
 }
 

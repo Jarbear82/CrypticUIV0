@@ -102,6 +102,32 @@ class PhysicsEngine() {
             }
         }
 
+        // --- 2d. ADDED: Bounding Box (for internal simulations) ---
+        if (options.isBounded && options.boundary != null) {
+            for (node in newNodes.values) {
+                if (node.isFixed) continue
+
+                var boundingForce = Offset.Zero
+                val boundaryRect = options.boundary // e.g., Rect(-radius, -radius, radius, radius)
+
+                if (node.pos.x < boundaryRect.left) {
+                    boundingForce += Offset(boundaryRect.left - node.pos.x, 0f) * options.boundingStrength
+                } else if (node.pos.x > boundaryRect.right) {
+                    boundingForce += Offset(boundaryRect.right - node.pos.x, 0f) * options.boundingStrength
+                }
+
+                if (node.pos.y < boundaryRect.top) {
+                    boundingForce += Offset(0f, boundaryRect.top - node.pos.y) * options.boundingStrength
+                } else if (node.pos.y > boundaryRect.bottom) {
+                    boundingForce += Offset(0f, boundaryRect.bottom - node.pos.y) * options.boundingStrength
+                }
+
+                forces[node.id] = forces[node.id]!! + boundingForce
+            }
+        }
+        // --- END ADDED SECTION ---
+
+
         // 3. Calculate ForceAtlas2 Adaptive Speed (Swinging & Traction)
         var globalSwinging = 0f
         var globalTraction = 0f
@@ -194,4 +220,3 @@ private fun Offset.normalized(): Offset {
     val mag = this.getDistance()
     return if (mag == 0f) Offset.Zero else this / mag
 }
-

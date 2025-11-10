@@ -1,23 +1,23 @@
 package com.tau.nexus_note.codex.crud
 
+import com.tau.nexus_note.CodexRepository
+import com.tau.nexus_note.codex.metadata.MetadataViewModel
+import com.tau.nexus_note.codex.schema.SchemaData
+import com.tau.nexus_note.codex.schema.SchemaViewModel
 import com.tau.nexus_note.datamodels.ConnectionPair
-import com.tau.nexus_note.datamodels.EditScreenState
-import com.tau.nexus_note.datamodels.NodeCreationState
-import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.datamodels.EdgeCreationState
+import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.EdgeEditState
 import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
+import com.tau.nexus_note.datamodels.EditScreenState
+import com.tau.nexus_note.datamodels.NodeCreationState
+import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.datamodels.NodeEditState
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
+import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.datamodels.SchemaProperty
-import com.tau.nexus_note.codex.metadata.MetadataViewModel
-import com.tau.nexus_note.codex.schema.SchemaViewModel
-import com.tau.nexus_note.CodexRepository
-import com.tau.nexus_note.codex.schema.SchemaData
-import com.tau.nexus_note.datamodels.EdgeDisplayItem
-import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,9 +106,13 @@ class EditCreateViewModel(
     // --- Node Creation ---
     fun initiateNodeCreation() {
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
+        val allEdges = metadataViewModel.edgeList.value // <-- ADDED: Get edge list
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
-            NodeCreationState(schemas = nodeSchemas)
+            NodeCreationState(
+                schemas = nodeSchemas,
+                allEdges = allEdges // <-- ADDED: Pass edge list
+            )
         )
     }
 
@@ -117,10 +121,12 @@ class EditCreateViewModel(
      */
     fun initiateNodeCreation(schema: SchemaDefinitionItem) {
         val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
+        val allEdges = metadataViewModel.edgeList.value // <-- ADDED: Get edge list
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
             NodeCreationState(
                 schemas = nodeSchemas,
+                allEdges = allEdges, // <-- ADDED: Pass edge list
                 selectedSchema = schema
             )
         )
@@ -356,8 +362,11 @@ class EditCreateViewModel(
     fun initiateNodeEdit(item: NodeDisplayItem) {
         viewModelScope.launch {
             val editState = repository.getNodeEditState(item.id)
+            val allEdges = metadataViewModel.edgeList.value // <-- ADDED: Get edge list
             if (editState != null) {
-                _editScreenState.value = EditScreenState.EditNode(editState)
+                _editScreenState.value = EditScreenState.EditNode(
+                    editState.copy(allEdges = allEdges) // <-- ADDED: Pass edge list
+                )
                 metadataViewModel.setItemToEdit(item) // For navigation
             } else {
                 println("Error: Could not fetch node details for ${item.id}")

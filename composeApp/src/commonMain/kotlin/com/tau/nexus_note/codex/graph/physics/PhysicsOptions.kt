@@ -1,5 +1,7 @@
 package com.tau.nexus_note.codex.graph.physics
 
+import androidx.compose.ui.geometry.Rect
+
 /**
  * Data class to hold all the constants for the physics simulation.
  *
@@ -14,6 +16,10 @@ package com.tau.nexus_note.codex.graph.physics
  * Higher values are faster but less accurate. (Default: 1.2)
  * @param tolerance The "Tolerance (speed)" parameter for ForceAtlas2 adaptive speed.
  * Controls how much node "swinging" is allowed. (Default: 1.0)
+ *
+ * @param isBounded If true, nodes will be contained within the 'boundary'.
+ * @param boundary The Rect defining the containment area (e.g., the Supernode's radius).
+ * @param boundingStrength The stiffness of the "walls" of the boundary.
  */
 data class PhysicsOptions(
     val gravity: Float = 0.05f,
@@ -24,5 +30,10 @@ data class PhysicsOptions(
     val nodeRadiusEdgeFactor: Float = 2.0f,
     val minDistance: Float = 2.0f, // Extra buffer between nodes
     val barnesHutTheta: Float = 1.2f,
-    val tolerance: Float = 1.0f
+    val tolerance: Float = 1.0f,
+
+    // Options for bounded internal physics
+    val isBounded: Boolean = false,
+    val boundary: Rect? = null,
+    val boundingStrength: Float = 100.0f
 )

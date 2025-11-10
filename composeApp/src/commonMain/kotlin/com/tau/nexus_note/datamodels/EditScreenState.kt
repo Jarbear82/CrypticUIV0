@@ -18,6 +18,7 @@ sealed interface EditScreenState {
 // --- Data class for Node Creation UI State ---
 data class NodeCreationState(
     val schemas: List<SchemaDefinitionItem>, // All available NODE schemas
+    val allEdges: List<EdgeDisplayItem> = emptyList(),
     val selectedSchema: SchemaDefinitionItem? = null,
     val properties: Map<String, String> = emptyMap() // UI state for text fields
 )
@@ -52,6 +53,7 @@ data class EdgeSchemaCreationState(
 data class NodeEditState(
     val id: Long,
     val schema: SchemaDefinitionItem,
+    val allEdges: List<EdgeDisplayItem> = emptyList(),
     val properties: Map<String, String> // Current values from DB, as strings for UI
 )
 

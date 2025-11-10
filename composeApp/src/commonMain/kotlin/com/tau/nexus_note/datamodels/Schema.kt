@@ -3,6 +3,31 @@ package com.tau.nexus_note.datamodels
 import kotlinx.serialization.Serializable
 
 /**
+ * Defines the constant string values for supported property types in a schema.
+ */
+object SchemaPropertyTypes {
+    const val TEXT = "Text"
+    const val LONG_TEXT = "LongText"
+    const val IMAGE = "Image"
+    const val AUDIO = "Audio"
+    const val DATE = "Date"
+    const val NUMBER = "Number"
+    /**
+     * This new type signifies that the property's value
+     * should be the ID of an Edge.
+     */
+    const val EDGE_REF = "EdgeRef"
+
+    /**
+     * Returns the list of all standard, user-selectable types.
+     */
+    fun getCreatableTypes(): List<String> {
+        return listOf(TEXT, LONG_TEXT, IMAGE, AUDIO, DATE, NUMBER, EDGE_REF)
+    }
+}
+
+
+/**
  * Represents a user-defined property within a schema.
  * This is serialized to/from JSON.
  * @param name The name of the property (e.g., "Description", "Due Date").

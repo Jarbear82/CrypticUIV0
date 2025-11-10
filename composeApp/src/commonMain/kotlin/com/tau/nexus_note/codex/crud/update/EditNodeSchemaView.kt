@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.datamodels.SchemaPropertyTypes // <-- ADDED IMPORT
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +27,8 @@ fun EditNodeSchemaView(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
+    // UPDATED: Use the new SchemaPropertyTypes object
+    val dataTypes = SchemaPropertyTypes.getCreatableTypes()
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)

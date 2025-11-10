@@ -16,6 +16,8 @@ import androidx.compose.ui.geometry.Offset
  * @param oldForce The net force applied to this node in the *previous* frame.
  * @param swinging The magnitude of the change in force between frames.
  * @param traction The magnitude of the consistent force between frames.
+ * @param isSupernode True if this node encapsulates other edges, triggering Supernode rendering.
+ * @param internalGraph The data class holding the nodes/edges this Supernode contains.
  */
 data class GraphNode(
     val id: Long,
@@ -27,10 +29,11 @@ data class GraphNode(
     val radius: Float,
     val colorInfo: ColorInfo,
     var isFixed: Boolean = false,
-    // --- ADDED: State for ForceAtlas2 Adaptive Speed ---
     var oldForce: Offset = Offset.Zero,
     var swinging: Float = 0f,
-    var traction: Float = 0f
+    var traction: Float = 0f,
+    val isSupernode: Boolean = false,
+    val internalGraph: InternalGraph? = null
 )
 
 /**
