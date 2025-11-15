@@ -20,7 +20,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+// --- ADDED: Imports for the fix ---
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+// --- END ADD ---
 
 enum class Screen {
     NEXUS,
@@ -47,22 +51,24 @@ class MainViewModel {
     private val dataStore = createDataStore()
     private val settingsRepository = SettingsRepository(dataStore)
 
-    // 2. This is the NEW implementation, replacing the old MutableStateFlow
-    //    It reads directly from the repository.
-    val appSettings: StateFlow<SettingsData> = settingsRepository.settings
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly, // Load settings immediately
-            initialValue = SettingsData.Default // Use default while loading
-        )
+    // --- UPDATED: Step 1 ---
+    // 2. This is the NEW implementation.
+    //    It holds the settings in memory for instant UI updates.
+    private val _appSettings = MutableStateFlow(SettingsData.Default)
+    val appSettings: StateFlow<SettingsData> = _appSettings.asStateFlow()
+    // --- END UPDATE ---
 
-    // 3. The SettingsViewModel is initialized with the new flow and a save lambda
+
+    // 3. The SettingsViewModel is initialized with the in-memory flow
+    //    and a lambda that updates that flow.
     val settingsViewModel = SettingsViewModel(
-        settingsFlow = appSettings, // Pass the repository-backed flow
+        settingsFlow = appSettings, // Pass the in-memory flow
         onUpdateSettings = { newSettings ->
-            viewModelScope.launch {
-                settingsRepository.saveSettings(newSettings)
-            }
+            // --- UPDATED: Step 2 ---
+            // Update the in-memory state instantly.
+            // The 'init' block collector will handle debouncing and saving.
+            _appSettings.value = newSettings
+            // --- END UPDATE ---
         }
     )
 
@@ -86,6 +92,23 @@ class MainViewModel {
 
     init {
         loadCodicies()
+
+        // --- ADDED: Step 3 - Debounced Settings Loading & Saving ---
+        viewModelScope.launch {
+            // 1. Load initial settings from disk just once
+            _appSettings.value = settingsRepository.settings.first()
+
+            // 2. Set up the debounced saver.
+            //    This flow collects changes to the in-memory settings,
+            //    waits 500ms, and then saves to disk.
+            _appSettings
+                .drop(1) // Don't save the initial value we just loaded
+                .debounce(500L) // Wait 500ms after the last change
+                .collect { settingsToSave ->
+                    settingsRepository.saveSettings(settingsToSave)
+                }
+        }
+        // --- END ADD ---
     }
 
     /**

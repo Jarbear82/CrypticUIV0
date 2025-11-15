@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel // --- ADDED: Import for the fix ---
 
 // --- UPDATED ---
 // Constructor now accepts the settingsFlow
@@ -115,6 +116,10 @@ class CodexViewModel(
     fun onCleared() {
         graphViewModel.onCleared()
         dbService.close()
+        // --- THIS IS THE FIX ---
+        // Cancel the scope to stop all child coroutines (in this VM and GraphViewModel)
+        viewModelScope.cancel()
+        // --- END FIX ---
     }
 }
 
