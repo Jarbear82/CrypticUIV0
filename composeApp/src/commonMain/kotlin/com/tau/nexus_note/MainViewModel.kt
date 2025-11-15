@@ -6,7 +6,9 @@ import com.tau.nexus_note.datamodels.CodexItem
 import com.tau.nexus_note.codex.CodexViewModel
 import com.tau.nexus_note.SqliteDbService
 import com.tau.nexus_note.settings.SettingsData
+import com.tau.nexus_note.settings.SettingsRepository
 import com.tau.nexus_note.settings.SettingsViewModel
+import com.tau.nexus_note.settings.createDataStore
 import com.tau.nexus_note.utils.getFileName
 import com.tau.nexus_note.utils.getHomeDirectoryPath
 import com.tau.nexus_note.utils.listFilesWithExtension
@@ -16,6 +18,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 enum class Screen {
     NEXUS,
@@ -36,10 +41,30 @@ class MainViewModel {
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow = _errorFlow.asStateFlow()
 
-    private val _appSettings = MutableStateFlow(SettingsData.Default)
-    val appSettings = _appSettings.asStateFlow()
+    // --- Settings ---
 
-    val settingsViewModel = SettingsViewModel(_appSettings)
+    // 1. Create the repository and DataStore
+    private val dataStore = createDataStore()
+    private val settingsRepository = SettingsRepository(dataStore)
+
+    // 2. This is the NEW implementation, replacing the old MutableStateFlow
+    //    It reads directly from the repository.
+    val appSettings: StateFlow<SettingsData> = settingsRepository.settings
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly, // Load settings immediately
+            initialValue = SettingsData.Default // Use default while loading
+        )
+
+    // 3. The SettingsViewModel is initialized with the new flow and a save lambda
+    val settingsViewModel = SettingsViewModel(
+        settingsFlow = appSettings, // Pass the repository-backed flow
+        onUpdateSettings = { newSettings ->
+            viewModelScope.launch {
+                settingsRepository.saveSettings(newSettings)
+            }
+        }
+    )
 
     fun clearError() {
         _errorFlow.value = null

@@ -39,7 +39,13 @@ fun App() {
         )
     }
 
-    val useDarkTheme = isDark ?: isSystemInDarkTheme()
+    // --- THIS IS THE FIX ---
+    val useDarkTheme = when (isDark) {
+        true -> true
+        false -> false
+        null -> isSystemInDarkTheme()
+    }
+    // --- END FIX ---
 
     // Determine the ColorScheme
     val colorScheme = remember(themeSettings, useDarkTheme) {

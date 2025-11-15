@@ -21,9 +21,11 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SettingsView(
-    settings: SettingsData,
     viewModel: SettingsViewModel
 ) {
+
+    val settings by viewModel.settingsFlow.collectAsState()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)

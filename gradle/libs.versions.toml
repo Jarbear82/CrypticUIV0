@@ -1,5 +1,6 @@
 [versions]
 androidx-lifecycle = "2.9.3"
+datastore-preferences = "1.1.7"
 composeHotReload = "1.0.0-beta06"
 composeMultiplatform = "1.9.1"
 junit = "4.13.2"
@@ -22,6 +23,7 @@ sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore-preferences" }
 
 [plugins]
 composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }

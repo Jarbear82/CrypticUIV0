@@ -2,10 +2,12 @@ package com.tau.nexus_note.settings
 
 import androidx.compose.ui.graphics.Color
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
+import kotlinx.serialization.Serializable
 
 /**
  * Enumeration for the three possible theme modes.
  */
+@Serializable
 enum class ThemeMode {
     LIGHT, DARK, SYSTEM
 }
@@ -14,6 +16,7 @@ enum class ThemeMode {
  * Holds all settings related to a custom color theme.
  * Colors are stored as hex strings for serialization.
  */
+@Serializable
 data class ThemeSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useDynamicColors: Boolean = false, // For Android 12+
@@ -37,6 +40,7 @@ data class ThemeSettings(
  * Holds settings for default graph physics.
  * This re-uses the PhysicsOptions data class.
  */
+@Serializable
 data class GraphPhysicsSettings(
     val options: PhysicsOptions = PhysicsOptions(
         gravity = 0.5f,
@@ -58,6 +62,7 @@ data class GraphPhysicsSettings(
 /**
  * Holds settings for graph rendering.
  */
+@Serializable
 data class GraphRenderingSettings(
     val startSimulationOnLoad: Boolean = true,
     val showNodeLabels: Boolean = true,
@@ -72,6 +77,7 @@ data class GraphRenderingSettings(
 /**
  * Holds settings for graph interaction.
  */
+@Serializable
 data class GraphInteractionSettings(
     val zoomSensitivity: Float = 1.0f,
     // Node sizing is part of physics, but we can put a shortcut here
@@ -86,6 +92,7 @@ data class GraphInteractionSettings(
 /**
  * Holds settings for data and codex file management.
  */
+@Serializable
 data class DataSettings(
     val defaultCodexDirectory: String = com.tau.nexus_note.utils.getHomeDirectoryPath(),
     val autoLoadLastCodex: Boolean = false,
@@ -100,6 +107,7 @@ data class DataSettings(
 /**
  * Holds general application behavior settings.
  */
+@Serializable
 data class GeneralSettings(
     val startupScreen: String = "Nexus", // "Nexus" or "Last Codex"
     val defaultCodexView: String = "Graph", // "Graph" or "List"
@@ -115,6 +123,7 @@ data class GeneralSettings(
 /**
  * Root data class holding all application settings.
  */
+@Serializable
 data class SettingsData(
     val theme: ThemeSettings = ThemeSettings.Default,
     val graphPhysics: GraphPhysicsSettings = GraphPhysicsSettings.Default,

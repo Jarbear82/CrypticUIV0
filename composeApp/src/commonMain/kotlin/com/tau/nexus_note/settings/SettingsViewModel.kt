@@ -1,114 +1,187 @@
 package com.tau.nexus_note.settings
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Manages the state for the Settings screen.
- * It receives the master MutableStateFlow from MainViewModel
- * and provides event handlers to modify it.
+ * It receives the master StateFlow from MainViewModel (which is fed by the SettingsRepository)
+ * and provides event handlers to update it via a lambda.
  */
 class SettingsViewModel(
-    private val settingsFlow: MutableStateFlow<SettingsData>
+    /**
+     * A flow that emits the current, persisted settings.
+     * The View should collect this.
+     */
+    val settingsFlow: StateFlow<SettingsData>,
+
+    /**
+     * A lambda function to call when settings need to be updated.
+     * This will trigger the SettingsRepository to save the new data.
+     */
+    private val onUpdateSettings: (SettingsData) -> Unit
 ) {
+
     // --- Theme ---
     fun onThemeModeChange(mode: ThemeMode) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(themeMode = mode)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(themeMode = mode)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onUseCustomThemeChange(use: Boolean) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(useCustomTheme = use)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(useCustomTheme = use)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onPrimaryColorChange(hex: String) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(primaryHex = hex)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(primaryHex = hex)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onSecondaryColorChange(hex: String) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(secondaryHex = hex)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(secondaryHex = hex)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onBackgroundColorChange(hex: String) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(backgroundHex = hex)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(backgroundHex = hex)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onSurfaceColorChange(hex: String) {
-        settingsFlow.update { it.copy(theme = it.theme.copy(surfaceHex = hex)) }
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(surfaceHex = hex)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onResetTheme() {
-        settingsFlow.update { it.copy(theme = ThemeSettings.Default) }
+        val newSettings = settingsFlow.value.copy(theme = ThemeSettings.Default)
+        onUpdateSettings(newSettings)
     }
 
     // --- Graph Physics ---
     fun onGravityChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(gravity = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(gravity = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onRepulsionChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(repulsion = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(repulsion = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onSpringChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(spring = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(spring = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onDampingChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(damping = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(damping = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onBarnesHutThetaChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(barnesHutTheta = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(barnesHutTheta = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onToleranceChange(value: Float) {
-        settingsFlow.update { it.copy(graphPhysics = it.graphPhysics.copy(options = it.graphPhysics.options.copy(tolerance = value))) }
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(
+                options = settingsFlow.value.graphPhysics.options.copy(tolerance = value)
+            )
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onResetPhysics() {
-        settingsFlow.update { it.copy(graphPhysics = GraphPhysicsSettings.Default) }
+        val newSettings = settingsFlow.value.copy(graphPhysics = GraphPhysicsSettings.Default)
+        onUpdateSettings(newSettings)
     }
 
     // --- Graph Rendering ---
     fun onStartSimulationOnLoadChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(graphRendering = it.graphRendering.copy(startSimulationOnLoad = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            graphRendering = settingsFlow.value.graphRendering.copy(startSimulationOnLoad = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onShowNodeLabelsChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(graphRendering = it.graphRendering.copy(showNodeLabels = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            graphRendering = settingsFlow.value.graphRendering.copy(showNodeLabels = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onShowEdgeLabelsChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(graphRendering = it.graphRendering.copy(showEdgeLabels = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            graphRendering = settingsFlow.value.graphRendering.copy(showEdgeLabels = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onShowCrosshairsChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(graphRendering = it.graphRendering.copy(showCrosshairs = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            graphRendering = settingsFlow.value.graphRendering.copy(showCrosshairs = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
     // --- Graph Interaction ---
     fun onZoomSensitivityChange(value: Float) {
-        settingsFlow.update { it.copy(graphInteraction = it.graphInteraction.copy(zoomSensitivity = value)) }
+        val newSettings = settingsFlow.value.copy(
+            graphInteraction = settingsFlow.value.graphInteraction.copy(zoomSensitivity = value)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onNodeBaseRadiusChange(value: Float) {
-        settingsFlow.update {
-            val newOptions = it.graphPhysics.options.copy(nodeBaseRadius = value)
-            it.copy(
-                graphPhysics = it.graphPhysics.copy(options = newOptions),
-                graphInteraction = it.graphInteraction.copy(nodeBaseRadius = value)
-            )
-        }
+        val newOptions = settingsFlow.value.graphPhysics.options.copy(nodeBaseRadius = value)
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(options = newOptions),
+            graphInteraction = settingsFlow.value.graphInteraction.copy(nodeBaseRadius = value)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onNodeRadiusEdgeFactorChange(value: Float) {
-        settingsFlow.update {
-            val newOptions = it.graphPhysics.options.copy(nodeRadiusEdgeFactor = value)
-            it.copy(
-                graphPhysics = it.graphPhysics.copy(options = newOptions),
-                graphInteraction = it.graphInteraction.copy(nodeRadiusEdgeFactor = value)
-            )
-        }
+        val newOptions = settingsFlow.value.graphPhysics.options.copy(nodeRadiusEdgeFactor = value)
+        val newSettings = settingsFlow.value.copy(
+            graphPhysics = settingsFlow.value.graphPhysics.copy(options = newOptions),
+            graphInteraction = settingsFlow.value.graphInteraction.copy(nodeRadiusEdgeFactor = value)
+        )
+        onUpdateSettings(newSettings)
     }
 
     // --- Data ---
@@ -116,28 +189,58 @@ class SettingsViewModel(
         // This would trigger navigation via the MainViewModel
         // For now, we just log it
         println("Directory change requested")
+        // NOTE: This action is handled by MainViewModel,
+        // so this function can be modified to call a lambda from MainViewModel
+        // if you want to trigger the directory picker.
     }
 
     fun onAutoLoadLastCodexChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(data = it.data.copy(autoLoadLastCodex = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            data = settingsFlow.value.data.copy(autoLoadLastCodex = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
-    // ... other data setting handlers ...
+    fun onAutoRefreshCodexChange(enabled: Boolean) {
+        val newSettings = settingsFlow.value.copy(
+            data = settingsFlow.value.data.copy(autoRefreshCodex = enabled)
+        )
+        onUpdateSettings(newSettings)
+    }
+
+    fun onRefreshIntervalChange(value: Float) {
+        val newSettings = settingsFlow.value.copy(
+            data = settingsFlow.value.data.copy(refreshInterval = value)
+        )
+        onUpdateSettings(newSettings)
+    }
 
     // --- General ---
     fun onStartupScreenChange(screen: String) {
-        settingsFlow.update { it.copy(general = it.general.copy(startupScreen = screen)) }
+        val newSettings = settingsFlow.value.copy(
+            general = settingsFlow.value.general.copy(startupScreen = screen)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onDefaultCodexViewChange(view: String) {
-        settingsFlow.update { it.copy(general = it.general.copy(defaultCodexView = view)) }
+        val newSettings = settingsFlow.value.copy(
+            general = settingsFlow.value.general.copy(defaultCodexView = view)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onConfirmNodeEdgeDeletionChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(general = it.general.copy(confirmNodeEdgeDeletion = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            general = settingsFlow.value.general.copy(confirmNodeEdgeDeletion = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 
     fun onConfirmSchemaDeletionChange(enabled: Boolean) {
-        settingsFlow.update { it.copy(general = it.general.copy(confirmSchemaDeletion = enabled)) }
+        val newSettings = settingsFlow.value.copy(
+            general = settingsFlow.value.general.copy(confirmSchemaDeletion = enabled)
+        )
+        onUpdateSettings(newSettings)
     }
 }
