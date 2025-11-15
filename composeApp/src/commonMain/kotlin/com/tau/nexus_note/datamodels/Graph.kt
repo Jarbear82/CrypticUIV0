@@ -55,6 +55,21 @@ data class GraphEdge(
 )
 
 /**
+ * Represents a property or link rendered *inside* a GraphNode.
+ * @param id A unique identifier for this reference (e.g., the edge ID it represents).
+ * @param label The text to display.
+ * @param relativePos The x/y offset from the parent node's center (node.pos).
+ * @param radius The interaction/draw radius for this reference.
+ */
+data class GraphNodeInternalRef(
+    val id: String, // Or Long, if it's an edge ID
+    val label: String,
+    val relativePos: Offset,
+    val radius: Float = 10f,
+    val color: ColorInfo
+)
+
+/**
  * Represents the pan and zoom state of the graph canvas.
  * @param pan The current x/y offset (pan) in world coordinates.
  * @param zoom The current zoom multiplier.
