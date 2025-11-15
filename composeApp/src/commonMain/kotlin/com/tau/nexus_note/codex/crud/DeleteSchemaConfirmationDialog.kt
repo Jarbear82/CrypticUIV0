@@ -1,6 +1,7 @@
 package com.tau.nexus_note.codex.crud
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,7 +29,10 @@ fun DeleteSchemaConfirmationDialog(
         text = { Text(text) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete")
+                // --- UPDATED ---
+                // Used the theme's error color for a semantic destructive action
+                Text("Delete", color = MaterialTheme.colorScheme.error)
+                // --- END UPDATE ---
             }
         },
         dismissButton = {

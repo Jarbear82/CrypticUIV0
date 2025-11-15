@@ -59,7 +59,10 @@ fun ListView(
                 addContentDescription = "New Node",
                 leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
             )
-            HorizontalDivider(color = Color.Black)
+            // --- UPDATED ---
+            // Replaced Color.Black with the theme's semantic 'outline' color
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // --- END UPDATE ---
             LazyColumn {
                 val filteredNodes = nodes.filter {
                     it.label.contains(nodeSearchText, ignoreCase = true) ||
@@ -82,6 +85,13 @@ fun ListView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onNodeClick(node); println("${node.label} clicked!") }
+                            // --- UPDATED ---
+                            // Using outline color for the default border
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                            // --- END UPDATE ---
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row{
@@ -114,7 +124,10 @@ fun ListView(
                 addContentDescription = "New Edge",
                 leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
             )
-            HorizontalDivider(color = Color.Black)
+            // --- UPDATED ---
+            // Replaced Color.Black with the theme's semantic 'outline' color
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // --- END UPDATE ---
             LazyColumn {
                 // --- UPDATED: Filter the list ---
                 val filteredEdges = edges.filter {
@@ -132,16 +145,23 @@ fun ListView(
                         headlineContent = { Column {
                             Text(
                                 "Src: (${edge.src.label} : ${edge.src.displayProperty})",
-                                style= MaterialTheme.typography.bodySmall
+                                style= MaterialTheme.typography.bodySmall,
+                                // --- UPDATED ---
+                                color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
+                                // --- END UPDATE ---
                             )
                             Text(
                                 "[${edge.label}]",
                                 style=MaterialTheme.typography.titleMedium, // Smaller text
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                color = colorInfo.composeFontColor // Main color
                             )
                             Text(
                                 "Dst: (${edge.dst.label} : ${edge.dst.displayProperty})",
-                                style= MaterialTheme.typography.bodySmall
+                                style= MaterialTheme.typography.bodySmall,
+                                // --- UPDATED ---
+                                color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
+                                // --- END UPDATE ---
                             )
                         }},
                         leadingContent = {
@@ -156,6 +176,13 @@ fun ListView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onEdgeClick(edge) }
+                            // --- UPDATED ---
+                            // Using outline color for the default border
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                            // --- END UPDATE ---
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row {

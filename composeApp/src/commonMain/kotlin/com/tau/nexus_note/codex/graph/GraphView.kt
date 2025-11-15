@@ -26,7 +26,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LaunchedEffect // --- ADDED ---
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,16 +72,20 @@ fun GraphView(
     onNodeTap: (Long) -> Unit,
     onAddNodeClick: () -> Unit,
     onAddEdgeClick: () -> Unit,
-    onDetangleClick: () -> Unit // <-- ADDED
+    onDetangleClick: () -> Unit
 ) {
-    // REMOVED: nodes and edges .collectAsState()
     val transform by viewModel.transform.collectAsState()
     val showFabMenu by viewModel.showFabMenu.collectAsState()
 
-    // --- ADDED: Collect new state ---
     val isDetangling by viewModel.isDetangling.collectAsState()
     val physicsOptions by viewModel.physicsOptions.collectAsState()
     val showSettings by viewModel.showSettings.collectAsState()
+
+    // --- UPDATED ---
+    // Collect the rendering settings
+    val renderingSettings by viewModel.renderingSettings.collectAsState()
+    // --- END UPDATE ---
+
     // --- ADDED: Collect simulation state ---
     val isSimulationRunning by viewModel.simulationRunning.collectAsState()
     // --- END ADDED ---
@@ -93,13 +97,15 @@ fun GraphView(
 
     var isDraggingNode by remember { mutableStateOf(false) }
 
-    // --- MODIFIED: This effect now keys off isSimulationRunning ---
+    // --- ADDED ---
+    // This LaunchedEffect runs in the Composable's context, which has the
+    // MonotonicFrameClock needed by withFrameNanos.
     LaunchedEffect(isSimulationRunning) {
         if (isSimulationRunning) {
-            viewModel.runSimulationLoop() // This runs in the Composable's context
+            viewModel.runSimulationLoop()
         }
     }
-    // --- END MODIFIED ---
+    // --- END ADD ---
 
     DisposableEffect(Unit) {
         onDispose {
@@ -149,6 +155,11 @@ fun GraphView(
                 viewModel.onResize(it)
             }
     ) {
+        val edgeLabelStyle = TextStyle(
+            fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant // Muted color
+        )
+
         Canvas(modifier = Modifier.fillMaxSize()) {
             withTransform({
                 translate(left = center.x, top = center.y)
@@ -175,10 +186,7 @@ fun GraphView(
                 val pairDrawIndex = mutableMapOf<Pair<Long, Long>, Int>()
                 val selfLoopDrawIndex = mutableMapOf<Long, Int>()
 
-                val edgeLabelStyle = TextStyle(
-                    fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
-                    color = labelColor.copy(alpha = 0.8f)
-                )
+
 
                 for (edge in edges) {
                     val nodeA = nodes[edge.sourceId]
@@ -187,7 +195,14 @@ fun GraphView(
 
                     if (nodeA.id == nodeB.id) {
                         val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
-                        drawSelfLoop(nodeA, edge, index, textMeasurer, edgeLabelStyle)
+                        drawSelfLoop(
+                            node = nodeA,
+                            edge = edge,
+                            index = index,
+                            textMeasurer = textMeasurer,
+                            style = edgeLabelStyle,
+                            showLabel = renderingSettings.showEdgeLabels
+                        )
                         selfLoopDrawIndex[nodeA.id] = index + 1
                     } else {
                         val pair = Pair(nodeA.id, nodeB.id)
@@ -196,7 +211,16 @@ fun GraphView(
                         val total = linkCounts[undirectedPair] ?: 1
                         val index = pairDrawIndex.getOrPut(pair) { 0 }
 
-                        drawCurvedEdge(nodeA, nodeB, edge, index, total, textMeasurer, edgeLabelStyle)
+                        drawCurvedEdge(
+                            from = nodeA,
+                            to = nodeB,
+                            edge = edge,
+                            index = index,
+                            total = total,
+                            textMeasurer = textMeasurer,
+                            style = edgeLabelStyle,
+                            showLabel = renderingSettings.showEdgeLabels
+                        )
 
                         pairDrawIndex[pair] = index + 1
                     }
@@ -204,30 +228,39 @@ fun GraphView(
 
                 // --- 2. Draw Nodes ---
                 drawNodes(
-                    nodes,
-                    textMeasurer,
-                    labelColor,
-                    selectionColor,
-                    transform.zoom,
-                    primarySelectedId,   // MODIFIED
-                    secondarySelectedId  // MODIFIED
+                    nodes = nodes,
+                    textMeasurer = textMeasurer,
+                    labelColor = labelColor,
+                    selectionColor = selectionColor,
+                    zoom = transform.zoom,
+                    primarySelectedId = primarySelectedId,
+                    secondarySelectedId = secondarySelectedId,
+                    // --- UPDATED ---
+                    showLabel = renderingSettings.showNodeLabels
+                    // --- END UPDATE ---
                 )
             }
 
             // --- Draw UI Elements (outside transform) ---
             val crosshairSize = 10f
-            drawLine(
-                color = crosshairColor,
-                start = Offset(center.x - crosshairSize, center.y),
-                end = Offset(center.x + crosshairSize, center.y),
-                strokeWidth = 2f
-            )
-            drawLine(
-                color = crosshairColor,
-                start = Offset(center.x, center.y - crosshairSize),
-                end = Offset(center.x, center.y + crosshairSize),
-                strokeWidth = 2f
-            )
+
+            // --- UPDATED ---
+            // This is the fix. Use renderingSettings.showCrosshairs
+            if(renderingSettings.showCrosshairs) {
+                // --- END UPDATE ---
+                drawLine(
+                    color = crosshairColor,
+                    start = Offset(center.x - crosshairSize, center.y),
+                    end = Offset(center.x + crosshairSize, center.y),
+                    strokeWidth = 2f
+                )
+                drawLine(
+                    color = crosshairColor,
+                    start = Offset(center.x, center.y - crosshairSize),
+                    end = Offset(center.x, center.y + crosshairSize),
+                    strokeWidth = 2f
+                )
+            }
         }
 
         // --- ADDED: Detangling Lockout Overlay ---
@@ -272,16 +305,9 @@ fun GraphView(
         ) {
             GraphSettingsView(
                 options = physicsOptions,
-                onGravityChange = { viewModel.setGravity(it) },
-                onRepulsionChange = { viewModel.setRepulsion(it) },
-                onSpringChange = { viewModel.setSpring(it) },
-                onDampingChange = { viewModel.setDamping(it) },
-                onBarnesHutThetaChange = { viewModel.setBarnesHutTheta(it) },
-                onToleranceChange = { viewModel.setTolerance(it) },
-                onDetangleClick = onDetangleClick // <-- Pass the handler
+                onDetangleClick = onDetangleClick
             )
         }
-        // --- END ADDED ---
 
 
         // --- Floating Action Button Menu ---
@@ -332,7 +358,8 @@ private fun DrawScope.drawSelfLoop(
     edge: GraphEdge,
     index: Int,
     textMeasurer: TextMeasurer,
-    style: TextStyle
+    style: TextStyle,
+    showLabel: Boolean // --- ADDED ---
 ) {
     val color = edge.colorInfo.composeColor.copy(alpha = 0.7f)
     val strokeWidth = 2f
@@ -357,13 +384,17 @@ private fun DrawScope.drawSelfLoop(
 
     drawArrowhead(p3, p4, color, arrowSize)
 
-    val labelPos = (p2 + p3) / 2f
-    val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
-    drawText(
-        textLayoutResult = textLayoutResult,
-        topLeft = labelPos - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
-        color = color
-    )
+    // --- UPDATED ---
+    if (showLabel) {
+        // --- END UPDATE ---
+        val labelPos = (p2 + p3) / 2f
+        val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
+        drawText(
+            textLayoutResult = textLayoutResult,
+            topLeft = labelPos - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
+            color = style.color
+        )
+    }
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -374,7 +405,8 @@ private fun DrawScope.drawCurvedEdge(
     index: Int,
     total: Int,
     textMeasurer: TextMeasurer,
-    style: TextStyle
+    style: TextStyle,
+    showLabel: Boolean // --- ADDED ---
 ) {
     val color = edge.colorInfo.composeColor.copy(alpha = 0.7f)
     val strokeWidth = 2f
@@ -394,13 +426,17 @@ private fun DrawScope.drawCurvedEdge(
         drawLine(color, startWithRadius, endWithRadius, strokeWidth)
         drawArrowhead(startWithRadius, endWithRadius, color, arrowSize)
 
-        val labelOffset = Offset(0f, -10f)
-        val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
-        drawText(
-            textLayoutResult = textLayoutResult,
-            topLeft = midPoint + labelOffset - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
-            color = color
-        )
+        // --- UPDATED ---
+        if (showLabel) {
+            // --- END UPDATE ---
+            val labelOffset = Offset(0f, -10f)
+            val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
+            drawText(
+                textLayoutResult = textLayoutResult,
+                topLeft = midPoint + labelOffset - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
+                color = style.color
+            )
+        }
     } else {
         val normal = Offset(-delta.y, delta.x).normalized()
         val baseCurvature = 30f
@@ -420,12 +456,16 @@ private fun DrawScope.drawCurvedEdge(
         val tangent = (endWithRadius - controlPoint).normalized()
         drawArrowhead(endWithRadius - (tangent * arrowSize * 2f), endWithRadius, color, arrowSize)
 
-        val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
-        drawText(
-            textLayoutResult = textLayoutResult,
-            topLeft = controlPoint - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
-            color = color
-        )
+        // --- UPDATED ---
+        if (showLabel) {
+            // --- END UPDATE ---
+            val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
+            drawText(
+                textLayoutResult = textLayoutResult,
+                topLeft = controlPoint - Offset(textLayoutResult.size.width / 2f, textLayoutResult.size.height / 2f),
+                color = style.color
+            )
+        }
     }
 }
 
@@ -456,7 +496,8 @@ private fun DrawScope.drawNodes(
     selectionColor: Color,
     zoom: Float,
     primarySelectedId: Long?,
-    secondarySelectedId: Long?
+    secondarySelectedId: Long?,
+    showLabel: Boolean // --- ADDED ---
 ) {
     val minSize = 8.sp
     val maxSize = 14.sp
@@ -481,7 +522,9 @@ private fun DrawScope.drawNodes(
             style = Stroke(width = if (isSelected) 3f else 1f)
         )
 
-        if (zoom > 0.5f) {
+        // --- UPDATED ---
+        if (showLabel && zoom > 0.5f) {
+            // --- END UPDATE ---
             val textLayoutResult = textMeasurer.measure(
                 text = AnnotatedString(node.displayProperty),
                 style = style

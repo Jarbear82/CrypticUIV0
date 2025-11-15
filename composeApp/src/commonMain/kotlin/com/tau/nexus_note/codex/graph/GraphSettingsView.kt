@@ -25,12 +25,11 @@ import kotlin.math.roundToInt
 @Composable
 fun GraphSettingsView(
     options: PhysicsOptions,
-    onGravityChange: (Float) -> Unit,
-    onRepulsionChange: (Float) -> Unit,
-    onSpringChange: (Float) -> Unit,
-    onDampingChange: (Float) -> Unit,
-    onBarnesHutThetaChange: (Float) -> Unit,
-    onToleranceChange: (Float) -> Unit,
+    // --- UPDATED ---
+    // Removed all on...Change handlers.
+    // This view is now read-only, as the settings
+    // are changed in the main SettingsView.
+    // --- END UPDATE ---
     onDetangleClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -43,53 +42,58 @@ fun GraphSettingsView(
             Text("Graph Physics", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(16.dp))
 
-            // Gravity
+            // --- UPDATED ---
+            // All SettingSliders are now "read-only" from this view's
+            // perspective. They just display the value.
+            // onValueChange is now an empty lambda.
             SettingSlider(
                 label = "Gravity",
                 value = options.gravity,
-                onValueChange = onGravityChange,
-                range = 0f..2f
+                onValueChange = {},
+                range = 0f..2f,
+                enabled = false // Disable the slider
             )
 
-            // Repulsion
             SettingSlider(
                 label = "Repulsion",
                 value = options.repulsion,
-                onValueChange = onRepulsionChange,
-                range = 0f..10000f
+                onValueChange = {},
+                range = 0f..10000f,
+                enabled = false
             )
 
-            // Spring
             SettingSlider(
                 label = "Spring",
                 value = options.spring,
-                onValueChange = onSpringChange,
-                range = 0.01f..1f
+                onValueChange = {},
+                range = 0.01f..1f,
+                enabled = false
             )
 
-            // Damping
             SettingSlider(
                 label = "Damping",
                 value = options.damping,
-                onValueChange = onDampingChange,
-                range = 0.5f..1f
+                onValueChange = {},
+                range = 0.5f..1f,
+                enabled = false
             )
 
-            // Barnes-Hut Theta
             SettingSlider(
                 label = "Barnes-Hut Theta",
                 value = options.barnesHutTheta,
-                onValueChange = onBarnesHutThetaChange,
-                range = 0.1f..3f
+                onValueChange = {},
+                range = 0.1f..3f,
+                enabled = false
             )
 
-            // Tolerance
             SettingSlider(
                 label = "Tolerance (Speed)",
                 value = options.tolerance,
-                onValueChange = onToleranceChange,
-                range = 0.1f..10f
+                onValueChange = {},
+                range = 0.1f..10f,
+                enabled = false
             )
+            // --- END UPDATE ---
 
             Spacer(Modifier.height(16.dp))
             Button(
@@ -107,7 +111,8 @@ private fun SettingSlider(
     label: String,
     value: Float,
     onValueChange: (Float) -> Unit,
-    range: ClosedFloatingPointRange<Float>
+    range: ClosedFloatingPointRange<Float>,
+    enabled: Boolean = true // --- ADDED ---
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -127,7 +132,8 @@ private fun SettingSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = range,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled
         )
         Spacer(Modifier.height(8.dp))
     }

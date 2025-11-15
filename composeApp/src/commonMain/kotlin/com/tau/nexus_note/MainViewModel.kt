@@ -174,7 +174,12 @@ class MainViewModel {
                 _codexViewModel.value?.onCleared() // Close previous one
                 val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
-                _codexViewModel.value = CodexViewModel(newService)
+
+                // --- UPDATED ---
+                // Pass the appSettings flow to the CodexViewModel
+                _codexViewModel.value = CodexViewModel(newService, appSettings)
+                // --- END UPDATE ---
+
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open codex '${item.path}': ${e.message}"
@@ -197,7 +202,12 @@ class MainViewModel {
                 _codexViewModel.value?.onCleared()
                 val newService = SqliteDbService()
                 newService.initialize(":memory:")
-                _codexViewModel.value = CodexViewModel(newService)
+
+                // --- UPDATED ---
+                // Pass the appSettings flow to the CodexViewModel
+                _codexViewModel.value = CodexViewModel(newService, appSettings)
+                // --- END UPDATE ---
+
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open in-memory database: ${e.message}"

@@ -40,8 +40,10 @@ class SchemaViewModel(
 
 
     fun showSchema() {
-        // Pass-through to repository
-        repository.refreshSchema()
+        // (FIXED) Launch a coroutine to call the suspend function
+        viewModelScope.launch {
+            repository.refreshSchema()
+        }
     }
 
     fun requestDeleteSchema(item: SchemaDefinitionItem) {

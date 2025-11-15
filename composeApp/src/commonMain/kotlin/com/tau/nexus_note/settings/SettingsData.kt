@@ -22,14 +22,14 @@ data class ThemeSettings(
     val useDynamicColors: Boolean = false, // For Android 12+
     val useCustomTheme: Boolean = false,
 
-    val primaryHex: String = "#6200EE",
-    val onPrimaryHex: String = "#FFFFFF",
-    val secondaryHex: String = "#03DAC6",
-    val onSecondaryHex: String = "#000000",
-    val backgroundHex: String = "#FFFFFF",
-    val onBackgroundHex: String = "#000000",
-    val surfaceHex: String = "#FFFFFF",
-    val onSurfaceHex: String = "#000000"
+    // --- UPDATED ---
+    // Replaced specific colors (primaryHex, onPrimaryHex, backgroundHex etc.)
+    // with "seed" colors. Material 3 will generate the full palette from these.
+    val primarySeedHex: String = "#6200EE",
+    val secondarySeedHex: String = "#03DAC6",
+    val tertiarySeedHex: String = "#03A9F4",
+    val errorSeedHex: String = "#B00020"
+    // --- END UPDATE ---
 ) {
     companion object {
         val Default = ThemeSettings()

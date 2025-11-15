@@ -80,7 +80,11 @@ fun SchemaView(
                 leadingContent = { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Node Schema")}
             )
 
-            HorizontalDivider(color = Color.Black)
+            // --- UPDATED ---
+            // Replaced Color.Black with the theme's semantic 'outline' color
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // --- END UPDATE ---
+
             LazyColumn {
                 val filteredNodeSchemas = schema.nodeSchemas.filter {
                     it.name.contains(nodeSchemaSearchText, ignoreCase = true)
@@ -122,7 +126,11 @@ fun SchemaView(
                 addContentDescription = "New Edge Schema",
                 leadingContent = { Icon(Icons.Default.Timeline, contentDescription = "Edge Schema")}
             )
-            HorizontalDivider(color = Color.Black)
+
+            // --- UPDATED ---
+            // Replaced Color.Black with the theme's semantic 'outline' color
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // --- END UPDATE ---
 
             LazyColumn {
                 val filteredEdgeSchemas = schema.edgeSchemas.filter {
@@ -180,7 +188,14 @@ private fun SchemaListItem(
             .fillMaxWidth()
             .clickable { onClick() }
             .background(colorInfo.composeColor)
-            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier)
+            // --- UPDATED ---
+            // The selection border already uses primary.
+            // A non-selected border is now provided using the 'outline' color.
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
+            // --- END UPDATE ---
             .then(modifier) // Apply caller-specific padding
     ) {
         // Title
@@ -195,13 +210,18 @@ private fun SchemaListItem(
                 )
             }
         )
-
-        HorizontalDivider(color = colorInfo.composeFontColor)
+        // --- UPDATED ---
+        // Using outline is more semantically correct for a divider
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        // --- END UPDATE ---
 
         // Unique Content Slot
         content(colorInfo.composeFontColor)
 
-        HorizontalDivider(color = colorInfo.composeFontColor)
+        // --- UPDATED ---
+        // Using outline is more semantically correct for a divider
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        // --- END UPDATE ---
 
         // Unique Actions Slot
         actions(colorInfo.composeFontColor)

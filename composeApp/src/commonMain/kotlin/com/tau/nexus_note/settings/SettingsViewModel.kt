@@ -36,35 +36,41 @@ class SettingsViewModel(
         onUpdateSettings(newSettings)
     }
 
-    fun onPrimaryColorChange(hex: String) {
+    // --- UPDATED ---
+    // Replaced old handlers with new "seed" handlers
+
+    fun onPrimarySeedHexChange(hex: String) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(primaryHex = hex)
+            theme = settingsFlow.value.theme.copy(primarySeedHex = hex)
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onSecondaryColorChange(hex: String) {
+    fun onSecondarySeedHexChange(hex: String) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(secondaryHex = hex)
+            theme = settingsFlow.value.theme.copy(secondarySeedHex = hex)
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onBackgroundColorChange(hex: String) {
+    fun onTertiarySeedHexChange(hex: String) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(backgroundHex = hex)
+            theme = settingsFlow.value.theme.copy(tertiarySeedHex = hex)
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onSurfaceColorChange(hex: String) {
+    fun onErrorSeedHexChange(hex: String) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(surfaceHex = hex)
+            theme = settingsFlow.value.theme.copy(errorSeedHex = hex)
         )
         onUpdateSettings(newSettings)
     }
+    // --- END UPDATE ---
 
     fun onResetTheme() {
+        // This still works, as it resets to ThemeSettings.Default,
+        // which now contains the default seed colors.
         val newSettings = settingsFlow.value.copy(theme = ThemeSettings.Default)
         onUpdateSettings(newSettings)
     }
