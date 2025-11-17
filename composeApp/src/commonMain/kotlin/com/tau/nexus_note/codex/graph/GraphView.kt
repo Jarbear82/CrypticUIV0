@@ -297,7 +297,7 @@ fun GraphView(
         SmallFloatingActionButton(
             onClick = { viewModel.toggleSettings() },
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
             Icon(Icons.Default.Settings, "Graph Settings")
         }
@@ -330,7 +330,7 @@ fun GraphView(
                     SmallFloatingActionButton(
                         onClick = { onAddNodeClick() },
                         // Use primaryContainer to match the main FAB
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(Icons.Default.Hub, contentDescription = "Create Node")
                     }
@@ -338,7 +338,7 @@ fun GraphView(
                     SmallFloatingActionButton(
                         onClick = { onAddEdgeClick() },
                         // Use primaryContainer to match the main FAB
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Create Edge")
                     }
@@ -346,8 +346,8 @@ fun GraphView(
             }
             // Main FAB
             FloatingActionButton(
-                onClick = { viewModel.onFabClick() }
-                // This FAB uses primaryContainer by default, so no change is needed
+                onClick = { viewModel.onFabClick() },
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
                     imageVector = if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
