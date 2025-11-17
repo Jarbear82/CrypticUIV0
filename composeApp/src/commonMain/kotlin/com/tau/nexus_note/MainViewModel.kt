@@ -20,11 +20,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-// --- ADDED: Imports for the fix ---
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
-// --- END ADD ---
 
 enum class Screen {
     NEXUS,
@@ -51,24 +50,18 @@ class MainViewModel {
     private val dataStore = createDataStore()
     private val settingsRepository = SettingsRepository(dataStore)
 
-    // --- UPDATED: Step 1 ---
-    // 2. This is the NEW implementation.
-    //    It holds the settings in memory for instant UI updates.
     private val _appSettings = MutableStateFlow(SettingsData.Default)
     val appSettings: StateFlow<SettingsData> = _appSettings.asStateFlow()
-    // --- END UPDATE ---
 
 
-    // 3. The SettingsViewModel is initialized with the in-memory flow
+    // The SettingsViewModel is initialized with the in-memory flow
     //    and a lambda that updates that flow.
     val settingsViewModel = SettingsViewModel(
         settingsFlow = appSettings, // Pass the in-memory flow
         onUpdateSettings = { newSettings ->
-            // --- UPDATED: Step 2 ---
             // Update the in-memory state instantly.
             // The 'init' block collector will handle debouncing and saving.
             _appSettings.value = newSettings
-            // --- END UPDATE ---
         }
     )
 
@@ -93,22 +86,22 @@ class MainViewModel {
     init {
         loadCodicies()
 
-        // --- ADDED: Step 3 - Debounced Settings Loading & Saving ---
+        // --- Step 3 - Debounced Settings Loading & Saving ---
         viewModelScope.launch {
             // 1. Load initial settings from disk just once
             _appSettings.value = settingsRepository.settings.first()
 
             // 2. Set up the debounced saver.
             //    This flow collects changes to the in-memory settings,
-            //    waits 500ms, and then saves to disk.
+            //    waits 1000ms, and then saves to disk.
+            @OptIn(FlowPreview::class)
             _appSettings
                 .drop(1) // Don't save the initial value we just loaded
-                .debounce(500L) // Wait 500ms after the last change
+                .debounce(1000L) // Wait 500ms after the last change
                 .collect { settingsToSave ->
                     settingsRepository.saveSettings(settingsToSave)
                 }
         }
-        // --- END ADD ---
     }
 
     /**
@@ -123,7 +116,7 @@ class MainViewModel {
                     CodexItem(getFileName(it), it)
                 }
 
-                viewModelScope.launch(Dispatchers.Main) { // Switch back to Main to update state
+                viewModelScope.launch(Dispatchers.Main) {
                     _codicies.value = graphs
                 }
             } catch (e: Exception) {
@@ -198,10 +191,7 @@ class MainViewModel {
                 val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
 
-                // --- UPDATED ---
-                // Pass the appSettings flow to the CodexViewModel
                 _codexViewModel.value = CodexViewModel(newService, appSettings)
-                // --- END UPDATE ---
 
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
@@ -209,8 +199,6 @@ class MainViewModel {
             }
         }
     }
-
-    // --- End Codex Management ---
 
     fun navigateTo(screen: Screen) {
         _selectedScreen.value = screen
@@ -226,10 +214,7 @@ class MainViewModel {
                 val newService = SqliteDbService()
                 newService.initialize(":memory:")
 
-                // --- UPDATED ---
-                // Pass the appSettings flow to the CodexViewModel
                 _codexViewModel.value = CodexViewModel(newService, appSettings)
-                // --- END UPDATE ---
 
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {

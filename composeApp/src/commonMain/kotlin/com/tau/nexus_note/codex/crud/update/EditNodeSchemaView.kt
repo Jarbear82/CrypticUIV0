@@ -68,7 +68,7 @@ fun EditNodeSchemaView(
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().width(120.dp),
+                            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).width(120.dp),
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,

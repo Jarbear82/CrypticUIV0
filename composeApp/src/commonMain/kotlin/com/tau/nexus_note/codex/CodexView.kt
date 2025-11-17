@@ -37,7 +37,7 @@ fun CodexView(viewModel: CodexViewModel) {
 
     val graphViewModel = viewModel.graphViewModel
 
-    val showDetangleDialog by graphViewModel?.showDetangleDialog?.collectAsState() ?: mutableStateOf(false)
+    val showDetangleDialog by graphViewModel.showDetangleDialog.collectAsState()
 
     val nodeSearchText by viewModel.metadataViewModel.nodeSearchText.collectAsState()
     val edgeSearchText by viewModel.metadataViewModel.edgeSearchText.collectAsState()
@@ -51,19 +51,12 @@ fun CodexView(viewModel: CodexViewModel) {
 
     LaunchedEffect(viewModel.editCreateViewModel) {
         viewModel.editCreateViewModel.navigationEventFlow.collectLatest {
-            val originalItem = viewModel.metadataViewModel.itemToEdit.value
-            val targetTab = when (originalItem) {
-                is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.SCHEMA
-                is SchemaDefinitionItem, is String -> DataViewTabs.SCHEMA
-                else -> DataViewTabs.SCHEMA
-            }
-            viewModel.selectDataTab(targetTab)
+            viewModel.selectDataTab(DataViewTabs.SCHEMA)
         }
     }
 
-    // --- ADDED: LaunchedEffect to control graph simulation ---
+    // --- LaunchedEffect to control graph simulation ---
     LaunchedEffect(selectedViewTab, graphViewModel) {
-        if (graphViewModel == null) return@LaunchedEffect
 
         if (selectedViewTab == ViewTabs.GRAPH) {
             graphViewModel.startSimulation()
@@ -71,7 +64,6 @@ fun CodexView(viewModel: CodexViewModel) {
             graphViewModel.stopSimulation()
         }
     }
-    // --- END ADD ---
 
 
     val onSave: () -> Unit = {
@@ -79,17 +71,9 @@ fun CodexView(viewModel: CodexViewModel) {
     }
 
     val onCancel: () -> Unit = {
-        val originalItem = viewModel.metadataViewModel.itemToEdit.value
         viewModel.editCreateViewModel.cancelAllEditing()
         viewModel.metadataViewModel.clearSelectedItem()
-
-        val targetTab = when (originalItem) {
-            is NodeDisplayItem, is EdgeDisplayItem -> DataViewTabs.SCHEMA
-            is SchemaDefinitionItem -> DataViewTabs.SCHEMA
-            is String -> DataViewTabs.SCHEMA
-            else -> DataViewTabs.SCHEMA
-        }
-        viewModel.selectDataTab(targetTab)
+        viewModel.selectDataTab(DataViewTabs.SCHEMA)
     }
 
 
@@ -98,7 +82,7 @@ fun CodexView(viewModel: CodexViewModel) {
 
             // ------------------ Left panel for controls and query results --------------------------
             Column(modifier = Modifier.weight(1f).padding(16.dp)) {
-                TabRow(selectedTabIndex = selectedViewTab.value) {
+                PrimaryTabRow(selectedTabIndex = selectedViewTab.value) {
                     ViewTabs.entries.forEach { tab ->
                         Tab(
                             text = { Text(tab.name) },
@@ -141,8 +125,8 @@ fun CodexView(viewModel: CodexViewModel) {
                         )
                     }
                     ViewTabs.GRAPH -> {
-                        // MODIFIED: Pass data and callbacks into GraphView
-                        graphViewModel?.let {
+                        // Pass data and callbacks into GraphView
+                        graphViewModel.let {
                             val nodesState by it.graphNodes.collectAsState()
                             val edgesState by it.graphEdges.collectAsState()
                             val primary = primarySelectedItem
@@ -177,16 +161,12 @@ fun CodexView(viewModel: CodexViewModel) {
                                     it.onShowDetangleDialog()
                                 }
                             )
-                        } ?: Text("Loading Graph...")
+                        }
                     }
                 }
             }
 
 
-            // --------------- Right panel for Schema and Metadata tabs ------------------------------
-            // --- UPDATED ---
-            // Added background(MaterialTheme.colorScheme.surfaceVariant) and fillMaxHeight()
-            // to create a visually distinct panel, as discussed in the video.
             Column(
                 modifier = Modifier
                     .width(400.dp)
@@ -194,7 +174,6 @@ fun CodexView(viewModel: CodexViewModel) {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(16.dp)
             ) {
-                // --- END UPDATE ---
 
                 val itemToDelete = schemaToDelete
                 if (itemToDelete != null && selectedDataTab == DataViewTabs.SCHEMA) {
@@ -206,7 +185,7 @@ fun CodexView(viewModel: CodexViewModel) {
                     )
                 }
 
-                TabRow(selectedTabIndex = selectedDataTab.value) {
+                PrimaryTabRow(selectedTabIndex = selectedDataTab.value) {
                     DataViewTabs.entries.forEach { tab ->
                         Tab(
                             text = { Text(tab.name) },
@@ -331,7 +310,7 @@ fun CodexView(viewModel: CodexViewModel) {
 
         // This dialog floats over everything
         if (showDetangleDialog) {
-            graphViewModel?.let { gvm ->
+            graphViewModel.let { gvm ->
                 DetangleSettingsDialog(
                     onDismiss = { gvm.onDismissDetangleDialog() },
                     onDetangle = { alg, params ->

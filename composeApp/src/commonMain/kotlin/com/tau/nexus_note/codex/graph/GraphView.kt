@@ -26,7 +26,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect // --- ADDED ---
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,14 +81,9 @@ fun GraphView(
     val physicsOptions by viewModel.physicsOptions.collectAsState()
     val showSettings by viewModel.showSettings.collectAsState()
 
-    // --- UPDATED ---
-    // Collect the rendering settings
     val renderingSettings by viewModel.renderingSettings.collectAsState()
-    // --- END UPDATE ---
 
-    // --- ADDED: Collect simulation state ---
     val isSimulationRunning by viewModel.simulationRunning.collectAsState()
-    // --- END ADDED ---
 
     val textMeasurer = rememberTextMeasurer()
     val labelColor = MaterialTheme.colorScheme.onSurface
@@ -97,15 +92,11 @@ fun GraphView(
 
     var isDraggingNode by remember { mutableStateOf(false) }
 
-    // --- ADDED ---
-    // This LaunchedEffect runs in the Composable's context, which has the
-    // MonotonicFrameClock needed by withFrameNanos.
     LaunchedEffect(isSimulationRunning) {
         if (isSimulationRunning) {
             viewModel.runSimulationLoop()
         }
     }
-    // --- END ADD ---
 
     DisposableEffect(Unit) {
         onDispose {
@@ -235,19 +226,14 @@ fun GraphView(
                     zoom = transform.zoom,
                     primarySelectedId = primarySelectedId,
                     secondarySelectedId = secondarySelectedId,
-                    // --- UPDATED ---
                     showLabel = renderingSettings.showNodeLabels
-                    // --- END UPDATE ---
                 )
             }
 
             // --- Draw UI Elements (outside transform) ---
             val crosshairSize = 10f
 
-            // --- UPDATED ---
-            // This is the fix. Use renderingSettings.showCrosshairs
             if(renderingSettings.showCrosshairs) {
-                // --- END UPDATE ---
                 drawLine(
                     color = crosshairColor,
                     start = Offset(center.x - crosshairSize, center.y),
@@ -263,7 +249,7 @@ fun GraphView(
             }
         }
 
-        // --- ADDED: Detangling Lockout Overlay ---
+        // --- Detangling Lockout Overlay ---
         AnimatedVisibility(
             visible = isDetangling,
             modifier = Modifier.fillMaxSize()
@@ -287,10 +273,9 @@ fun GraphView(
                 }
             }
         }
-        // --- END ADDED ---
 
 
-        // --- ADDED: Settings Toggle and Panel ---
+        // --- Settings Toggle and Panel ---
         SmallFloatingActionButton(
             onClick = { viewModel.toggleSettings() },
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
@@ -325,15 +310,17 @@ fun GraphView(
                 ) {
                     // Create Node
                     SmallFloatingActionButton(
-                        onClick = { onAddNodeClick() }, // MODIFIED
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        onClick = { onAddNodeClick() },
+                        // Use primaryContainer to match the main FAB
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Icon(Icons.Default.Hub, contentDescription = "Create Node")
                     }
                     // Create Edge
                     SmallFloatingActionButton(
-                        onClick = { onAddEdgeClick() }, // MODIFIED
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        onClick = { onAddEdgeClick() },
+                        // Use primaryContainer to match the main FAB
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Create Edge")
                     }
@@ -342,6 +329,7 @@ fun GraphView(
             // Main FAB
             FloatingActionButton(
                 onClick = { viewModel.onFabClick() }
+                // This FAB uses primaryContainer by default, so no change is needed
             ) {
                 Icon(
                     imageVector = if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
@@ -359,7 +347,7 @@ private fun DrawScope.drawSelfLoop(
     index: Int,
     textMeasurer: TextMeasurer,
     style: TextStyle,
-    showLabel: Boolean // --- ADDED ---
+    showLabel: Boolean
 ) {
     val color = edge.colorInfo.composeColor.copy(alpha = 0.7f)
     val strokeWidth = 2f
@@ -384,9 +372,7 @@ private fun DrawScope.drawSelfLoop(
 
     drawArrowhead(p3, p4, color, arrowSize)
 
-    // --- UPDATED ---
     if (showLabel) {
-        // --- END UPDATE ---
         val labelPos = (p2 + p3) / 2f
         val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
         drawText(
@@ -406,7 +392,7 @@ private fun DrawScope.drawCurvedEdge(
     total: Int,
     textMeasurer: TextMeasurer,
     style: TextStyle,
-    showLabel: Boolean // --- ADDED ---
+    showLabel: Boolean
 ) {
     val color = edge.colorInfo.composeColor.copy(alpha = 0.7f)
     val strokeWidth = 2f
@@ -426,9 +412,7 @@ private fun DrawScope.drawCurvedEdge(
         drawLine(color, startWithRadius, endWithRadius, strokeWidth)
         drawArrowhead(startWithRadius, endWithRadius, color, arrowSize)
 
-        // --- UPDATED ---
         if (showLabel) {
-            // --- END UPDATE ---
             val labelOffset = Offset(0f, -10f)
             val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
             drawText(
@@ -456,9 +440,7 @@ private fun DrawScope.drawCurvedEdge(
         val tangent = (endWithRadius - controlPoint).normalized()
         drawArrowhead(endWithRadius - (tangent * arrowSize * 2f), endWithRadius, color, arrowSize)
 
-        // --- UPDATED ---
         if (showLabel) {
-            // --- END UPDATE ---
             val textLayoutResult = textMeasurer.measure(AnnotatedString(edge.label), style)
             drawText(
                 textLayoutResult = textLayoutResult,
@@ -497,7 +479,7 @@ private fun DrawScope.drawNodes(
     zoom: Float,
     primarySelectedId: Long?,
     secondarySelectedId: Long?,
-    showLabel: Boolean // --- ADDED ---
+    showLabel: Boolean
 ) {
     val minSize = 8.sp
     val maxSize = 14.sp
@@ -522,9 +504,7 @@ private fun DrawScope.drawNodes(
             style = Stroke(width = if (isSelected) 3f else 1f)
         )
 
-        // --- UPDATED ---
         if (showLabel && zoom > 0.5f) {
-            // --- END UPDATE ---
             val textLayoutResult = textMeasurer.measure(
                 text = AnnotatedString(node.displayProperty),
                 style = style

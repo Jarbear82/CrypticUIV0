@@ -13,8 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.utils.hexToColor
 import kotlin.math.roundToInt
@@ -98,29 +100,26 @@ private fun ThemeSettingsSection(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // --- UPDATED ---
-            // Replaced specific color inputs with seed color inputs
             ColorSettingItem(
                 label = "Primary Seed",
-                hex = theme.primarySeedHex,
-                onHexChange = viewModel::onPrimarySeedHexChange
+                color = Color(theme.primarySeedValue.toInt()),
+                onColorChange = viewModel::onPrimarySeedColorChange
             )
             ColorSettingItem(
                 label = "Secondary Seed",
-                hex = theme.secondarySeedHex,
-                onHexChange = viewModel::onSecondarySeedHexChange
+                color = Color(theme.secondarySeedValue.toInt()),
+                onColorChange = viewModel::onSecondarySeedColorChange
             )
             ColorSettingItem(
                 label = "Tertiary Seed",
-                hex = theme.tertiarySeedHex,
-                onHexChange = viewModel::onTertiarySeedHexChange
+                color = Color(theme.tertiarySeedValue.toInt()),
+                onColorChange = viewModel::onTertiarySeedColorChange
             )
             ColorSettingItem(
                 label = "Error Seed",
-                hex = theme.errorSeedHex,
-                onHexChange = viewModel::onErrorSeedHexChange
+                color = Color(theme.errorSeedValue.toInt()),
+                onColorChange = viewModel::onErrorSeedColorChange
             )
-            // --- END UPDATE ---
 
             Button(
                 onClick = viewModel::onResetTheme,
@@ -141,7 +140,7 @@ private fun GraphSettingsSection(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Physics", "Rendering", "Interaction")
 
-    TabRow(selectedTabIndex = selectedTab) {
+    PrimaryTabRow(selectedTabIndex = selectedTab) {
         tabs.forEachIndexed { index, title ->
             Tab(
                 selected = selectedTab == index,
@@ -426,7 +425,9 @@ private fun SettingDropdown(
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+                    .fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -446,41 +447,115 @@ private fun SettingDropdown(
     }
 }
 
+@OptIn(ExperimentalStdlibApi::class) // Needed for .toHexString()
 @Composable
 private fun ColorSettingItem(
     label: String,
-    hex: String,
-    onHexChange: (String) -> Unit
+    color: Color,
+    onColorChange: (Color) -> Unit
 ) {
-    val color = hexToColor(hex)
+    // Derive the hex string from the Color object for display
+    // This removes the alpha channel (e.g., FF) for a cleaner 6-digit hex
+    val hex = "#" + color.toArgb().toHexString(HexFormat.UpperCase).substring(2)
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.small)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text(label, modifier = Modifier.weight(1f))
-
+        // --- This is the original Row, it still works ---
         Row(
-            modifier = Modifier.weight(2f),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier.size(24.dp)
-                    .background(color)
-                    .border(1.dp, MaterialTheme.colorScheme.onSurface)
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = hex,
-                onValueChange = onHexChange,
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium
-            )
+            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+
+            Row(
+                modifier = Modifier.weight(2f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.size(24.dp)
+                        .background(color) // Use the Color object directly
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface)
+                )
+                Spacer(Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = hex, // Display the derived hex
+                    onValueChange = {
+                        // When text changes, convert it back to a Color
+                        onColorChange(hexToColor(it))
+                    },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
+
+        // --- NEW: RGB Sliders ---
+        Spacer(Modifier.height(8.dp))
+
+        // Red Slider
+        ColorSlider(
+            label = "R",
+            value = color.red,
+            onValueChange = { onColorChange(color.copy(red = it)) },
+            color = Color.Red
+        )
+        // Green Slider
+        ColorSlider(
+            label = "G",
+            value = color.green,
+            onValueChange = { onColorChange(color.copy(green = it)) },
+            color = Color.Green
+        )
+        // Blue Slider
+        ColorSlider(
+            label = "B",
+            value = color.blue,
+            onValueChange = { onColorChange(color.copy(blue = it)) },
+            color = Color.Blue
+        )
     }
 }
+
+/**
+ * A helper composable for the color sliders.
+ * Add this new function to the bottom of SettingsView.kt.
+ */
+@Composable
+private fun ColorSlider(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    color: Color
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = color, fontWeight = FontWeight.Bold)
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..1f,
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = color,
+                activeTrackColor = color,
+                inactiveTrackColor = color.copy(alpha = 0.2f)
+            )
+        )
+        Text(
+            text = (value * 255).roundToInt().toString(),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.width(30.dp),
+            textAlign = TextAlign.End
+        )
+    }
+}
+
 
 @Composable
 private fun InfoCard(text: String) {

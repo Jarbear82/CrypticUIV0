@@ -1,5 +1,7 @@
 package com.tau.nexus_note.settings
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -36,37 +38,33 @@ class SettingsViewModel(
         onUpdateSettings(newSettings)
     }
 
-    // --- UPDATED ---
-    // Replaced old handlers with new "seed" handlers
-
-    fun onPrimarySeedHexChange(hex: String) {
+    fun onPrimarySeedColorChange(color: Color) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(primarySeedHex = hex)
+            theme = settingsFlow.value.theme.copy(primarySeedValue = color.toArgb().toLong())
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onSecondarySeedHexChange(hex: String) {
+    fun onSecondarySeedColorChange(color: Color) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(secondarySeedHex = hex)
+            theme = settingsFlow.value.theme.copy(secondarySeedValue = color.toArgb().toLong())
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onTertiarySeedHexChange(hex: String) {
+    fun onTertiarySeedColorChange(color: Color) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(tertiarySeedHex = hex)
+            theme = settingsFlow.value.theme.copy(tertiarySeedValue = color.toArgb().toLong())
         )
         onUpdateSettings(newSettings)
     }
 
-    fun onErrorSeedHexChange(hex: String) {
+    fun onErrorSeedColorChange(color: Color) {
         val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(errorSeedHex = hex)
+            theme = settingsFlow.value.theme.copy(errorSeedValue = color.toArgb().toLong())
         )
         onUpdateSettings(newSettings)
     }
-    // --- END UPDATE ---
 
     fun onResetTheme() {
         // This still works, as it resets to ThemeSettings.Default,

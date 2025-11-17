@@ -22,14 +22,10 @@ data class ThemeSettings(
     val useDynamicColors: Boolean = false, // For Android 12+
     val useCustomTheme: Boolean = false,
 
-    // --- UPDATED ---
-    // Replaced specific colors (primaryHex, onPrimaryHex, backgroundHex etc.)
-    // with "seed" colors. Material 3 will generate the full palette from these.
-    val primarySeedHex: String = "#6200EE",
-    val secondarySeedHex: String = "#03DAC6",
-    val tertiarySeedHex: String = "#03A9F4",
-    val errorSeedHex: String = "#B00020"
-    // --- END UPDATE ---
+    val primarySeedValue: Long = 0xFF6750A4L,     // M3 Primary
+    val secondarySeedValue: Long = 0xFF625B71L,   // M3 Secondary
+    val tertiarySeedValue: Long = 0xFF7D5260L,    // M3 Tertiary
+    val errorSeedValue: Long = 0xFFB3261EL       // M3 Error
 ) {
     companion object {
         val Default = ThemeSettings()
@@ -80,7 +76,6 @@ data class GraphRenderingSettings(
 @Serializable
 data class GraphInteractionSettings(
     val zoomSensitivity: Float = 1.0f,
-    // Node sizing is part of physics, but we can put a shortcut here
     val nodeBaseRadius: Float = 15f,
     val nodeRadiusEdgeFactor: Float = 2.0f
 ) {

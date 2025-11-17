@@ -42,7 +42,7 @@ fun CreateEdgeView(
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = schemaExpanded,
@@ -74,7 +74,7 @@ fun CreateEdgeView(
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = connectionExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
                 )
                 ExposedDropdownMenu(
                     expanded = connectionExpanded,
@@ -108,7 +108,7 @@ fun CreateEdgeView(
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth().padding(top = 8.dp)
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
                 )
                 ExposedDropdownMenu(
                     expanded = srcExpanded,
@@ -139,7 +139,7 @@ fun CreateEdgeView(
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth().padding(top = 8.dp)
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
                 )
                 ExposedDropdownMenu(
                     expanded = dstExpanded,

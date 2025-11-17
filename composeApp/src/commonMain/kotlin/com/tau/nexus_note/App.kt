@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
 import com.tau.nexus_note.settings.ThemeMode
 import com.tau.nexus_note.utils.hexToColor
 import com.tau.nexus_note.utils.labelToColor
@@ -24,7 +25,7 @@ fun App() {
     // Create the MainViewModel which now controls navigation and settings
     val mainViewModel = rememberMainViewModel()
 
-    // --- ADDED: Observe settings from the ViewModel ---
+    // Observe settings from the ViewModel
     val settings by mainViewModel.appSettings.collectAsState()
     val themeSettings = settings.theme
 
@@ -39,57 +40,78 @@ fun App() {
         )
     }
 
-    // --- THIS IS THE FIX ---
     val useDarkTheme = when (isDark) {
         true -> true
         false -> false
         null -> isSystemInDarkTheme()
     }
-    // --- END FIX ---
 
     // Determine the ColorScheme
     val colorScheme = remember(themeSettings, useDarkTheme) {
         if (themeSettings.useCustomTheme) {
-            // --- UPDATED LOGIC ---
-            // 1. Parse the new SEED colors from settings
-            val primarySeed = hexToColor(themeSettings.primarySeedHex)
-            val secondarySeed = hexToColor(themeSettings.secondarySeedHex)
-            val tertiarySeed = hexToColor(themeSettings.tertiarySeedHex)
-            val errorSeed = hexToColor(themeSettings.errorSeedHex)
+            // Convert the Long value directly to a Color
+            val primarySeed = Color(themeSettings.primarySeedValue.toInt())
+            val secondarySeed = Color(themeSettings.secondarySeedValue.toInt())
+            val tertiarySeed = Color(themeSettings.tertiarySeedValue.toInt())
+            val errorSeed = Color(themeSettings.errorSeedValue.toInt())
 
-            // 2. Let Material 3 generate the full palette from the seeds
+            // Provide clean, distinct colors for background and panels.
             if (useDarkTheme) {
                 darkColorScheme(
                     primary = primarySeed,
                     secondary = secondarySeed,
                     tertiary = tertiarySeed,
-                    error = errorSeed
-                    // All other colors (background, surface, onPrimary, etc.)
-                    // are automatically generated from these seeds.
+                    error = errorSeed,
+
+                    // Fix the FAB
+                    primaryContainer = primarySeed.copy(alpha = 0.3f),
+                    onPrimaryContainer = Color.White,
+
+                    // Fix the main background (standard dark)
+                    background = Color(0xFF121212),
+                    onBackground = Color.White,
+                    surface = Color(0xFF121212), // Main canvas
+                    onSurface = Color.White,
+
+                    // Fix the right panel (distinct lighter grey)
+                    surfaceVariant = Color(0xFF1E1E1E),
+                    onSurfaceVariant = Color(0xFFCACACA)
                 )
             } else {
                 lightColorScheme(
                     primary = primarySeed,
                     secondary = secondarySeed,
                     tertiary = tertiarySeed,
-                    error = errorSeed
+                    error = errorSeed,
+
+                    // Fix the FAB
+                    primaryContainer = primarySeed.copy(alpha = 0.2f), // A light version of primary
+                    onPrimaryContainer = Color.Black,
+
+                    // --- UPDATED VISUAL FIX ---
+                    // Fix the main background (pure white)
+                    background = Color.White,
+                    onBackground = Color.Black,
+                    surface = Color.White, // Main canvas
+                    onSurface = Color.Black,
+
+                    // Fix the right panel (distinct light grey)
+                    surfaceVariant = Color(0xFFF0F0F0),
+                    onSurfaceVariant = Color.Black
                 )
             }
-            // --- END UPDATED LOGIC ---
+
         } else {
             // Use standard light/dark scheme
             if (useDarkTheme) darkColorScheme() else lightColorScheme()
         }
     }
 
-    // --- MODIFIED: Apply the dynamic ColorScheme ---
     MaterialTheme(colorScheme = colorScheme) {
-        // Show the MainView, which contains the nav drawer and screen logic
         MainView(mainViewModel)
 
         DisposableEffect(Unit) {
             onDispose {
-                // Dispose the MainViewModel, which in turn disposes the CodexViewModel
                 mainViewModel.onDispose()
             }
         }
