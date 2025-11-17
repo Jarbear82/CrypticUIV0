@@ -39,45 +39,43 @@ fun App() {
         )
     }
 
-    val useDarkTheme = isDark ?: isSystemInDarkTheme()
+    // --- THIS IS THE FIX ---
+    val useDarkTheme = when (isDark) {
+        true -> true
+        false -> false
+        null -> isSystemInDarkTheme()
+    }
+    // --- END FIX ---
 
     // Determine the ColorScheme
     val colorScheme = remember(themeSettings, useDarkTheme) {
         if (themeSettings.useCustomTheme) {
-            // Create custom scheme
-            val p = hexToColor(themeSettings.primaryHex)
-            val onP = hexToColor(themeSettings.onPrimaryHex) // We should auto-calculate this
-            val s = hexToColor(themeSettings.secondaryHex)
-            val onS = hexToColor(themeSettings.onSecondaryHex) // We should auto-calculate this
-            val b = hexToColor(themeSettings.backgroundHex)
-            val onB = hexToColor(themeSettings.onBackgroundHex) // We should auto-calculate this
-            val surf = hexToColor(themeSettings.surfaceHex)
-            val onSurf = hexToColor(themeSettings.onSurfaceHex) // We should auto-calculate this
+            // --- UPDATED LOGIC ---
+            // 1. Parse the new SEED colors from settings
+            val primarySeed = hexToColor(themeSettings.primarySeedHex)
+            val secondarySeed = hexToColor(themeSettings.secondarySeedHex)
+            val tertiarySeed = hexToColor(themeSettings.tertiarySeedHex)
+            val errorSeed = hexToColor(themeSettings.errorSeedHex)
 
-            // This is a simplified scheme. A full one would need all ...Variant colors.
+            // 2. Let Material 3 generate the full palette from the seeds
             if (useDarkTheme) {
                 darkColorScheme(
-                    primary = p,
-                    onPrimary = onP,
-                    secondary = s,
-                    onSecondary = onS,
-                    background = b,
-                    onBackground = onB,
-                    surface = surf,
-                    onSurface = onSurf
+                    primary = primarySeed,
+                    secondary = secondarySeed,
+                    tertiary = tertiarySeed,
+                    error = errorSeed
+                    // All other colors (background, surface, onPrimary, etc.)
+                    // are automatically generated from these seeds.
                 )
             } else {
                 lightColorScheme(
-                    primary = p,
-                    onPrimary = onP,
-                    secondary = s,
-                    onSecondary = onS,
-                    background = b,
-                    onBackground = onB,
-                    surface = surf,
-                    onSurface = onSurf
+                    primary = primarySeed,
+                    secondary = secondarySeed,
+                    tertiary = tertiarySeed,
+                    error = errorSeed
                 )
             }
+            // --- END UPDATED LOGIC ---
         } else {
             // Use standard light/dark scheme
             if (useDarkTheme) darkColorScheme() else lightColorScheme()

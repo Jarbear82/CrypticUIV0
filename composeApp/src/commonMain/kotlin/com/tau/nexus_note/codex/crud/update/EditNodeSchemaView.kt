@@ -93,7 +93,14 @@ fun EditNodeSchemaView(
                     )
                     Text("Display") // UPDATED: Text changed from PK
                     IconButton(onClick = { onRemoveProperty(index) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Property", tint = Color.Red)
+                        // --- UPDATED ---
+                        // Replaced Color.Red with theme's error color
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete Property",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        // --- END UPDATE ---
                     }
                 }
             }

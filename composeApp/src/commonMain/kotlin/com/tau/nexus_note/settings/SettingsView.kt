@@ -21,9 +21,11 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SettingsView(
-    settings: SettingsData,
     viewModel: SettingsViewModel
 ) {
+
+    val settings by viewModel.settingsFlow.collectAsState()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
@@ -96,26 +98,30 @@ private fun ThemeSettingsSection(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // --- UPDATED ---
+            // Replaced specific color inputs with seed color inputs
             ColorSettingItem(
-                label = "Primary",
-                hex = theme.primaryHex,
-                onHexChange = viewModel::onPrimaryColorChange
+                label = "Primary Seed",
+                hex = theme.primarySeedHex,
+                onHexChange = viewModel::onPrimarySeedHexChange
             )
             ColorSettingItem(
-                label = "Secondary",
-                hex = theme.secondaryHex,
-                onHexChange = viewModel::onSecondaryColorChange
+                label = "Secondary Seed",
+                hex = theme.secondarySeedHex,
+                onHexChange = viewModel::onSecondarySeedHexChange
             )
             ColorSettingItem(
-                label = "Background",
-                hex = theme.backgroundHex,
-                onHexChange = viewModel::onBackgroundColorChange
+                label = "Tertiary Seed",
+                hex = theme.tertiarySeedHex,
+                onHexChange = viewModel::onTertiarySeedHexChange
             )
             ColorSettingItem(
-                label = "Surface",
-                hex = theme.surfaceHex,
-                onHexChange = viewModel::onSurfaceColorChange
+                label = "Error Seed",
+                hex = theme.errorSeedHex,
+                onHexChange = viewModel::onErrorSeedHexChange
             )
+            // --- END UPDATE ---
+
             Button(
                 onClick = viewModel::onResetTheme,
                 modifier = Modifier.fillMaxWidth()

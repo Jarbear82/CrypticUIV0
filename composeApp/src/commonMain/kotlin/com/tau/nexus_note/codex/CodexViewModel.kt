@@ -6,16 +6,25 @@ import com.tau.nexus_note.codex.crud.EditCreateViewModel
 import com.tau.nexus_note.codex.graph.GraphViewmodel
 import com.tau.nexus_note.codex.metadata.MetadataViewModel
 import com.tau.nexus_note.codex.schema.SchemaViewModel
-
+import com.tau.nexus_note.settings.SettingsData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel // --- ADDED: Import for the fix ---
 
-class CodexViewModel(private val dbService: SqliteDbService) {
+// --- UPDATED ---
+// Constructor now accepts the settingsFlow
+class CodexViewModel(
+    private val dbService: SqliteDbService,
+    private val settingsFlow: StateFlow<SettingsData>
+) {
+// --- END UPDATE ---
+
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
     // 1. Create the Repository, passing it the scope and dbService
@@ -26,9 +35,13 @@ class CodexViewModel(private val dbService: SqliteDbService) {
     val metadataViewModel = MetadataViewModel(repository, viewModelScope)
     val editCreateViewModel = EditCreateViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
+    // --- UPDATED ---
+    // Pass the settingsFlow to the GraphViewmodel
     val graphViewModel = GraphViewmodel(
-        viewModelScope = viewModelScope
+        viewModelScope = viewModelScope,
+        settingsFlow = settingsFlow
     )
+    // --- END UPDATE ---
 
     // Expose Repository Error Flow
     val errorFlow = repository.errorFlow
@@ -103,6 +116,10 @@ class CodexViewModel(private val dbService: SqliteDbService) {
     fun onCleared() {
         graphViewModel.onCleared()
         dbService.close()
+        // --- THIS IS THE FIX ---
+        // Cancel the scope to stop all child coroutines (in this VM and GraphViewModel)
+        viewModelScope.cancel()
+        // --- END FIX ---
     }
 }
 

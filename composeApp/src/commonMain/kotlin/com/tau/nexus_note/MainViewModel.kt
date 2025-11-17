@@ -6,7 +6,9 @@ import com.tau.nexus_note.datamodels.CodexItem
 import com.tau.nexus_note.codex.CodexViewModel
 import com.tau.nexus_note.SqliteDbService
 import com.tau.nexus_note.settings.SettingsData
+import com.tau.nexus_note.settings.SettingsRepository
 import com.tau.nexus_note.settings.SettingsViewModel
+import com.tau.nexus_note.settings.createDataStore
 import com.tau.nexus_note.utils.getFileName
 import com.tau.nexus_note.utils.getHomeDirectoryPath
 import com.tau.nexus_note.utils.listFilesWithExtension
@@ -16,6 +18,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+// --- ADDED: Imports for the fix ---
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+// --- END ADD ---
 
 enum class Screen {
     NEXUS,
@@ -36,10 +45,32 @@ class MainViewModel {
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow = _errorFlow.asStateFlow()
 
-    private val _appSettings = MutableStateFlow(SettingsData.Default)
-    val appSettings = _appSettings.asStateFlow()
+    // --- Settings ---
 
-    val settingsViewModel = SettingsViewModel(_appSettings)
+    // 1. Create the repository and DataStore
+    private val dataStore = createDataStore()
+    private val settingsRepository = SettingsRepository(dataStore)
+
+    // --- UPDATED: Step 1 ---
+    // 2. This is the NEW implementation.
+    //    It holds the settings in memory for instant UI updates.
+    private val _appSettings = MutableStateFlow(SettingsData.Default)
+    val appSettings: StateFlow<SettingsData> = _appSettings.asStateFlow()
+    // --- END UPDATE ---
+
+
+    // 3. The SettingsViewModel is initialized with the in-memory flow
+    //    and a lambda that updates that flow.
+    val settingsViewModel = SettingsViewModel(
+        settingsFlow = appSettings, // Pass the in-memory flow
+        onUpdateSettings = { newSettings ->
+            // --- UPDATED: Step 2 ---
+            // Update the in-memory state instantly.
+            // The 'init' block collector will handle debouncing and saving.
+            _appSettings.value = newSettings
+            // --- END UPDATE ---
+        }
+    )
 
     fun clearError() {
         _errorFlow.value = null
@@ -61,6 +92,23 @@ class MainViewModel {
 
     init {
         loadCodicies()
+
+        // --- ADDED: Step 3 - Debounced Settings Loading & Saving ---
+        viewModelScope.launch {
+            // 1. Load initial settings from disk just once
+            _appSettings.value = settingsRepository.settings.first()
+
+            // 2. Set up the debounced saver.
+            //    This flow collects changes to the in-memory settings,
+            //    waits 500ms, and then saves to disk.
+            _appSettings
+                .drop(1) // Don't save the initial value we just loaded
+                .debounce(500L) // Wait 500ms after the last change
+                .collect { settingsToSave ->
+                    settingsRepository.saveSettings(settingsToSave)
+                }
+        }
+        // --- END ADD ---
     }
 
     /**
@@ -149,7 +197,12 @@ class MainViewModel {
                 _codexViewModel.value?.onCleared() // Close previous one
                 val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
-                _codexViewModel.value = CodexViewModel(newService)
+
+                // --- UPDATED ---
+                // Pass the appSettings flow to the CodexViewModel
+                _codexViewModel.value = CodexViewModel(newService, appSettings)
+                // --- END UPDATE ---
+
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open codex '${item.path}': ${e.message}"
@@ -172,7 +225,12 @@ class MainViewModel {
                 _codexViewModel.value?.onCleared()
                 val newService = SqliteDbService()
                 newService.initialize(":memory:")
-                _codexViewModel.value = CodexViewModel(newService)
+
+                // --- UPDATED ---
+                // Pass the appSettings flow to the CodexViewModel
+                _codexViewModel.value = CodexViewModel(newService, appSettings)
+                // --- END UPDATE ---
+
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open in-memory database: ${e.message}"

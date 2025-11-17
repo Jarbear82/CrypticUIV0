@@ -189,9 +189,7 @@ fun MainView(mainViewModel: MainViewModel) {
                     }
                     // --- ADDED: Settings Screen Case ---
                     Screen.SETTINGS -> {
-                        val settings by mainViewModel.appSettings.collectAsState()
                         SettingsView(
-                            settings = settings,
                             viewModel = mainViewModel.settingsViewModel
                         )
                     }

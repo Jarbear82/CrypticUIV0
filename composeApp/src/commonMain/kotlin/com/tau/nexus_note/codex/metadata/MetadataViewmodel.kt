@@ -46,15 +46,21 @@ class MetadataViewModel(
     // --- Public API ---
 
     fun listNodes() {
-        repository.refreshNodes()
+        // (FIXED) Launch a coroutine to call the suspend function
+        viewModelScope.launch {
+            repository.refreshNodes()
+        }
     }
 
     fun listEdges() {
-        repository.refreshEdges()
+        // (FIXED) Launch a coroutine to call the suspend function
+        viewModelScope.launch {
+            repository.refreshEdges()
+        }
     }
 
     fun listAll() {
-        repository.refreshAll()
+        repository.refreshAll() // This function still launches its own coroutine
     }
 
     fun setItemToEdit(item: Any): Any? {

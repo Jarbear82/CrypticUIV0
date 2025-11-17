@@ -1,5 +1,7 @@
 package com.tau.nexus_note.codex.graph.physics
 
+import kotlinx.serialization.Serializable
+
 /**
  * Data class to hold all the constants for the physics simulation.
  *
@@ -15,6 +17,7 @@ package com.tau.nexus_note.codex.graph.physics
  * @param tolerance The "Tolerance (speed)" parameter for ForceAtlas2 adaptive speed.
  * Controls how much node "swinging" is allowed. (Default: 1.0)
  */
+@Serializable
 data class PhysicsOptions(
     val gravity: Float = 0.05f,
     val repulsion: Float = 2000f,

@@ -1,5 +1,6 @@
 package com.tau.nexus_note.codex
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,6 +60,18 @@ fun CodexView(viewModel: CodexViewModel) {
             viewModel.selectDataTab(targetTab)
         }
     }
+
+    // --- ADDED: LaunchedEffect to control graph simulation ---
+    LaunchedEffect(selectedViewTab, graphViewModel) {
+        if (graphViewModel == null) return@LaunchedEffect
+
+        if (selectedViewTab == ViewTabs.GRAPH) {
+            graphViewModel.startSimulation()
+        } else {
+            graphViewModel.stopSimulation()
+        }
+    }
+    // --- END ADD ---
 
 
     val onSave: () -> Unit = {
@@ -171,7 +184,17 @@ fun CodexView(viewModel: CodexViewModel) {
 
 
             // --------------- Right panel for Schema and Metadata tabs ------------------------------
-            Column(modifier = Modifier.width(400.dp).padding(16.dp)) {
+            // --- UPDATED ---
+            // Added background(MaterialTheme.colorScheme.surfaceVariant) and fillMaxHeight()
+            // to create a visually distinct panel, as discussed in the video.
+            Column(
+                modifier = Modifier
+                    .width(400.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(16.dp)
+            ) {
+                // --- END UPDATE ---
 
                 val itemToDelete = schemaToDelete
                 if (itemToDelete != null && selectedDataTab == DataViewTabs.SCHEMA) {

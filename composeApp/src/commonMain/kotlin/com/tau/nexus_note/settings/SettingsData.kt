@@ -2,10 +2,12 @@ package com.tau.nexus_note.settings
 
 import androidx.compose.ui.graphics.Color
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
+import kotlinx.serialization.Serializable
 
 /**
  * Enumeration for the three possible theme modes.
  */
+@Serializable
 enum class ThemeMode {
     LIGHT, DARK, SYSTEM
 }
@@ -14,19 +16,20 @@ enum class ThemeMode {
  * Holds all settings related to a custom color theme.
  * Colors are stored as hex strings for serialization.
  */
+@Serializable
 data class ThemeSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useDynamicColors: Boolean = false, // For Android 12+
     val useCustomTheme: Boolean = false,
 
-    val primaryHex: String = "#6200EE",
-    val onPrimaryHex: String = "#FFFFFF",
-    val secondaryHex: String = "#03DAC6",
-    val onSecondaryHex: String = "#000000",
-    val backgroundHex: String = "#FFFFFF",
-    val onBackgroundHex: String = "#000000",
-    val surfaceHex: String = "#FFFFFF",
-    val onSurfaceHex: String = "#000000"
+    // --- UPDATED ---
+    // Replaced specific colors (primaryHex, onPrimaryHex, backgroundHex etc.)
+    // with "seed" colors. Material 3 will generate the full palette from these.
+    val primarySeedHex: String = "#6200EE",
+    val secondarySeedHex: String = "#03DAC6",
+    val tertiarySeedHex: String = "#03A9F4",
+    val errorSeedHex: String = "#B00020"
+    // --- END UPDATE ---
 ) {
     companion object {
         val Default = ThemeSettings()
@@ -37,6 +40,7 @@ data class ThemeSettings(
  * Holds settings for default graph physics.
  * This re-uses the PhysicsOptions data class.
  */
+@Serializable
 data class GraphPhysicsSettings(
     val options: PhysicsOptions = PhysicsOptions(
         gravity = 0.5f,
@@ -58,10 +62,11 @@ data class GraphPhysicsSettings(
 /**
  * Holds settings for graph rendering.
  */
+@Serializable
 data class GraphRenderingSettings(
     val startSimulationOnLoad: Boolean = true,
     val showNodeLabels: Boolean = true,
-    val showEdgeLabels: Boolean = false,
+    val showEdgeLabels: Boolean = true,
     val showCrosshairs: Boolean = true
 ) {
     companion object {
@@ -72,6 +77,7 @@ data class GraphRenderingSettings(
 /**
  * Holds settings for graph interaction.
  */
+@Serializable
 data class GraphInteractionSettings(
     val zoomSensitivity: Float = 1.0f,
     // Node sizing is part of physics, but we can put a shortcut here
@@ -86,6 +92,7 @@ data class GraphInteractionSettings(
 /**
  * Holds settings for data and codex file management.
  */
+@Serializable
 data class DataSettings(
     val defaultCodexDirectory: String = com.tau.nexus_note.utils.getHomeDirectoryPath(),
     val autoLoadLastCodex: Boolean = false,
@@ -100,6 +107,7 @@ data class DataSettings(
 /**
  * Holds general application behavior settings.
  */
+@Serializable
 data class GeneralSettings(
     val startupScreen: String = "Nexus", // "Nexus" or "Last Codex"
     val defaultCodexView: String = "Graph", // "Graph" or "List"
@@ -115,6 +123,7 @@ data class GeneralSettings(
 /**
  * Root data class holding all application settings.
  */
+@Serializable
 data class SettingsData(
     val theme: ThemeSettings = ThemeSettings.Default,
     val graphPhysics: GraphPhysicsSettings = GraphPhysicsSettings.Default,

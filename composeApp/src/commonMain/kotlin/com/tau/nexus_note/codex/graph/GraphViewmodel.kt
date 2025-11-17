@@ -11,23 +11,42 @@ import com.tau.nexus_note.datamodels.TransformState
 import com.tau.nexus_note.codex.graph.physics.PhysicsEngine
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
 import com.tau.nexus_note.codex.graph.physics.runFRLayout
+import com.tau.nexus_note.settings.GraphRenderingSettings
+import com.tau.nexus_note.settings.SettingsData
 import com.tau.nexus_note.utils.labelToColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
+// --- UPDATED ---
+// Constructor now accepts settingsFlow
 class GraphViewmodel(
-    private val viewModelScope: CoroutineScope
+    private val viewModelScope: CoroutineScope,
+    private val settingsFlow: StateFlow<SettingsData>
 ) {
+// --- END UPDATE ---
+
     private val physicsEngine = PhysicsEngine()
 
-    private val _physicsOptions = MutableStateFlow(PhysicsOptions(gravity = 0.5f))
+    // --- UPDATED ---
+    // Physics and Rendering options are now initialized from the settings flow
+    private val _physicsOptions = MutableStateFlow(settingsFlow.value.graphPhysics.options)
     val physicsOptions = _physicsOptions.asStateFlow()
+
+    private val _renderingSettings = MutableStateFlow(settingsFlow.value.graphRendering)
+    val renderingSettings = _renderingSettings.asStateFlow()
+
+    // --- FIX: Initialize to false. CodexView will be responsible for starting. ---
+    private val _simulationRunning = MutableStateFlow(false)
+    val simulationRunning = _simulationRunning.asStateFlow()
+    // --- END UPDATE ---
 
     private val _graphNodes = MutableStateFlow<Map<Long, GraphNode>>(emptyMap())
     val graphNodes = _graphNodes.asStateFlow()
@@ -38,13 +57,6 @@ class GraphViewmodel(
     private val _transform = MutableStateFlow(TransformState())
     val transform = _transform.asStateFlow()
 
-    // --- MODIFIED: Start simulation by default ---
-    private val _simulationRunning = MutableStateFlow(true)
-    val simulationRunning = _simulationRunning.asStateFlow() // <-- EXPOSED
-
-    // --- REMOVED: Internal guard against concurrent loops ---
-    // private var isLoopActive = false
-
     private val _draggedNodeId = MutableStateFlow<Long?>(null)
     private val _dragVelocity = MutableStateFlow(Offset.Zero)
 
@@ -54,23 +66,37 @@ class GraphViewmodel(
     private val _showSettings = MutableStateFlow(false)
     val showSettings = _showSettings.asStateFlow()
 
-    // --- ADDED: State for Detangle ---
     private val _isDetangling = MutableStateFlow(false)
     val isDetangling = _isDetangling.asStateFlow()
 
     private val _showDetangleDialog = MutableStateFlow(false)
     val showDetangleDialog = _showDetangleDialog.asStateFlow()
-    // --- END ADDED ---
 
     private var size = Size.Zero
 
-    suspend fun runSimulationLoop() {
-        // --- MODIFIED: Removed isLoopActive guard ---
-        // if (isLoopActive) return // Don't run two loops
-        if (!_simulationRunning.value) return // Don't start if we were told not to
+    // --- UPDATED ---
+    // Logic moved from GraphView.kt to here.
+    // Listens for settings changes and simulation state.
+    init {
+        // Collector for settings
+        viewModelScope.launch {
+            settingsFlow.collect { settings ->
+                _physicsOptions.value = settings.graphPhysics.options
+                _renderingSettings.value = settings.graphRendering
+                // --- REMOVED ---
+                // The init block no longer controls the simulation state.
+                // _simulationRunning.value = settings.graphRendering.startSimulationOnLoad
+            }
+        }
 
-        // isLoopActive = true // Not needed
-        // _simulationRunning.value = true // Not needed here, set by caller intent
+        // --- DELETED ---
+        // The viewModelScope.launch block that collected simulationRunning
+        // and called runSimulationLoop() has been removed.
+        // --- END DELETED ---
+    }
+
+    suspend fun runSimulationLoop() {
+        if (!_simulationRunning.value) return
 
         var lastTimeNanos = withFrameNanos { it }
         while (_simulationRunning.value) { // This flag is now critical
@@ -88,9 +114,9 @@ class GraphViewmodel(
                 _graphNodes.value = updatedNodes
             }
         }
-
-        // isLoopActive = false // Not needed
     }
+    // --- END UPDATE ---
+
 
     /**
      * Public method for CodexViewModel to push new data into the graph.
@@ -106,7 +132,10 @@ class GraphViewmodel(
             val newNodeMap = nodeList.associate { node ->
                 val id = node.id
                 val edgeCount = edgeCountByNodeId[id] ?: 0
+                // --- UPDATED ---
+                // Use physics options from the state flow
                 val radius = _physicsOptions.value.nodeBaseRadius + (edgeCount * _physicsOptions.value.nodeRadiusEdgeFactor)
+                // --- END UPDATE ---
                 val mass = (edgeCount + 1).toFloat()
                 val existingNode = currentNodes[id]
 
@@ -170,9 +199,17 @@ class GraphViewmodel(
     }
 
     fun onZoom(zoomFactor: Float, zoomCenterScreen: Offset) {
+        // --- UPDATED ---
+        // Use zoom sensitivity from settings
+        val newZoomFactor = 1.0f + (zoomFactor - 1.0f) * settingsFlow.value.graphInteraction.zoomSensitivity
+        // --- END UPDATE ---
+
         _transform.update { state ->
             val oldZoom = state.zoom
-            val newZoom = (oldZoom * zoomFactor).coerceIn(0.1f, 10.0f)
+            // --- UPDATED ---
+            // Use newZoomFactor
+            val newZoom = (oldZoom * newZoomFactor).coerceIn(0.1f, 10.0f)
+            // --- END UPDATE ---
             val sizeCenter = Offset(size.width / 2f, size.height / 2f)
             val worldPos = (zoomCenterScreen - state.pan * oldZoom - sizeCenter) / oldZoom
             val newPan = (zoomCenterScreen - worldPos * newZoom - sizeCenter) / newZoom
@@ -267,28 +304,37 @@ class GraphViewmodel(
         _showSettings.update { !it }
     }
 
+    // --- UPDATED ---
+    // These settings are now handled by the SettingsViewModel and flow in.
+    // These functions can be removed if you only want settings to be set
+    // from the SettingsView. I will leave them commented out
+    // in case you want to re-enable direct manipulation.
+    /*
     fun setGravity(value: Float) {
         _physicsOptions.update { it.copy(gravity = value) }
     }
-
     fun setRepulsion(value: Float) {
         _physicsOptions.update { it.copy(repulsion = value) }
     }
-
     fun setSpring(value: Float) {
         _physicsOptions.update { it.copy(spring = value) }
     }
-
     fun setDamping(value: Float) {
         _physicsOptions.update { it.copy(damping = value) }
     }
-
     fun setBarnesHutTheta(value: Float) {
         _physicsOptions.update { it.copy(barnesHutTheta = value) }
     }
-
     fun setTolerance(value: Float) {
         _physicsOptions.update { it.copy(tolerance = value) }
+    }
+    */
+    // --- END UPDATE ---
+
+    // --- ADDED: Public method to start simulation, respecting settings ---
+    fun startSimulation() {
+        // Only start if the user has it enabled in settings.
+        _simulationRunning.value = settingsFlow.value.graphRendering.startSimulationOnLoad
     }
 
     fun stopSimulation() {
@@ -348,11 +394,8 @@ class GraphViewmodel(
                 _isDetangling.value = false // Remove lockout
 
                 // 5. "Resume Simulation"
-                // The graph now has stable positions.
-                // We just set the flag, and GraphView's LaunchedEffect will pick it up
-                // and call runSimulationLoop() in the correct context.
-                _simulationRunning.value = true // <-- THIS IS THE FIX
-                // runSimulationLoop() // <-- DO NOT CALL THIS HERE
+                // --- FIX: Call startSimulation, not just set the value ---
+                startSimulation()
             }
         }
     }

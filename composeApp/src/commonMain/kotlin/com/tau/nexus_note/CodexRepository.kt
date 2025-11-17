@@ -55,98 +55,119 @@ class CodexRepository(
         _errorFlow.value = null
     }
 
+    /**
+     * (FIXED)
+     * Launches a single coroutine that refreshes schema, then nodes, then edges
+     * in the correct sequential order.
+     */
     fun refreshAll() {
         repositoryScope.launch {
+            // Now these calls will suspend and execute in order
             refreshSchema()
             refreshNodes()
             refreshEdges()
         }
     }
 
-    fun refreshSchema() {
-        repositoryScope.launch {
-            try {
-                val dbSchemas = dbService.database.appDatabaseQueries.selectAllSchemas().executeAsList()
-                val nodeSchemas = mutableListOf<SchemaDefinitionItem>()
-                val edgeSchemas = mutableListOf<SchemaDefinitionItem>()
+    /**
+     * (FIXED) This is now a suspend function and executes directly.
+     * It MUST be called from a coroutine.
+     */
+    suspend fun refreshSchema() {
+        // No more `repositoryScope.launch`
+        try {
+            val dbSchemas = dbService.database.appDatabaseQueries.selectAllSchemas().executeAsList()
+            val nodeSchemas = mutableListOf<SchemaDefinitionItem>()
+            val edgeSchemas = mutableListOf<SchemaDefinitionItem>()
 
-                dbSchemas.forEach { dbSchema ->
-                    val properties = dbSchema.properties_json
+            dbSchemas.forEach { dbSchema ->
+                val properties = dbSchema.properties_json
 
-                    if (dbSchema.type == "NODE") {
-                        nodeSchemas.add(
-                            SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, null)
-                        )
-                    } else if (dbSchema.type == "EDGE") {
-                        val connections = dbSchema.connections_json ?: emptyList()
-                        edgeSchemas.add(
-                            SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, connections)
-                        )
-                    }
+                if (dbSchema.type == "NODE") {
+                    nodeSchemas.add(
+                        SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, null)
+                    )
+                } else if (dbSchema.type == "EDGE") {
+                    val connections = dbSchema.connections_json ?: emptyList()
+                    edgeSchemas.add(
+                        SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, connections)
+                    )
                 }
-                _schema.value = SchemaData(nodeSchemas, edgeSchemas)
-            } catch (e: Exception) {
-                _errorFlow.value = "Error refreshing schema: ${e.message}"
-                _schema.value = SchemaData(emptyList(), emptyList())
             }
+            _schema.value = SchemaData(nodeSchemas, edgeSchemas)
+        } catch (e: Exception) {
+            _errorFlow.value = "Error refreshing schema: ${e.message}"
+            _schema.value = SchemaData(emptyList(), emptyList())
         }
     }
 
-    fun refreshNodes() {
-        repositoryScope.launch {
-            val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: run {
-                if (_schema.value == null) refreshSchema() // Ensure schema is loaded
-                _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
-            }
+    /**
+     * (FIXED) This is now a suspend function and executes directly.
+     * It assumes `refreshSchema()` has already completed.
+     */
+    suspend fun refreshNodes() {
+        // No more `repositoryScope.launch`
 
-            try {
-                val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
-                _nodeList.value = dbNodes.mapNotNull { dbNode ->
-                    val nodeSchema = schemaMap[dbNode.schema_id]
-                    if (nodeSchema == null) {
-                        println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
-                        null
-                    } else {
-                        NodeDisplayItem(dbNode.id, nodeSchema.name, dbNode.display_label, nodeSchema.id)
-                    }
+        // (FIXED) Removed defensive check. We now assume _schema.value is populated.
+        val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
+
+        if (_schema.value == null) {
+            _errorFlow.value = "Error refreshing nodes: Schema was not loaded first."
+            _nodeList.value = emptyList()
+            return // Abort if schema isn't loaded
+        }
+
+        try {
+            val dbNodes = dbService.database.appDatabaseQueries.selectAllNodes().executeAsList()
+            _nodeList.value = dbNodes.mapNotNull { dbNode ->
+                val nodeSchema = schemaMap[dbNode.schema_id]
+                if (nodeSchema == null) {
+                    println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
+                    null
+                } else {
+                    NodeDisplayItem(dbNode.id, nodeSchema.name, dbNode.display_label, nodeSchema.id)
                 }
-            } catch (e: Exception) {
-                _errorFlow.value = "Error refreshing nodes: ${e.message}"
-                _nodeList.value = emptyList()
             }
+        } catch (e: Exception) {
+            _errorFlow.value = "Error refreshing nodes: ${e.message}"
+            _nodeList.value = emptyList()
         }
     }
 
-    fun refreshEdges() {
-        repositoryScope.launch {
-            val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: run {
-                if (_schema.value == null) refreshSchema()
-                _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
-            }
+    /**
+     * (FIXED) This is now a suspend function and executes directly.
+     * It assumes `refreshSchema()` and `refreshNodes()` have already completed.
+     */
+    suspend fun refreshEdges() {
+        // No more `repositoryScope.launch`
 
-            val nodeMap = _nodeList.value.associateBy { it.id } ?: run {
-                if(_nodeList.value.isEmpty()) refreshNodes()
-                _nodeList.value.associateBy { it.id } ?: emptyMap()
-            }
+        // (FIXED) Removed defensive checks.
+        val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
+        val nodeMap = _nodeList.value.associateBy { it.id }
 
-            try {
-                val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
-                _edgeList.value = dbEdges.mapNotNull { dbEdge ->
-                    val schema = schemaMap[dbEdge.schema_id]
-                    val srcNode = nodeMap[dbEdge.from_node_id]
-                    val dstNode = nodeMap[dbEdge.to_node_id]
+        if (_schema.value == null) {
+            _errorFlow.value = "Error refreshing edges: Schema was not loaded first."
+            _edgeList.value = emptyList()
+            return // Abort
+        }
 
-                    if (schema == null || srcNode == null || dstNode == null) {
-                        println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
-                        null
-                    } else {
-                        EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode, schema.id)
-                    }
+        try {
+            val dbEdges = dbService.database.appDatabaseQueries.selectAllEdges().executeAsList()
+            _edgeList.value = dbEdges.mapNotNull { dbEdge ->
+                val schema = schemaMap[dbEdge.schema_id]
+                val srcNode = nodeMap[dbEdge.from_node_id]
+                val dstNode = nodeMap[dbEdge.to_node_id]
+
+                if (schema == null || srcNode == null || dstNode == null) {
+                    println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
+                    null
+                } else {
+                    EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode, schema.id)
                 }
-            } catch (e: Exception) {
-                _errorFlow.value = "Error refreshing edges: ${e.message}"
-                _edgeList.value = emptyList()
             }
+        } catch (e: Exception) {
+            _errorFlow.value = "Error refreshing edges: ${e.message}"
+            _edgeList.value = emptyList()
         }
     }
 

@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,16 +20,34 @@ fun EditEdgeView(
     onCancel: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Edit Edge: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall) // UPDATED: Use schema.name
+        Text("Edit Edge: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
-        // UPDATED: Use new displayProperty
-        Text("From: ${state.src.label} (${state.src.displayProperty})", style = MaterialTheme.typography.bodyMedium)
-        Text("To: ${state.dst.label} (${state.dst.displayProperty})", style = MaterialTheme.typography.bodyMedium)
+
+        // --- UPDATED ---
+        // Using onSurfaceVariant for secondary, "muted" text
+        Text(
+            "From: ${state.src.label} (${state.src.displayProperty})",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "To: ${state.dst.label} (${state.dst.displayProperty})",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        // --- END UPDATE ---
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
         if (state.schema.properties.isEmpty()) { // UPDATED: Check schema for properties
-            Text("No properties to edit.", style = MaterialTheme.typography.bodySmall)
+            Text(
+                "No properties to edit.",
+                style = MaterialTheme.typography.bodySmall,
+                // --- UPDATED ---
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+                // --- END UPDATE ---
+            )
         } else {
             LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                 // UPDATED: Iterate over schema properties, get values from state.properties map
