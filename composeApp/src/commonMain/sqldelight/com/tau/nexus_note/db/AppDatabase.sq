@@ -8,7 +8,7 @@ id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
 name TEXT NOT NULL UNIQUE,
 properties_json TEXT AS List<SchemaProperty> NOT NULL,
-connections_json TEXT AS List<ConnectionPair>
+connections_json TEXT AS List<ConnectionPair> NOT NULL
 );
 
 CREATE TABLE Node (

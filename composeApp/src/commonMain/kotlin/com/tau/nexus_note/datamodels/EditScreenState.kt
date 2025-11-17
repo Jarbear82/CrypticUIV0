@@ -84,5 +84,6 @@ data class EdgeSchemaEditState(
     val connections: List<ConnectionPair>,
     val properties: List<SchemaProperty>,
     val currentNameError: String? = null,
-    val propertyErrors: Map<Int, String?> = emptyMap()
+    val propertyErrors: Map<Int, String?> = emptyMap(),
+    val allNodeSchemas: List<SchemaDefinitionItem> = emptyList()
 )

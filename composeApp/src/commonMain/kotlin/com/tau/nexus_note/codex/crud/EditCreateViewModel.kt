@@ -561,12 +561,14 @@ class EditCreateViewModel(
 
     // --- Edge Schema Editing ---
     fun initiateEdgeSchemaEdit(schema: SchemaDefinitionItem) {
+        val allNodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
         _editScreenState.value = EditScreenState.EditEdgeSchema(
             EdgeSchemaEditState(
                 originalSchema = schema,
                 currentName = schema.name,
                 connections = schema.connections ?: emptyList(),
-                properties = schema.properties
+                properties = schema.properties,
+                allNodeSchemas = allNodeSchemas // ADDED
             )
         )
     }

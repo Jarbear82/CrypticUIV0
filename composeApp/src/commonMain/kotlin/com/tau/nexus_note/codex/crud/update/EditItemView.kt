@@ -70,8 +70,7 @@ fun EditItemView(
     onEdgeSchemaEditRemoveProperty: (Int) -> Unit,
     // ADDED: Handlers for editing connections
     onEdgeSchemaEditAddConnection: (src: String, dst: String) -> Unit,
-    onEdgeSchemaEditRemoveConnection: (Int) -> Unit,
-    allNodeSchemaNames: List<String> // ADDED: Needed for edge schema editors
+    onEdgeSchemaEditRemoveConnection: (Int) -> Unit
 ) {
     // Use a 'when' block to route to the correct composable
     when (editScreenState) {
@@ -158,7 +157,6 @@ fun EditItemView(
                 onCancel = onCancelClick,
                 onAddConnection = onEdgeSchemaEditAddConnection, // ADDED
                 onRemoveConnection = onEdgeSchemaEditRemoveConnection, // ADDED
-                allNodeSchemaNames = allNodeSchemaNames // ADDED
             )
         }
         is EditScreenState.None -> {

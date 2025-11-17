@@ -31,8 +31,7 @@ fun EditEdgeSchemaView(
     onCancel: () -> Unit,
     // ADDED: Handlers for editing connections
     onAddConnection: (src: String, dst: String) -> Unit,
-    onRemoveConnection: (Int) -> Unit,
-    allNodeSchemaNames: List<String>
+    onRemoveConnection: (Int) -> Unit
 ) {
     // Define supported types
     val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
@@ -78,11 +77,11 @@ fun EditEdgeSchemaView(
                     expanded = newSrcExpanded,
                     onDismissRequest = { newSrcExpanded = false }
                 ) {
-                    allNodeSchemaNames.forEach { schemaName ->
+                    state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schemaName) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newSrcTable = schemaName
+                                newSrcTable = schema.name
                                 newSrcExpanded = false
                             }
                         )
@@ -107,11 +106,11 @@ fun EditEdgeSchemaView(
                     expanded = newDstExpanded,
                     onDismissRequest = { newDstExpanded = false }
                 ) {
-                    allNodeSchemaNames.forEach { schemaName ->
+                    state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
-                            text = { Text(schemaName) },
+                            text = { Text(schema.name) },
                             onClick = {
-                                newDstTable = schemaName
+                                newDstTable = schema.name
                                 newDstExpanded = false
                             }
                         )

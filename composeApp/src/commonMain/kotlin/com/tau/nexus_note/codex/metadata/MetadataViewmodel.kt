@@ -76,7 +76,10 @@ class MetadataViewModel(
     }
 
     fun listAll() {
-        repository.refreshAll() // This function still launches its own coroutine
+        // (FIXED) Launch a coroutine to call the suspend function
+        viewModelScope.launch {
+            repository.refreshAll()
+        }
         // Also reset paginated lists
         refreshPaginatedLists()
     }

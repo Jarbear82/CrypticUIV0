@@ -33,36 +33,22 @@ val schemaPropertyAdapter = object : ColumnAdapter<List<SchemaProperty>, String>
 
 /**
  * Adapter for `SchemaDefinition.connections_json`
- * Converts List<ConnectionPair> to/from a nullable JSON String.
- * (This includes your fix)
+ * Converts List<ConnectionPair> to/from a NON-NULL JSON String.
+ * (This is the fix: Use the adapter that handles String)
  */
-//val connectionPairAdapter = object : ColumnAdapter<List<ConnectionPair>, String?> {
-//    override fun decode(databaseValue: String?): List<ConnectionPair> {
-//        return databaseValue?.let {
-//            dbJson.decodeFromString(ListSerializer(ConnectionPair.serializer()), it)
-//        } ?: emptyList()
-//    }
-//    override fun encode(value: List<ConnectionPair>): String? {
-//        // Return null if the list is empty, or encode it
-//        return if (value.isEmpty()) null else {
-//            dbJson.encodeToString(ListSerializer(ConnectionPair.serializer()), value)
-//        }
-//    }
-//}
-
 val connectionPairAdapter = object : ColumnAdapter<List<ConnectionPair>, String> {
     override fun decode(databaseValue: String): List<ConnectionPair> {
-        // This decode must assume non-null input, so we use your logic differently
+        // databaseValue will be "[]" for nodes, not null
         return dbJson.decodeFromString(ListSerializer(ConnectionPair.serializer()), databaseValue)
     }
 
     override fun encode(value: List<ConnectionPair>): String {
         // Must return a non-null string, handle the empty case
-        return if (value.isEmpty()) "[]" else { // Encode as empty JSON array or default
-            dbJson.encodeToString(ListSerializer(ConnectionPair.serializer()), value)
-        }
+        // Encode empty list as "[]" string
+        return dbJson.encodeToString(ListSerializer(ConnectionPair.serializer()), value)
     }
 }
+
 
 /**
  * Adapter for `Node.properties_json` and `Edge.properties_json`

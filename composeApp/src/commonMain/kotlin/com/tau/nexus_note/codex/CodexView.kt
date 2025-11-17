@@ -315,8 +315,7 @@ fun CodexView(viewModel: CodexViewModel) {
                         onEdgeSchemaEditAddProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditAddProperty() },
                         onEdgeSchemaEditRemoveProperty = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveProperty(it) },
                         onEdgeSchemaEditAddConnection = { s, d -> viewModel.editCreateViewModel.updateEdgeSchemaEditAddConnection(s, d) },
-                        onEdgeSchemaEditRemoveConnection = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(it) },
-                        allNodeSchemaNames = schema?.nodeSchemas?.map { it.name } ?: emptyList()
+                        onEdgeSchemaEditRemoveConnection = { viewModel.editCreateViewModel.updateEdgeSchemaEditRemoveConnection(it) }
                     )
                 }
             }

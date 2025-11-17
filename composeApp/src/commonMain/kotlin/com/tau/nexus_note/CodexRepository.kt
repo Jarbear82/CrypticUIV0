@@ -15,10 +15,12 @@ import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.codex.schema.SchemaData
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
 
@@ -60,26 +62,20 @@ class CodexRepository(
 
     (FIXED)
 
-    Launches a single coroutine that refreshes schema, then nodes, then edges
-
-    in the correct sequential order.
+    This is now a suspend function that completes ALL work before returning.
      */
-    fun refreshAll() {
-        repositoryScope.launch {
+    suspend fun refreshAll() {
 // Now these calls will suspend and execute in order
-            refreshSchema()
-            refreshNodes() // Loads all nodes for the graph
-            refreshEdges() // Loads all edges for the graph
-        }
+        refreshSchema()
+        refreshNodes() // Loads all nodes for the graph
+        refreshEdges() // Loads all edges for the graph
     }
 
     /**
 
-    (FIXED) This is now a suspend function and executes directly.
-
-    It MUST be called from a coroutine.
+    (FIXED) This is now a suspend function and executes on the IO dispatcher.
      */
-    fun refreshSchema() {
+    suspend fun refreshSchema() = withContext(Dispatchers.IO) {
 // No more repositoryScope.launch
         try {
             val dbSchemas = dbService.database.appDatabaseQueries.selectAllSchemas().executeAsList()
@@ -90,11 +86,13 @@ class CodexRepository(
                 val properties = dbSchema.properties_json
 
                 if (dbSchema.type == "NODE") {
+                    // FIX: connections_json is now NOT NULL, but we'll treat it as null in the data model
                     nodeSchemas.add(
                         SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, null)
                     )
                 } else if (dbSchema.type == "EDGE") {
-                    val connections = dbSchema.connections_json ?: emptyList()
+                    // connections_json is NOT NULL, it will be "[]" or "[...]"
+                    val connections = dbSchema.connections_json
                     edgeSchemas.add(
                         SchemaDefinitionItem(dbSchema.id, dbSchema.type, dbSchema.name, properties, connections)
                     )
@@ -111,18 +109,19 @@ class CodexRepository(
 
     /**
 
+    (FIXED) This is now a suspend function and executes on the IO dispatcher.
+
     It assumes refreshSchema() has already completed.
 
     This loads all nodes into the stateflow for the graph.
      */
-    fun refreshNodes() {
-// (FIXED) Removed defensive check. We now assume _schema.value is populated.
+    suspend fun refreshNodes() = withContext(Dispatchers.IO) {
         val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
 
         if (_schema.value == null) {
             _errorFlow.value = "Error refreshing nodes: Schema was not loaded first."
             _nodeList.value = emptyList()
-            return // Abort if schema isn't loaded
+            return@withContext // Abort if schema isn't loaded
         }
 
         try {
@@ -144,19 +143,20 @@ class CodexRepository(
 
     /**
 
+    (FIXED) This is now a suspend function and executes on the IO dispatcher.
+
     It assumes refreshSchema() and refreshNodes() have already completed.
 
     This loads all edges into the stateflow for the graph.
      */
-    fun refreshEdges() {
-// (FIXED) Removed defensive checks.
+    suspend fun refreshEdges() = withContext(Dispatchers.IO) {
         val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
         val nodeMap = _nodeList.value.associateBy { it.id }
 
         if (_schema.value == null) {
             _errorFlow.value = "Error refreshing edges: Schema was not loaded first."
             _edgeList.value = emptyList()
-            return // Abort
+            return@withContext // Abort
         }
 
         try {
@@ -181,7 +181,7 @@ class CodexRepository(
         }
     }
 
-// --- NEW: Pagination-specific functions for ListView ---
+// --- NEW: Pagination-specific functions ---
 
     /**
 
@@ -189,14 +189,14 @@ class CodexRepository(
 
     This is a suspend function and does not update the main state flow.
      */
-    suspend fun getNodesPaginated(offset: Long, limit: Long): List<NodeDisplayItem> {
+    suspend fun getNodesPaginated(offset: Long, limit: Long): List<NodeDisplayItem> = withContext(Dispatchers.IO) {
         val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
         if (_schema.value == null) {
             _errorFlow.value = "Error refreshing nodes: Schema was not loaded first."
-            return emptyList()
+            return@withContext emptyList()
         }
 
-        return try {
+        return@withContext try {
             val dbNodes = dbService.database.appDatabaseQueries.getNodesPaginated(limit, offset).executeAsList()
             dbNodes.mapNotNull { dbNode ->
                 val nodeSchema = schemaMap[dbNode.schema_id]
@@ -219,17 +219,17 @@ class CodexRepository(
 
     This is a suspend function and does not update the main state flow.
      */
-    suspend fun getEdgesPaginated(offset: Long, limit: Long): List<EdgeDisplayItem> {
+    suspend fun getEdgesPaginated(offset: Long, limit: Long): List<EdgeDisplayItem> = withContext(Dispatchers.IO) {
         val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
 // We must use the full node list to correctly link src/dst
         val nodeMap = _nodeList.value.associateBy { it.id }
 
         if (_schema.value == null) {
             _errorFlow.value = "Error refreshing edges: Schema was not loaded first."
-            return emptyList()
+            return@withContext emptyList()
         }
 
-        return try {
+        return@withContext try {
             val dbEdges = dbService.database.appDatabaseQueries.getEdgesPaginated(limit, offset).executeAsList()
             dbEdges.mapNotNull { dbEdge ->
                 val schema = schemaMap[dbEdge.schema_id]
@@ -284,7 +284,7 @@ class CodexRepository(
                     type = "NODE",
                     name = state.tableName,
                     properties_json = state.properties,
-                    connections_json = null
+                    connections_json = emptyList() // <-- FIX: Pass emptyList() instead of null
                 )
                 refreshSchema()
             } catch (e: Exception) {
@@ -316,7 +316,7 @@ class CodexRepository(
                     id = state.originalSchema.id,
                     name = state.currentName,
                     properties_json = state.properties,
-                    connections_json = null
+                    connections_json = emptyList() // <-- FIX: Pass emptyList() instead of null
                 )
                 refreshSchema()
                 refreshNodes()

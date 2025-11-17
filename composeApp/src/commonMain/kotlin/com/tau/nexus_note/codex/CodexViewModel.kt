@@ -49,7 +49,10 @@ class CodexViewModel(
 
     init {
         // Trigger initial data load
-        repository.refreshAll()
+        // FIX: Launch a coroutine to call the suspend function
+        viewModelScope.launch {
+            repository.refreshAll()
+        }
 
         // Combine lists with visibility state
         viewModelScope.launch {
