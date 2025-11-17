@@ -1,10 +1,30 @@
 package com.tau.nexus_note.settings
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
 import kotlinx.serialization.Serializable
 
+// NEW: Enum to represent the settings categories for the UI
+enum class SettingsCategory(
+    val title: String,
+    val icon: ImageVector
+) {
+    APPEARANCE("Appearance", Icons.Default.Palette),
+    GRAPH("Graph", Icons.Default.Hub),
+    DATA("Data", Icons.Default.Storage),
+    GENERAL("General", Icons.Default.Settings),
+    ABOUT("About", Icons.Default.Info)
+}
+
 /**
- * Enumeration for the possible theme modes.
+
+Enumeration for the possible theme modes.
  */
 @Serializable
 enum class ThemeMode {
@@ -12,8 +32,10 @@ enum class ThemeMode {
 }
 
 /**
- * Holds all settings related to a custom color theme.
- * All colors are stored as Longs (ARGB). "On" colors are derived automatically.
+
+Holds all settings related to a custom color theme.
+
+All colors are stored as Longs (ARGB). "On" colors are derived automatically.
  */
 @Serializable
 data class ThemeSettings(
@@ -27,8 +49,10 @@ data class ThemeSettings(
 }
 
 /**
- * Holds settings for default graph physics.
- * This re-uses the PhysicsOptions data class.
+
+Holds settings for default graph physics.
+
+This re-uses the PhysicsOptions data class.
  */
 @Serializable
 data class GraphPhysicsSettings(
@@ -50,7 +74,8 @@ data class GraphPhysicsSettings(
 }
 
 /**
- * Holds settings for graph rendering.
+
+Holds settings for graph rendering.
  */
 @Serializable
 data class GraphRenderingSettings(
@@ -65,7 +90,8 @@ data class GraphRenderingSettings(
 }
 
 /**
- * Holds settings for graph interaction.
+
+Holds settings for graph interaction.
  */
 @Serializable
 data class GraphInteractionSettings(
@@ -79,7 +105,8 @@ data class GraphInteractionSettings(
 }
 
 /**
- * Holds settings for data and codex file management.
+
+Holds settings for data and codex file management.
  */
 @Serializable
 data class DataSettings(
@@ -94,7 +121,8 @@ data class DataSettings(
 }
 
 /**
- * Holds general application behavior settings.
+
+Holds settings for general application behavior settings.
  */
 @Serializable
 data class GeneralSettings(
@@ -110,21 +138,22 @@ data class GeneralSettings(
 }
 
 /**
- * Root data class holding all application settings.
- */
+
+Root data class holding all application settings.
+*/
 @Serializable
 data class SettingsData(
-    val theme: ThemeSettings = ThemeSettings.Default,
-    val graphPhysics: GraphPhysicsSettings = GraphPhysicsSettings.Default,
-    val graphRendering: GraphRenderingSettings = GraphRenderingSettings.Default,
-    val graphInteraction: GraphInteractionSettings = GraphInteractionSettings.Default,
-    val data: DataSettings = DataSettings.Default,
-    val general: GeneralSettings = GeneralSettings.Default
+val theme: ThemeSettings = ThemeSettings.Default,
+val graphPhysics: GraphPhysicsSettings = GraphPhysicsSettings.Default,
+val graphRendering: GraphRenderingSettings = GraphRenderingSettings.Default,
+val graphInteraction: GraphInteractionSettings = GraphInteractionSettings.Default,
+val data: DataSettings = DataSettings.Default,
+val general: GeneralSettings = GeneralSettings.Default
 ) {
-    companion object {
-        /**
-         * The master default settings for the entire application.
-         */
-        val Default = SettingsData()
-    }
+companion object {
+/*
+ * The master default settings for the entire application.
+*/
+val Default = SettingsData()
+}
 }

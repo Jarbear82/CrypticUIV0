@@ -179,7 +179,7 @@ class GraphViewmodel(
 
     // --- Coordinate Conversion ---
 
-    private fun screenToWorld(screenPos: Offset): Offset {
+    fun screenToWorld(screenPos: Offset): Offset {
         val pan = _transform.value.pan
         val zoom = _transform.value.zoom
         val center = Offset(size.width / 2f, size.height / 2f)

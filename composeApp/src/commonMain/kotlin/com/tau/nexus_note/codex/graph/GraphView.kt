@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ExperimentalGraphicsApi
 import androidx.compose.ui.graphics.Path
@@ -152,6 +153,13 @@ fun GraphView(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
+            // --- NEW: CULLING LOGIC ---
+            // Calculate the visible rectangle in world coordinates
+            val worldTopLeft = viewModel.screenToWorld(Offset.Zero)
+            val worldBottomRight = viewModel.screenToWorld(Offset(size.width, size.height))
+            val visibleWorldRect = Rect(worldTopLeft, worldBottomRight)
+            // --- END CULLING LOGIC ---
+
             withTransform({
                 translate(left = center.x, top = center.y)
                 scale(scaleX = transform.zoom, scaleY = transform.zoom, pivot = Offset.Zero)
@@ -183,6 +191,15 @@ fun GraphView(
                     val nodeA = nodes[edge.sourceId]
                     val nodeB = nodes[edge.targetId]
                     if (nodeA == null || nodeB == null) continue
+
+                    // --- NEW: CULLING CHECK ---
+                    // Inflate the visible rect slightly (e.g., by 200px in world space) to avoid pop-in
+                    // This is an approximation: if *both* nodes are off-screen, skip drawing the edge
+                    val cullingRect = visibleWorldRect.inflate(200f / transform.zoom)
+                    if (!cullingRect.contains(nodeA.pos) && !cullingRect.contains(nodeB.pos)) {
+                        continue
+                    }
+                    // --- END CULLING CHECK ---
 
                     if (nodeA.id == nodeB.id) {
                         val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
@@ -220,6 +237,7 @@ fun GraphView(
                 // --- 2. Draw Nodes ---
                 drawNodes(
                     nodes = nodes,
+                    visibleWorldRect = visibleWorldRect, // <-- NEW: Pass visible rect
                     textMeasurer = textMeasurer,
                     labelColor = labelColor,
                     selectionColor = selectionColor,
@@ -338,6 +356,8 @@ fun GraphView(
             }
         }
     }
+
+
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -381,6 +401,8 @@ private fun DrawScope.drawSelfLoop(
             color = style.color
         )
     }
+
+
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -449,6 +471,8 @@ private fun DrawScope.drawCurvedEdge(
             )
         }
     }
+
+
 }
 
 private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size: Float) {
@@ -468,11 +492,14 @@ private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size
         close()
     }
     drawPath(path, color)
+
+
 }
 
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawNodes(
     nodes: Map<Long, GraphNode>,
+    visibleWorldRect: Rect, // <-- NEW: Use this for culling
     textMeasurer: TextMeasurer,
     labelColor: Color,
     selectionColor: Color,
@@ -490,6 +517,19 @@ private fun DrawScope.drawNodes(
     val secondaryId = secondarySelectedId
 
     for (node in nodes.values) {
+        // --- NEW: CULLING CHECK ---
+        // Create a bounding box for the node and check if it overlaps the visible rect
+        val nodeRect = Rect(
+            left = node.pos.x - node.radius,
+            top = node.pos.y - node.radius,
+            right = node.pos.x + node.radius,
+            bottom = node.pos.y + node.radius
+        )
+        if (!visibleWorldRect.overlaps(nodeRect)) {
+            continue // Skip drawing this node
+        }
+        // --- END CULLING CHECK ---
+
         val isSelected = node.id == primaryId || node.id == secondaryId
 
         drawCircle(
@@ -519,6 +559,8 @@ private fun DrawScope.drawNodes(
             )
         }
     }
+
+
 }
 
 // --- Math Helpers ---

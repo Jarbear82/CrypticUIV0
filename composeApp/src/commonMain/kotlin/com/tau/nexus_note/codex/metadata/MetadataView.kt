@@ -24,8 +24,8 @@ import com.tau.nexus_note.utils.labelToColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetadataView(
-    nodes: List<NodeDisplayItem>,
-    edges: List<EdgeDisplayItem>,
+    nodes: List<NodeDisplayItem>, // This is now the paginated list
+    edges: List<EdgeDisplayItem>, // This is now the paginated list
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
@@ -36,7 +36,7 @@ fun MetadataView(
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
     onAddEdgeClick: () -> Unit,
-    // ADDED: Refresh handlers
+// ADDED: Refresh handlers
     onListAllClick: () -> Unit,
     onListNodesClick: () -> Unit,
     onListEdgesClick: () -> Unit
@@ -74,14 +74,14 @@ fun MetadataView(
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         // --- Data Refresh ---
-        Text("Data Refresh", style = MaterialTheme.typography.headlineSmall)
+        Text("Data Management", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = onListAllClick,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("List All Nodes & Edges")
+            Text("Refresh All Data")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(
@@ -92,17 +92,19 @@ fun MetadataView(
                 onClick = onListNodesClick,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("List Nodes")
+                Text("Refresh Graph Nodes")
             }
             Button(
                 onClick = onListEdgesClick,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("List Edges")
+                Text("Refresh Graph Edges")
             }
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
     }
+
+
 }

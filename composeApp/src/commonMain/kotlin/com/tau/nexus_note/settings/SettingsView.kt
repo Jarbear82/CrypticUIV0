@@ -24,41 +24,67 @@ fun SettingsView(
 ) {
 
     val settings by viewModel.settingsFlow.collectAsState()
+    var selectedCategory by remember { mutableStateOf(SettingsCategory.APPEARANCE) }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp)
-    ) {
-        // --- Appearance Section ---
-        item {
-            SectionHeader("Appearance & Theme")
-            ThemeSettingsSection(settings.theme, viewModel)
+    Row(modifier = Modifier.fillMaxSize()) {
+        // --- Navigation Rail ---
+        NavigationRail(
+            modifier = Modifier.fillMaxHeight(),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ) {
+            Spacer(Modifier.height(8.dp))
+            SettingsCategory.entries.forEach { category ->
+                NavigationRailItem(
+                    selected = selectedCategory == category,
+                    onClick = { selectedCategory = category },
+                    icon = { Icon(category.icon, contentDescription = category.title) },
+                    label = { Text(category.title) },
+                    alwaysShowLabel = true
+                )
+            }
         }
 
-        // --- Graph View Section ---
-        item {
-            SectionHeader("Graph View")
-            GraphSettingsSection(settings, viewModel)
-        }
-
-        // --- Data & Codex Section ---
-        item {
-            SectionHeader("Data & Codex")
-            DataSettingsSection(settings.data, viewModel)
-        }
-
-        // --- General Section ---
-        item {
-            SectionHeader("General")
-            GeneralSettingsSection(settings.general, viewModel)
-        }
-
-        // --- About Section ---
-        item {
-            SectionHeader("About")
-            AboutSection()
+        // --- Content Area ---
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            when (selectedCategory) {
+                SettingsCategory.APPEARANCE -> {
+                    item {
+                        SectionHeader("Appearance & Theme")
+                        ThemeSettingsSection(settings.theme, viewModel)
+                    }
+                }
+                SettingsCategory.GRAPH -> {
+                    item {
+                        SectionHeader("Graph View")
+                        GraphSettingsSection(settings, viewModel)
+                    }
+                }
+                SettingsCategory.DATA -> {
+                    item {
+                        SectionHeader("Data & Codex")
+                        DataSettingsSection(settings.data, viewModel)
+                    }
+                }
+                SettingsCategory.GENERAL -> {
+                    item {
+                        SectionHeader("General")
+                        GeneralSettingsSection(settings.general, viewModel)
+                    }
+                }
+                SettingsCategory.ABOUT -> {
+                    item {
+                        SectionHeader("About")
+                        AboutSection()
+                    }
+                }
+            }
         }
     }
+
+
 }
 
 @Composable
@@ -77,7 +103,7 @@ private fun ThemeSettingsSection(
     theme: ThemeSettings,
     viewModel: SettingsViewModel
 ) {
-    // --- UPDATED: Theme Mode Dropdown ---
+// --- UPDATED: Theme Mode Dropdown ---
     SettingDropdown(
         label = "Theme Mode",
         selected = theme.themeMode.name,
@@ -85,14 +111,14 @@ private fun ThemeSettingsSection(
         onSelected = { viewModel.onThemeModeChange(ThemeMode.valueOf(it)) }
     )
 
-    // --- ADDED: Single Accent Color Picker (always visible) ---
+// --- ADDED: Single Accent Color Picker (always visible) ---
     ColorSettingItem(
         label = "Accent Color",
         color = Color(theme.accentColor),
         onColorChange = { viewModel.onAccentColorChange(it) }
     )
 
-    // --- UPDATED: Conditional visibility for Custom Background ---
+// --- UPDATED: Conditional visibility for Custom Background ---
     AnimatedVisibility(visible = theme.themeMode == ThemeMode.CUSTOM) {
         Column(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp)
@@ -109,7 +135,7 @@ private fun ThemeSettingsSection(
         }
     }
 
-    // --- ADDED: Simplified Reset Button ---
+// --- ADDED: Simplified Reset Button ---
     Spacer(Modifier.height(16.dp))
     Button(
         onClick = viewModel::onResetTheme,
@@ -117,6 +143,8 @@ private fun ThemeSettingsSection(
     ) {
         Text("Reset Theme to Defaults")
     }
+
+
 }
 
 // --- Graph View Section ---
@@ -145,6 +173,8 @@ private fun GraphSettingsSection(
         1 -> GraphRenderingSubSection(settings.graphRendering, viewModel)
         2 -> GraphInteractionSubSection(settings.graphInteraction, viewModel)
     }
+
+
 }
 
 @Composable
@@ -152,7 +182,7 @@ private fun GraphPhysicsSubSection(
     physics: GraphPhysicsSettings,
     viewModel: SettingsViewModel
 ) {
-    // Recommended Defaults Text
+// Recommended Defaults Text
     InfoCard(
         "Recommended Defaults: Gravity: 0.5, Repulsion: 2000, Spring: 0.1, Damping: 0.9, Barnes-Hut: 1.2, Tolerance: 1.0"
     )
@@ -201,6 +231,8 @@ private fun GraphPhysicsSubSection(
     ) {
         Text("Reset Physics to Defaults")
     }
+
+
 }
 
 @Composable
@@ -283,7 +315,9 @@ private fun DataSettingsSection(
         checked = data.autoLoadLastCodex,
         onCheckedChange = viewModel::onAutoLoadLastCodexChange
     )
-    // Add other data settings here
+// Add other data settings here
+
+
 }
 
 // --- General Section ---
@@ -327,18 +361,17 @@ private fun GeneralSettingsSection(
 private fun AboutSection() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Nexus Note Version 1.0.0", style = MaterialTheme.typography.bodyLarge)
-        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
-            Text("Check for Updates")
-        }
-        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
-            Text("View Licenses")
-        }
-        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { /* TODO / }, modifier = Modifier.fillMaxWidth()) {
+Text("Check for Updates")
+}
+Button(onClick = { / TODO / }, modifier = Modifier.fillMaxWidth()) {
+Text("View Licenses")
+}
+Button(onClick = { / TODO */ }, modifier = Modifier.fillMaxWidth()) {
             Text("View README")
         }
     }
 }
-
 
 // --- Reusable Setting Composables ---
 
@@ -433,11 +466,15 @@ private fun SettingDropdown(
             }
         }
     }
+
+
 }
 
 /**
- * A compact, two-row widget for editing a color.
- * Includes label, color preview, hex input, and RGB sliders.
+
+A compact, two-row widget for editing a color.
+
+Includes label, color preview, hex input, and RGB sliders.
  */
 @OptIn(ExperimentalStdlibApi::class)
 @Composable
@@ -455,7 +492,7 @@ private fun ColorSettingItem(
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.small)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // Top row: Label, Preview, Hex
+// Top row: Label, Preview, Hex
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -509,9 +546,10 @@ private fun ColorSettingItem(
                 colors = SliderDefaults.colors(thumbColor = Color.Blue, activeTrackColor = Color.Blue)
             )
         }
+
+
     }
 }
-
 
 @Composable
 private fun InfoCard(text: String) {

@@ -4,35 +4,35 @@ import com.tau.nexus_note.datamodels.ConnectionPair;
 import kotlin.collections.List;
 
 CREATE TABLE SchemaDefinition (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
-    name TEXT NOT NULL UNIQUE,
-    properties_json TEXT AS List<SchemaProperty> NOT NULL,
-    connections_json TEXT AS List<ConnectionPair>
+id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+type TEXT NOT NULL CHECK (type IN ('NODE', 'EDGE')),
+name TEXT NOT NULL UNIQUE,
+properties_json TEXT AS List<SchemaProperty> NOT NULL,
+connections_json TEXT AS List<ConnectionPair>
 );
 
 CREATE TABLE Node (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    schema_id INTEGER NOT NULL,
-    display_label TEXT NOT NULL,
-    properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
-    -- ADDED: ON DELETE CASCADE
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
+id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+schema_id INTEGER NOT NULL,
+display_label TEXT NOT NULL,
+properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
+-- ADDED: ON DELETE CASCADE
+FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE
 );
 
 CREATE TABLE Edge (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    schema_id INTEGER NOT NULL,
-    from_node_id INTEGER NOT NULL,
-    to_node_id INTEGER NOT NULL,
-    properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
-    -- ON DELETE CASCADE
-    FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
-    FOREIGN KEY(from_node_id) REFERENCES Node(id) ON DELETE CASCADE,
-    FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE
+id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+schema_id INTEGER NOT NULL,
+from_node_id INTEGER NOT NULL,
+to_node_id INTEGER NOT NULL,
+properties_json TEXT AS kotlin.collections.Map<kotlin.String, kotlin.String> NOT NULL,
+-- ON DELETE CASCADE
+FOREIGN KEY(schema_id) REFERENCES SchemaDefinition(id) ON DELETE CASCADE,
+FOREIGN KEY(from_node_id) REFERENCES Node(id) ON DELETE CASCADE,
+FOREIGN KEY(to_node_id) REFERENCES Node(id) ON DELETE CASCADE
 );
 
--- --- SchemaDefinition Queries ---
+--- SchemaDefinition Queries ---
 
 selectAllSchemas:
 SELECT * FROM SchemaDefinition;
@@ -52,7 +52,7 @@ WHERE id = ?;
 deleteSchemaById:
 DELETE FROM SchemaDefinition WHERE id = ?;
 
--- --- Node Queries ---
+--- Node Queries ---
 
 selectAllNodes:
 SELECT * FROM Node;
@@ -60,7 +60,7 @@ SELECT * FROM Node;
 selectNodeById:
 SELECT * FROM Node WHERE id = ?;
 
--- ADDED: Query to count nodes for a schema
+--- Query to count nodes for a schema
 countNodesForSchema:
 SELECT COUNT(*) FROM Node WHERE schema_id = ?;
 
@@ -76,7 +76,14 @@ WHERE id = ?;
 deleteNodeById:
 DELETE FROM Node WHERE id = ?;
 
--- --- Edge Queries ---
+getNodesPaginated:
+SELECT * FROM Node LIMIT ? OFFSET ?;
+
+countAllNodes:
+SELECT COUNT(*) FROM Node;
+
+
+--- Edge Queries ---
 
 selectAllEdges:
 SELECT * FROM Edge;
@@ -84,7 +91,7 @@ SELECT * FROM Edge;
 selectEdgeById:
 SELECT * FROM Edge WHERE id = ?;
 
--- ADDED: Query to count edges for a schema
+-- Query to count edges for a schema
 countEdgesForSchema:
 SELECT COUNT(*) FROM Edge WHERE schema_id = ?;
 
@@ -99,3 +106,9 @@ WHERE id = ?;
 
 deleteEdgeById:
 DELETE FROM Edge WHERE id = ?;
+
+getEdgesPaginated:
+SELECT * FROM Edge LIMIT ? OFFSET ?;
+
+countAllEdges:
+SELECT COUNT(*) FROM Edge;

@@ -20,12 +20,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
 /**
- * Centralizes all database logic and state for an open Codex.
- * This class owns the database connection and the primary data flows.
- * ViewModels will observe these flows and call methods on this repository
- * to perform actions.
+
+Centralizes all database logic and state for an open Codex.
+
+This class owns the database connection and the primary data flows.
+
+ViewModels will observe these flows and call methods on this repository
+
+to perform actions.
  */
 class CodexRepository(
     private val dbService: SqliteDbService,
@@ -33,7 +36,7 @@ class CodexRepository(
 ) {
 
     // --- Central State Flows ---
-
+// These flows hold the entire dataset, primarily for the graph visualization.
     private val _schema = MutableStateFlow<SchemaData?>(null)
     val schema = _schema.asStateFlow()
 
@@ -47,34 +50,37 @@ class CodexRepository(
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow = _errorFlow.asStateFlow()
 
-
-
-    // --- Public API ---
+// --- Public API ---
 
     fun clearError() {
         _errorFlow.value = null
     }
 
     /**
-     * (FIXED)
-     * Launches a single coroutine that refreshes schema, then nodes, then edges
-     * in the correct sequential order.
+
+    (FIXED)
+
+    Launches a single coroutine that refreshes schema, then nodes, then edges
+
+    in the correct sequential order.
      */
     fun refreshAll() {
         repositoryScope.launch {
-            // Now these calls will suspend and execute in order
+// Now these calls will suspend and execute in order
             refreshSchema()
-            refreshNodes()
-            refreshEdges()
+            refreshNodes() // Loads all nodes for the graph
+            refreshEdges() // Loads all edges for the graph
         }
     }
 
     /**
-     * (FIXED) This is now a suspend function and executes directly.
-     * It MUST be called from a coroutine.
+
+    (FIXED) This is now a suspend function and executes directly.
+
+    It MUST be called from a coroutine.
      */
     fun refreshSchema() {
-        // No more `repositoryScope.launch`
+// No more repositoryScope.launch
         try {
             val dbSchemas = dbService.database.appDatabaseQueries.selectAllSchemas().executeAsList()
             val nodeSchemas = mutableListOf<SchemaDefinitionItem>()
@@ -95,6 +101,8 @@ class CodexRepository(
                 }
             }
             _schema.value = SchemaData(nodeSchemas, edgeSchemas)
+
+
         } catch (e: Exception) {
             _errorFlow.value = "Error refreshing schema: ${e.message}"
             _schema.value = SchemaData(emptyList(), emptyList())
@@ -102,12 +110,13 @@ class CodexRepository(
     }
 
     /**
-     * It assumes `refreshSchema()` has already completed.
+
+    It assumes refreshSchema() has already completed.
+
+    This loads all nodes into the stateflow for the graph.
      */
     fun refreshNodes() {
-        // No more `repositoryScope.launch`
-
-        // (FIXED) Removed defensive check. We now assume _schema.value is populated.
+// (FIXED) Removed defensive check. We now assume _schema.value is populated.
         val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
 
         if (_schema.value == null) {
@@ -134,12 +143,13 @@ class CodexRepository(
     }
 
     /**
-     * It assumes `refreshSchema()` and `refreshNodes()` have already completed.
+
+    It assumes refreshSchema() and refreshNodes() have already completed.
+
+    This loads all edges into the stateflow for the graph.
      */
     fun refreshEdges() {
-        // No more `repositoryScope.launch`
-
-        // (FIXED) Removed defensive checks.
+// (FIXED) Removed defensive checks.
         val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
         val nodeMap = _nodeList.value.associateBy { it.id }
 
@@ -163,13 +173,87 @@ class CodexRepository(
                     EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode, schema.id)
                 }
             }
+
+
         } catch (e: Exception) {
             _errorFlow.value = "Error refreshing edges: ${e.message}"
             _edgeList.value = emptyList()
         }
     }
 
-    // --- Schema CRUD ---
+// --- NEW: Pagination-specific functions for ListView ---
+
+    /**
+
+    Fetches a single page of nodes for the list view.
+
+    This is a suspend function and does not update the main state flow.
+     */
+    suspend fun getNodesPaginated(offset: Long, limit: Long): List<NodeDisplayItem> {
+        val schemaMap = _schema.value?.nodeSchemas?.associateBy { it.id } ?: emptyMap()
+        if (_schema.value == null) {
+            _errorFlow.value = "Error refreshing nodes: Schema was not loaded first."
+            return emptyList()
+        }
+
+        return try {
+            val dbNodes = dbService.database.appDatabaseQueries.getNodesPaginated(limit, offset).executeAsList()
+            dbNodes.mapNotNull { dbNode ->
+                val nodeSchema = schemaMap[dbNode.schema_id]
+                if (nodeSchema == null) {
+                    println("Warning: Found node with unknown schema ID ${dbNode.schema_id}")
+                    null
+                } else {
+                    NodeDisplayItem(dbNode.id, nodeSchema.name, dbNode.display_label, nodeSchema.id)
+                }
+            }
+        } catch (e: Exception) {
+            _errorFlow.value = "Error fetching paginated nodes: ${e.message}"
+            emptyList()
+        }
+    }
+
+    /**
+
+    Fetches a single page of edges for the list view.
+
+    This is a suspend function and does not update the main state flow.
+     */
+    suspend fun getEdgesPaginated(offset: Long, limit: Long): List<EdgeDisplayItem> {
+        val schemaMap = _schema.value?.edgeSchemas?.associateBy { it.id } ?: emptyMap()
+// We must use the full node list to correctly link src/dst
+        val nodeMap = _nodeList.value.associateBy { it.id }
+
+        if (_schema.value == null) {
+            _errorFlow.value = "Error refreshing edges: Schema was not loaded first."
+            return emptyList()
+        }
+
+        return try {
+            val dbEdges = dbService.database.appDatabaseQueries.getEdgesPaginated(limit, offset).executeAsList()
+            dbEdges.mapNotNull { dbEdge ->
+                val schema = schemaMap[dbEdge.schema_id]
+                val srcNode = nodeMap[dbEdge.from_node_id]
+                val dstNode = nodeMap[dbEdge.to_node_id]
+
+                if (schema == null || srcNode == null || dstNode == null) {
+                    println("Warning: Skipping edge ${dbEdge.id} due to missing schema or node link.")
+                    null
+                } else {
+                    EdgeDisplayItem(dbEdge.id, schema.name, srcNode, dstNode, schema.id)
+                }
+            }
+
+
+        } catch (e: Exception) {
+            _errorFlow.value = "Error fetching paginated edges: ${e.message}"
+            emptyList()
+        }
+    }
+
+// --- END: Pagination-specific functions ---
+
+// --- Schema CRUD ---
 
     fun getSchemaDependencyCount(schemaId: Long): Long {
         return try {
@@ -258,9 +342,11 @@ class CodexRepository(
                 _errorFlow.value = "Error updating edge schema: ${e.message}"
             }
         }
+
+
     }
 
-    // --- Node CRUD ---
+// --- Node CRUD ---
 
     fun createNode(state: NodeCreationState) {
         repositoryScope.launch {
@@ -274,14 +360,17 @@ class CodexRepository(
                     display_label = displayLabel,
                     properties_json = state.properties
                 )
-                refreshNodes()
+                refreshNodes() // Refresh the full node list
+                // The paginated list will be refreshed by the user (or by a pull-to-refresh)
             } catch (e: Exception) {
                 _errorFlow.value = "Error creating node: ${e.message}"
             }
         }
+
+
     }
 
-     fun getNodeEditState(itemId: Long): NodeEditState? {
+    fun getNodeEditState(itemId: Long): NodeEditState? {
         val dbNode = dbService.database.appDatabaseQueries.selectNodeById(itemId).executeAsOneOrNull() ?: return null
         val schema = _schema.value?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
         val properties = dbNode.properties_json
@@ -306,7 +395,7 @@ class CodexRepository(
                     displayProperty = displayLabel,
                     schemaId = state.schema.id
                 )
-                // Perform in-memory update of the flow
+                // Perform in-memory update of the full node flow
                 _nodeList.update { currentList ->
                     currentList.map { node ->
                         if (node.id == updatedItem.id) {
@@ -316,35 +405,44 @@ class CodexRepository(
                         }
                     }
                 }
+                // Note: The paginated list will be updated on its next refresh
             } catch (e: Exception) {
                 _errorFlow.value = "Error updating node: ${e.message}"
             }
         }
+
+
     }
 
     /**
-     * Deletes a node and its cascading edges.
-     * This implementation is optimized to perform an in-memory update
-     * for the node list and only re-query the edge list.
+
+    Deletes a node and its cascading edges.
+
+    This implementation is optimized to perform an in-memory update
+
+    for the node list and only re-query the edge list.
      */
     fun deleteNode(itemId: Long) {
         repositoryScope.launch {
             try {
-                // 1. Delete node from DB (this will cascade delete edges)
+// 1. Delete node from DB (this will cascade delete edges)
                 dbService.database.appDatabaseQueries.deleteNodeById(itemId)
 
-                // 2. Update node from list in-memory
+                // 2. Update full node list from in-memory
                 _nodeList.update { it.filterNot { node -> node.id == itemId } }
 
                 // 3. Refresh only edges, which were affected by the cascade
                 refreshEdges()
+                // Note: The paginated list will be updated on its next refresh
             } catch (e: Exception) {
                 _errorFlow.value = "Error deleting node: ${e.message}"
             }
+
+
         }
     }
 
-    // --- Edge CRUD ---
+// --- Edge CRUD ---
 
     fun createEdge(state: EdgeCreationState) {
         repositoryScope.launch {
@@ -356,7 +454,8 @@ class CodexRepository(
                     to_node_id = state.dst.id,
                     properties_json = state.properties
                 )
-                refreshEdges()
+                refreshEdges() // Refresh the full edge list
+// The paginated list will be refreshed by the user
             } catch (e: Exception) {
                 _errorFlow.value = "Error creating edge: ${e.message}"
             }
@@ -378,29 +477,38 @@ class CodexRepository(
                     id = state.id,
                     properties_json = state.properties
                 )
+                // Note: The paginated list will be updated on its next refresh
             } catch (e: Exception) {
                 _errorFlow.value = "Error updating edge: ${e.message}"
             }
         }
+
+
     }
 
     /**
-     * Deletes an edge.
-     * This implementation is optimized to perform an in-memory update
-     * and avoid any subsequent database reads.
+
+    Deletes an edge.
+
+    This implementation is optimized to perform an in-memory update
+
+    and avoid any subsequent database reads.
      */
     fun deleteEdge(itemId: Long) {
         repositoryScope.launch {
             try {
-                // 1. Delete edge from DB
+// 1. Delete edge from DB
                 dbService.database.appDatabaseQueries.deleteEdgeById(itemId)
 
-                // 2. Update edge list in-memory.
+                // 2. Update full edge list in-memory.
                 _edgeList.update { it.filterNot { edge -> edge.id == itemId } }
+                // Note: The paginated list will be updated on its next refresh
 
             } catch (e: Exception) {
                 _errorFlow.value = "Error deleting edge: ${e.message}"
             }
+
+
         }
     }
 }

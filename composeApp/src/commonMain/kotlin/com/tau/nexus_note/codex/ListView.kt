@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -14,6 +15,11 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -26,8 +32,13 @@ import com.tau.nexus_note.utils.labelToColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListView(
-    nodes: List<NodeDisplayItem>,
-    edges: List<EdgeDisplayItem>,
+// MODIFIED: Use paginated lists
+    paginatedNodes: List<NodeDisplayItem>,
+    paginatedEdges: List<EdgeDisplayItem>,
+// NEW: Handlers for pagination
+    onLoadMoreNodes: () -> Unit,
+    onLoadMoreEdges: () -> Unit,
+// --- Unchanged props ---
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
@@ -47,7 +58,53 @@ fun ListView(
     edgeVisibility: Map<Long, Boolean>,
     onToggleEdgeVisibility: (Long) -> Unit
 ) {
-    // User requested "side by side lists"
+// --- NEW: List states for pagination ---
+    val nodeLazyListState = rememberLazyListState()
+    val edgeLazyListState = rememberLazyListState()
+
+// Derived state to check if we're at the end of the list
+    val isAtNodeListEnd by remember {
+        derivedStateOf {
+            val layoutInfo = nodeLazyListState.layoutInfo
+            val visibleItemsInfo = layoutInfo.visibleItemsInfo
+            if (layoutInfo.totalItemsCount == 0) {
+                false
+            } else {
+                val lastVisibleItem = visibleItemsInfo.lastOrNull()
+                lastVisibleItem != null && lastVisibleItem.index + 1 == layoutInfo.totalItemsCount
+            }
+        }
+    }
+
+    val isAtEdgeListEnd by remember {
+        derivedStateOf {
+            val layoutInfo = edgeLazyListState.layoutInfo
+            val visibleItemsInfo = layoutInfo.visibleItemsInfo
+            if (layoutInfo.totalItemsCount == 0) {
+                false
+            } else {
+                val lastVisibleItem = visibleItemsInfo.lastOrNull()
+                lastVisibleItem != null && lastVisibleItem.index + 1 == layoutInfo.totalItemsCount
+            }
+        }
+    }
+
+// Effect to load more when end is reached
+    LaunchedEffect(isAtNodeListEnd) {
+        if (isAtNodeListEnd) {
+            onLoadMoreNodes()
+        }
+    }
+
+    LaunchedEffect(isAtEdgeListEnd) {
+        if (isAtEdgeListEnd) {
+            onLoadMoreEdges()
+        }
+    }
+// --- END NEW PAGINATION LOGIC ---
+
+
+// User requested "side by side lists"
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Nodes List ---
         Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
@@ -59,12 +116,9 @@ fun ListView(
                 addContentDescription = "New Node",
                 leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
             )
-            // --- UPDATED ---
-            // Replaced Color.Black with the theme's semantic 'outline' color
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            // --- END UPDATE ---
-            LazyColumn {
-                val filteredNodes = nodes.filter {
+            LazyColumn(state = nodeLazyListState) { // <-- NEW: Added state
+                val filteredNodes = paginatedNodes.filter { // <-- MODIFIED: Use paginatedNodes
                     it.label.contains(nodeSearchText, ignoreCase = true) ||
                             it.displayProperty.contains(nodeSearchText, ignoreCase = true)
                 }
@@ -85,13 +139,10 @@ fun ListView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onNodeClick(node); println("${node.label} clicked!") }
-                            // --- UPDATED ---
-                            // Using outline color for the default border
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
-                            // --- END UPDATE ---
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row{
@@ -124,21 +175,15 @@ fun ListView(
                 addContentDescription = "New Edge",
                 leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
             )
-            // --- UPDATED ---
-            // Replaced Color.Black with the theme's semantic 'outline' color
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            // --- END UPDATE ---
-            LazyColumn {
-                // --- UPDATED: Filter the list ---
-                val filteredEdges = edges.filter {
+            LazyColumn(state = edgeLazyListState) { // <-- NEW: Added state
+                val filteredEdges = paginatedEdges.filter { // <-- MODIFIED: Use paginatedEdges
                     it.label.contains(edgeSearchText, ignoreCase = true) ||
                             it.src.displayProperty.contains(edgeSearchText, ignoreCase = true) ||
                             it.dst.displayProperty.contains(edgeSearchText, ignoreCase = true)
                 }
                 items(filteredEdges, key = { it.id }) { edge ->
-                    // An edge is "selected" if its src and dst nodes are the selected items
                     val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
-                    // Get color based on the *edge* label
                     val colorInfo = labelToColor(edge.label)
 
                     ListItem(
@@ -146,9 +191,7 @@ fun ListView(
                             Text(
                                 "Src: (${edge.src.label} : ${edge.src.displayProperty})",
                                 style= MaterialTheme.typography.bodySmall,
-                                // --- UPDATED ---
                                 color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
-                                // --- END UPDATE ---
                             )
                             Text(
                                 "[${edge.label}]",
@@ -159,9 +202,7 @@ fun ListView(
                             Text(
                                 "Dst: (${edge.dst.label} : ${edge.dst.displayProperty})",
                                 style= MaterialTheme.typography.bodySmall,
-                                // --- UPDATED ---
                                 color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
-                                // --- END UPDATE ---
                             )
                         }},
                         leadingContent = {
@@ -176,13 +217,10 @@ fun ListView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onEdgeClick(edge) }
-                            // --- UPDATED ---
-                            // Using outline color for the default border
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
-                            // --- END UPDATE ---
                             .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row {
@@ -195,7 +233,6 @@ fun ListView(
                             }
                         },
                         colors = ListItemDefaults.colors(
-                            // Apply colors based on edge label
                             containerColor = colorInfo.composeColor,
                             headlineColor = colorInfo.composeFontColor,
                             leadingIconColor = colorInfo.composeFontColor,
@@ -206,4 +243,6 @@ fun ListView(
             }
         }
     }
+
+
 }

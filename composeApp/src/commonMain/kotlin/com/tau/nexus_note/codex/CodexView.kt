@@ -20,12 +20,18 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun CodexView(viewModel: CodexViewModel) {
-    // Observe state from repository via the ViewModels
+// Observe state from repository via the ViewModels
     val schema by viewModel.schemaViewModel.schema.collectAsState()
+// Graph data (full list)
     val nodes by viewModel.metadataViewModel.nodeList.collectAsState()
     val edges by viewModel.metadataViewModel.edgeList.collectAsState()
 
-    // Observe UI state from ViewModels
+// NEW: Paginated data for ListView
+    val paginatedNodes by viewModel.metadataViewModel.paginatedNodes.collectAsState()
+    val paginatedEdges by viewModel.metadataViewModel.paginatedEdges.collectAsState()
+
+
+// Observe UI state from ViewModels
     val itemToEdit by viewModel.metadataViewModel.itemToEdit.collectAsState()
     val primarySelectedItem by viewModel.metadataViewModel.primarySelectedItem.collectAsState()
     val secondarySelectedItem by viewModel.metadataViewModel.secondarySelectedItem.collectAsState()
@@ -55,7 +61,7 @@ fun CodexView(viewModel: CodexViewModel) {
         }
     }
 
-    // --- LaunchedEffect to control graph simulation ---
+// --- LaunchedEffect to control graph simulation ---
     LaunchedEffect(selectedViewTab, graphViewModel) {
 
         if (selectedViewTab == ViewTabs.GRAPH) {
@@ -68,6 +74,8 @@ fun CodexView(viewModel: CodexViewModel) {
 
     val onSave: () -> Unit = {
         viewModel.editCreateViewModel.saveCurrentState()
+        // After save, refresh paginated lists
+        viewModel.metadataViewModel.refreshPaginatedLists()
     }
 
     val onCancel: () -> Unit = {
@@ -96,8 +104,12 @@ fun CodexView(viewModel: CodexViewModel) {
                 when (selectedViewTab) {
                     ViewTabs.LIST -> {
                         ListView(
-                            nodes = nodes,
-                            edges = edges,
+                            // MODIFIED: Pass paginated lists and handlers
+                            paginatedNodes = paginatedNodes,
+                            paginatedEdges = paginatedEdges,
+                            onLoadMoreNodes = viewModel.metadataViewModel::loadMoreNodes,
+                            onLoadMoreEdges = viewModel.metadataViewModel::loadMoreEdges,
+                            // --- Unchanged props ---
                             primarySelectedItem = primarySelectedItem,
                             secondarySelectedItem = secondarySelectedItem,
                             onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
@@ -198,8 +210,10 @@ fun CodexView(viewModel: CodexViewModel) {
 
                 when (selectedDataTab) {
                     DataViewTabs.METADATA -> MetadataView(
-                        nodes = nodes,
-                        edges = edges,
+                        // MODIFIED: Pass paginated lists
+                        nodes = paginatedNodes,
+                        edges = paginatedEdges,
+                        // --- Unchanged props ---
                         primarySelectedItem = primarySelectedItem,
                         secondarySelectedItem = secondarySelectedItem,
                         onNodeClick = { viewModel.metadataViewModel.selectItem(it) },
@@ -320,4 +334,6 @@ fun CodexView(viewModel: CodexViewModel) {
             }
         }
     }
+
+
 }
