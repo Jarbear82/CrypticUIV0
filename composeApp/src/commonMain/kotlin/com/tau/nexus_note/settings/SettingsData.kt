@@ -1,31 +1,25 @@
 package com.tau.nexus_note.settings
 
-import androidx.compose.ui.graphics.Color
 import com.tau.nexus_note.codex.graph.physics.PhysicsOptions
 import kotlinx.serialization.Serializable
 
 /**
- * Enumeration for the three possible theme modes.
+ * Enumeration for the possible theme modes.
  */
 @Serializable
 enum class ThemeMode {
-    LIGHT, DARK, SYSTEM
+    LIGHT, DARK, SYSTEM, CUSTOM
 }
 
 /**
  * Holds all settings related to a custom color theme.
- * Colors are stored as hex strings for serialization.
+ * All colors are stored as Longs (ARGB). "On" colors are derived automatically.
  */
 @Serializable
 data class ThemeSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val useDynamicColors: Boolean = false, // For Android 12+
-    val useCustomTheme: Boolean = false,
-
-    val primarySeedValue: Long = 0xFF6750A4L,     // M3 Primary
-    val secondarySeedValue: Long = 0xFF625B71L,   // M3 Secondary
-    val tertiarySeedValue: Long = 0xFF7D5260L,    // M3 Tertiary
-    val errorSeedValue: Long = 0xFFB3261EL       // M3 Error
+    val accentColor: Long = 0xFF33C3FF, // A nice default blue accent
+    val customBackgroundColor: Long = 0xFF121212 // Default custom background (dark)
 ) {
     companion object {
         val Default = ThemeSettings()

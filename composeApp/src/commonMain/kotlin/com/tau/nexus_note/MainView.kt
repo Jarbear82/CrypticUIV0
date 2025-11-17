@@ -84,7 +84,9 @@ fun MainView(mainViewModel: MainViewModel) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "Menu",
@@ -137,6 +139,7 @@ fun MainView(mainViewModel: MainViewModel) {
     ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.surface,
             topBar = {
                 TopAppBar(
                     title = {

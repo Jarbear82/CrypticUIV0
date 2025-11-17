@@ -31,45 +31,25 @@ class SettingsViewModel(
         onUpdateSettings(newSettings)
     }
 
-    fun onUseCustomThemeChange(use: Boolean) {
-        val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(useCustomTheme = use)
-        )
-        onUpdateSettings(newSettings)
-    }
-
-    fun onPrimarySeedColorChange(color: Color) {
-        val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(primarySeedValue = color.toArgb().toLong())
-        )
-        onUpdateSettings(newSettings)
-    }
-
-    fun onSecondarySeedColorChange(color: Color) {
-        val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(secondarySeedValue = color.toArgb().toLong())
-        )
-        onUpdateSettings(newSettings)
-    }
-
-    fun onTertiarySeedColorChange(color: Color) {
-        val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(tertiarySeedValue = color.toArgb().toLong())
-        )
-        onUpdateSettings(newSettings)
-    }
-
-    fun onErrorSeedColorChange(color: Color) {
-        val newSettings = settingsFlow.value.copy(
-            theme = settingsFlow.value.theme.copy(errorSeedValue = color.toArgb().toLong())
-        )
-        onUpdateSettings(newSettings)
-    }
-
     fun onResetTheme() {
-        // This still works, as it resets to ThemeSettings.Default,
-        // which now contains the default seed colors.
+        // Now just resets to the simple default
         val newSettings = settingsFlow.value.copy(theme = ThemeSettings.Default)
+        onUpdateSettings(newSettings)
+    }
+
+    // --- ADDED: New simplified color handlers ---
+
+    fun onAccentColorChange(color: Color) {
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(accentColor = color.toArgb().toLong())
+        )
+        onUpdateSettings(newSettings)
+    }
+
+    fun onCustomBackgroundColorChange(color: Color) {
+        val newSettings = settingsFlow.value.copy(
+            theme = settingsFlow.value.theme.copy(customBackgroundColor = color.toArgb().toLong())
+        )
         onUpdateSettings(newSettings)
     }
 

@@ -171,7 +171,7 @@ fun CodexView(viewModel: CodexViewModel) {
                 modifier = Modifier
                     .width(400.dp)
                     .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
 

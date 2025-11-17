@@ -14,9 +14,11 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -60,7 +62,17 @@ fun SearchableListHeader(
                             placeholder = { Text("Search...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
                         )
                     }
                 } else {
@@ -79,7 +91,17 @@ fun SearchableListHeader(
                             placeholder = { Text("Search...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                             singleLine = true,
-                            modifier = Modifier.weight(2f) // Search takes 2/3
+                            modifier = Modifier.weight(2f), // Search takes 2/3
+                            colors = TextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
                         )
                     }
                 }

@@ -148,7 +148,7 @@ fun GraphView(
     ) {
         val edgeLabelStyle = TextStyle(
             fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant // Muted color
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {

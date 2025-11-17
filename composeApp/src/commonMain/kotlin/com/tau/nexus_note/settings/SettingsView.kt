@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
@@ -14,9 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.utils.hexToColor
 import kotlin.math.roundToInt
@@ -80,6 +77,7 @@ private fun ThemeSettingsSection(
     theme: ThemeSettings,
     viewModel: SettingsViewModel
 ) {
+    // --- UPDATED: Theme Mode Dropdown ---
     SettingDropdown(
         label = "Theme Mode",
         selected = theme.themeMode.name,
@@ -87,47 +85,37 @@ private fun ThemeSettingsSection(
         onSelected = { viewModel.onThemeModeChange(ThemeMode.valueOf(it)) }
     )
 
-    SettingToggle(
-        label = "Use Custom Theme",
-        checked = theme.useCustomTheme,
-        onCheckedChange = viewModel::onUseCustomThemeChange
+    // --- ADDED: Single Accent Color Picker (always visible) ---
+    ColorSettingItem(
+        label = "Accent Color",
+        color = Color(theme.accentColor),
+        onColorChange = { viewModel.onAccentColorChange(it) }
     )
 
-    AnimatedVisibility(visible = theme.useCustomTheme) {
+    // --- UPDATED: Conditional visibility for Custom Background ---
+    AnimatedVisibility(visible = theme.themeMode == ThemeMode.CUSTOM) {
         Column(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Text("Custom Background", style = MaterialTheme.typography.titleMedium)
             ColorSettingItem(
-                label = "Primary Seed",
-                color = Color(theme.primarySeedValue.toInt()),
-                onColorChange = viewModel::onPrimarySeedColorChange
+                label = "Background",
+                color = Color(theme.customBackgroundColor),
+                onColorChange = { viewModel.onCustomBackgroundColorChange(it) }
             )
-            ColorSettingItem(
-                label = "Secondary Seed",
-                color = Color(theme.secondarySeedValue.toInt()),
-                onColorChange = viewModel::onSecondarySeedColorChange
-            )
-            ColorSettingItem(
-                label = "Tertiary Seed",
-                color = Color(theme.tertiarySeedValue.toInt()),
-                onColorChange = viewModel::onTertiarySeedColorChange
-            )
-            ColorSettingItem(
-                label = "Error Seed",
-                color = Color(theme.errorSeedValue.toInt()),
-                onColorChange = viewModel::onErrorSeedColorChange
-            )
-
-            Button(
-                onClick = viewModel::onResetTheme,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Reset Custom Theme")
-            }
         }
+    }
+
+    // --- ADDED: Simplified Reset Button ---
+    Spacer(Modifier.height(16.dp))
+    Button(
+        onClick = viewModel::onResetTheme,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Reset Theme to Defaults")
     }
 }
 
@@ -447,15 +435,17 @@ private fun SettingDropdown(
     }
 }
 
-@OptIn(ExperimentalStdlibApi::class) // Needed for .toHexString()
+/**
+ * A compact, two-row widget for editing a color.
+ * Includes label, color preview, hex input, and RGB sliders.
+ */
+@OptIn(ExperimentalStdlibApi::class)
 @Composable
 private fun ColorSettingItem(
     label: String,
     color: Color,
     onColorChange: (Color) -> Unit
 ) {
-    // Derive the hex string from the Color object for display
-    // This removes the alpha channel (e.g., FF) for a cleaner 6-digit hex
     val hex = "#" + color.toArgb().toHexString(HexFormat.UpperCase).substring(2)
 
     Column(
@@ -463,96 +453,62 @@ private fun ColorSettingItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.small)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // --- This is the original Row, it still works ---
+        // Top row: Label, Preview, Hex
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-
-            Row(
-                modifier = Modifier.weight(2f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier.size(24.dp)
-                        .background(color) // Use the Color object directly
-                        .border(1.dp, MaterialTheme.colorScheme.onSurface)
-                )
-                Spacer(Modifier.width(8.dp))
-                OutlinedTextField(
-                    value = hex, // Display the derived hex
-                    onValueChange = {
-                        // When text changes, convert it back to a Color
-                        onColorChange(hexToColor(it))
-                    },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-            }
+            Text(label, modifier = Modifier.width(100.dp))
+            Box(
+                modifier = Modifier.size(24.dp)
+                    .background(color)
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface)
+            )
+            OutlinedTextField(
+                value = hex,
+                onValueChange = { onColorChange(hexToColor(it)) },
+                modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.bodyMedium,
+                singleLine = true,
+            )
         }
 
-        // --- NEW: RGB Sliders ---
         Spacer(Modifier.height(8.dp))
 
-        // Red Slider
-        ColorSlider(
-            label = "R",
-            value = color.red,
-            onValueChange = { onColorChange(color.copy(red = it)) },
-            color = Color.Red
-        )
-        // Green Slider
-        ColorSlider(
-            label = "G",
-            value = color.green,
-            onValueChange = { onColorChange(color.copy(green = it)) },
-            color = Color.Green
-        )
-        // Blue Slider
-        ColorSlider(
-            label = "B",
-            value = color.blue,
-            onValueChange = { onColorChange(color.copy(blue = it)) },
-            color = Color.Blue
-        )
-    }
-}
-
-/**
- * A helper composable for the color sliders.
- * Add this new function to the bottom of SettingsView.kt.
- */
-@Composable
-private fun ColorSlider(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    color: Color
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = color, fontWeight = FontWeight.Bold)
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0f..1f,
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = color,
-                activeTrackColor = color,
-                inactiveTrackColor = color.copy(alpha = 0.2f)
+        // Bottom row: Sliders
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Red
+            Text("R", color = Color.Red, fontWeight = FontWeight.Bold)
+            Slider(
+                value = color.red,
+                onValueChange = { onColorChange(color.copy(red = it)) },
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = Color.Red, activeTrackColor = Color.Red)
             )
-        )
-        Text(
-            text = (value * 255).roundToInt().toString(),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(30.dp),
-            textAlign = TextAlign.End
-        )
+            // Green
+            Text("G", color = Color.Green, fontWeight = FontWeight.Bold)
+            Slider(
+                value = color.green,
+                onValueChange = { onColorChange(color.copy(green = it)) },
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = Color.Green, activeTrackColor = Color.Green)
+            )
+            // Blue
+            Text("B", color = Color.Blue, fontWeight = FontWeight.Bold)
+            Slider(
+                value = color.blue,
+                onValueChange = { onColorChange(color.copy(blue = it)) },
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = Color.Blue, activeTrackColor = Color.Blue)
+            )
+        }
     }
 }
 
