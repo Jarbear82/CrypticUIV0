@@ -112,7 +112,7 @@ private fun SettingSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     range: ClosedFloatingPointRange<Float>,
-    enabled: Boolean = true // --- ADDED ---
+    enabled: Boolean = true
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(

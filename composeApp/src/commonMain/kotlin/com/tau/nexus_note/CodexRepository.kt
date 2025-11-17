@@ -73,7 +73,7 @@ class CodexRepository(
      * (FIXED) This is now a suspend function and executes directly.
      * It MUST be called from a coroutine.
      */
-    suspend fun refreshSchema() {
+    fun refreshSchema() {
         // No more `repositoryScope.launch`
         try {
             val dbSchemas = dbService.database.appDatabaseQueries.selectAllSchemas().executeAsList()
@@ -102,10 +102,9 @@ class CodexRepository(
     }
 
     /**
-     * (FIXED) This is now a suspend function and executes directly.
      * It assumes `refreshSchema()` has already completed.
      */
-    suspend fun refreshNodes() {
+    fun refreshNodes() {
         // No more `repositoryScope.launch`
 
         // (FIXED) Removed defensive check. We now assume _schema.value is populated.
@@ -135,10 +134,9 @@ class CodexRepository(
     }
 
     /**
-     * (FIXED) This is now a suspend function and executes directly.
      * It assumes `refreshSchema()` and `refreshNodes()` have already completed.
      */
-    suspend fun refreshEdges() {
+    fun refreshEdges() {
         // No more `repositoryScope.launch`
 
         // (FIXED) Removed defensive checks.
@@ -173,7 +171,7 @@ class CodexRepository(
 
     // --- Schema CRUD ---
 
-    suspend fun getSchemaDependencyCount(schemaId: Long): Long {
+    fun getSchemaDependencyCount(schemaId: Long): Long {
         return try {
             val nodeCount = dbService.database.appDatabaseQueries.countNodesForSchema(schemaId).executeAsOne()
             val edgeCount = dbService.database.appDatabaseQueries.countEdgesForSchema(schemaId).executeAsOne()
@@ -283,7 +281,7 @@ class CodexRepository(
         }
     }
 
-    suspend fun getNodeEditState(itemId: Long): NodeEditState? {
+     fun getNodeEditState(itemId: Long): NodeEditState? {
         val dbNode = dbService.database.appDatabaseQueries.selectNodeById(itemId).executeAsOneOrNull() ?: return null
         val schema = _schema.value?.nodeSchemas?.firstOrNull { it.id == dbNode.schema_id } ?: return null
         val properties = dbNode.properties_json
@@ -301,7 +299,23 @@ class CodexRepository(
                     display_label = displayLabel,
                     properties_json = state.properties
                 )
-                refreshNodes()
+                // Create the updated display item
+                val updatedItem = NodeDisplayItem(
+                    id = state.id,
+                    label = state.schema.name,
+                    displayProperty = displayLabel,
+                    schemaId = state.schema.id
+                )
+                // Perform in-memory update of the flow
+                _nodeList.update { currentList ->
+                    currentList.map { node ->
+                        if (node.id == updatedItem.id) {
+                            updatedItem // Swap with the updated item
+                        } else {
+                            node // Keep the others
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _errorFlow.value = "Error updating node: ${e.message}"
             }
@@ -349,7 +363,7 @@ class CodexRepository(
         }
     }
 
-    suspend fun getEdgeEditState(item: EdgeDisplayItem): EdgeEditState? {
+    fun getEdgeEditState(item: EdgeDisplayItem): EdgeEditState? {
         val dbEdge = dbService.database.appDatabaseQueries.selectEdgeById(item.id).executeAsOneOrNull() ?: return null
         val schema = _schema.value?.edgeSchemas?.firstOrNull { it.id == dbEdge.schema_id } ?: return null
         val properties = dbEdge.properties_json
@@ -364,7 +378,6 @@ class CodexRepository(
                     id = state.id,
                     properties_json = state.properties
                 )
-                refreshEdges()
             } catch (e: Exception) {
                 _errorFlow.value = "Error updating edge: ${e.message}"
             }

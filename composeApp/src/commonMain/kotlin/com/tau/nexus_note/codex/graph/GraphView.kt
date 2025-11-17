@@ -279,7 +279,7 @@ fun GraphView(
         SmallFloatingActionButton(
             onClick = { viewModel.toggleSettings() },
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ) {
             Icon(Icons.Default.Settings, "Graph Settings")
         }

@@ -68,7 +68,7 @@ fun ListView(
                     it.label.contains(nodeSearchText, ignoreCase = true) ||
                             it.displayProperty.contains(nodeSearchText, ignoreCase = true)
                 }
-                items(filteredNodes) { node ->
+                items(filteredNodes, key = { it.id }) { node ->
                     val isSelected = primarySelectedItem == node || secondarySelectedItem == node
                     val colorInfo = labelToColor(node.label)
                     ListItem(
@@ -135,7 +135,7 @@ fun ListView(
                             it.src.displayProperty.contains(edgeSearchText, ignoreCase = true) ||
                             it.dst.displayProperty.contains(edgeSearchText, ignoreCase = true)
                 }
-                items(filteredEdges) { edge ->
+                items(filteredEdges, key = { it.id }) { edge ->
                     // An edge is "selected" if its src and dst nodes are the selected items
                     val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
                     // Get color based on the *edge* label

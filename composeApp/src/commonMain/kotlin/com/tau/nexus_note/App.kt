@@ -13,7 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import com.tau.nexus_note.settings.ThemeMode
-import com.tau.nexus_note.utils.hexToColor
+import com.tau.nexus_note.utils.getFontColor // ADDED IMPORT
+import com.tau.nexus_note.utils.hexToColor // ADDED IMPORT
 import com.tau.nexus_note.utils.labelToColor
 import com.tau.nexus_note.viewmodels.rememberMainViewModel
 import com.tau.nexus_note.views.MainView
@@ -55,6 +56,18 @@ fun App() {
             val tertiarySeed = Color(themeSettings.tertiarySeedValue.toInt())
             val errorSeed = Color(themeSettings.errorSeedValue.toInt())
 
+            // 1. Convert Compose Color (0.0f-1.0f) to RGB IntArray (0-255)
+            val primarySeedRgb = intArrayOf(
+                (primarySeed.red * 255).toInt(),
+                (primarySeed.green * 255).toInt(),
+                (primarySeed.blue * 255).toInt()
+            )
+            // 2. Get the contrast color string ("#FFFFFF" or "#000000")
+            val onPrimaryColorString = getFontColor(primarySeedRgb)
+            // 3. Convert that string back into a Compose Color
+            val onPrimaryColor = hexToColor(onPrimaryColorString)
+
+
             // Provide clean, distinct colors for background and panels.
             if (useDarkTheme) {
                 darkColorScheme(
@@ -64,8 +77,8 @@ fun App() {
                     error = errorSeed,
 
                     // Fix the FAB
-                    primaryContainer = primarySeed.copy(alpha = 0.3f),
-                    onPrimaryContainer = Color.White,
+                    primaryContainer = primarySeed,
+                    onPrimaryContainer = onPrimaryColor, // Use the dynamic color
 
                     // Fix the main background (standard dark)
                     background = Color(0xFF121212),
@@ -85,10 +98,9 @@ fun App() {
                     error = errorSeed,
 
                     // Fix the FAB
-                    primaryContainer = primarySeed.copy(alpha = 0.2f), // A light version of primary
-                    onPrimaryContainer = Color.Black,
+                    primaryContainer = primarySeed,
+                    onPrimaryContainer = onPrimaryColor, // Use the dynamic color
 
-                    // --- UPDATED VISUAL FIX ---
                     // Fix the main background (pure white)
                     background = Color.White,
                     onBackground = Color.Black,
