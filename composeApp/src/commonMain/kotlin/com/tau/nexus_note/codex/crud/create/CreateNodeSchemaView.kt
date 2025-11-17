@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.utils.toCamelCase
+import com.tau.nexus_note.utils.toPascalCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,9 +36,12 @@ fun CreateNodeSchemaView(
 
         OutlinedTextField(
             value = state.tableName,
-            onValueChange = onTableNameChange,
+            onValueChange = { onTableNameChange(it.toPascalCase()) },
             label = { Text("Table Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = state.tableNameError != null,
+            supportingText = { state.tableNameError?.let { Text(it) } },
+            singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -48,10 +53,13 @@ fun CreateNodeSchemaView(
                     OutlinedTextField(
                         value = property.name,
                         onValueChange = {
-                            onPropertyChange(index, property.copy(name = it))
+                            onPropertyChange(index, property.copy(name = it.toCamelCase()))
                         },
                         label = { Text("Property Name") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        isError = state.propertyErrors.containsKey(index) || property.name.isBlank(),
+                        supportingText = { state.propertyErrors[index]?.let { Text(it) } },
+                        singleLine = true
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ExposedDropdownMenuBox(
@@ -103,7 +111,10 @@ fun CreateNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row {
-            Button(onClick = { onCreate(state) }) {
+            Button(
+                onClick = { onCreate(state) },
+                enabled = state.tableName.isNotBlank() && state.tableNameError == null && state.propertyErrors.isEmpty()
+            ) {
                 Text("Create")
             }
             Spacer(modifier = Modifier.width(8.dp))

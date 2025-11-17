@@ -51,6 +51,50 @@ class EditCreateViewModel(
         encodeDefaults = true // Ensure all fields are present
     }
 
+    // --- Validation Helper ---
+
+    /**
+     * Checks if a schema name is unique.
+     * @param name The name to check.
+     * @param editingId The ID of the schema being edited, or null if creating a new one.
+     * @return An error message string if not unique, or null if unique.
+     */
+    private fun isSchemaNameUnique(name: String, editingId: Long? = null): String? {
+        if (name.isBlank()) return "Name cannot be blank."
+
+        val allSchemas = (schemaViewModel.schema.value?.nodeSchemas ?: emptyList()) +
+                (schemaViewModel.schema.value?.edgeSchemas ?: emptyList())
+
+        val conflictingSchema = allSchemas.find { it.name.equals(name, ignoreCase = false) }
+
+        return when {
+            conflictingSchema == null -> null // No conflict
+            editingId != null && conflictingSchema.id == editingId -> null // Conflict is with itself
+            else -> "Name is already used by another schema."
+        }
+    }
+
+    /**
+     * Validates a single property within a list.
+     * @param index The index of the property being validated.
+     * @param property The property itself.
+     * @param allProperties The complete list of properties for this schema.
+     * @return An error message string if invalid, or null if valid.
+     */
+    private fun validateProperty(
+        index: Int,
+        property: SchemaProperty,
+        allProperties: List<SchemaProperty>
+    ): String? {
+        if (property.name.isBlank()) return "Name cannot be blank."
+
+        val conflict = allProperties.withIndex().find { (i, p) ->
+            i != index && p.name.equals(property.name, ignoreCase = false)
+        }
+        return if (conflict != null) "Name is already used in this schema." else null
+    }
+
+
     /**
      * Saves the currently active state (create or edit) to the repository.
      * After saving, it emits a navigation event and clears the edit state.
@@ -58,6 +102,22 @@ class EditCreateViewModel(
     fun saveCurrentState() {
         val stateToSave = _editScreenState.value
         if (stateToSave is EditScreenState.None) return
+
+        // --- PRE-SAVE VALIDATION ---
+        // Check for any existing errors in the state before attempting to save
+        val hasError = when (stateToSave) {
+            is EditScreenState.CreateNodeSchema -> stateToSave.state.tableNameError != null || stateToSave.state.propertyErrors.any { it.value != null }
+            is EditScreenState.EditNodeSchema -> stateToSave.state.currentNameError != null || stateToSave.state.propertyErrors.any { it.value != null }
+            is EditScreenState.CreateEdgeSchema -> stateToSave.state.tableNameError != null || stateToSave.state.propertyErrors.any { it.value != null }
+            is EditScreenState.EditEdgeSchema -> stateToSave.state.currentNameError != null || stateToSave.state.propertyErrors.any { it.value != null }
+            else -> false // No validation for instance creation/editing (yet)
+        }
+
+        if (hasError) {
+            println("Save aborted due to validation errors.")
+            return // Don't save
+        }
+        // --- END VALIDATION ---
 
         viewModelScope.launch {
             // Perform the database operation based on the current state
@@ -254,7 +314,8 @@ class EditCreateViewModel(
     fun onNodeSchemaTableNameChange(name: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
-            current.copy(state = current.state.copy(tableName = name))
+            val error = isSchemaNameUnique(name)
+            current.copy(state = current.state.copy(tableName = name, tableNameError = error))
         }
     }
 
@@ -264,7 +325,14 @@ class EditCreateViewModel(
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
-            current.copy(state = current.state.copy(properties = newProperties))
+            val error = validateProperty(index, property, newProperties)
+            val newErrors = current.state.propertyErrors.toMutableMap()
+            if (error != null) newErrors[index] = error else newErrors.remove(index)
+
+            current.copy(state = current.state.copy(
+                properties = newProperties,
+                propertyErrors = newErrors
+            ))
         }
     }
 
@@ -299,7 +367,8 @@ class EditCreateViewModel(
     fun onEdgeSchemaTableNameChange(name: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
-            current.copy(state = current.state.copy(tableName = name))
+            val error = isSchemaNameUnique(name)
+            current.copy(state = current.state.copy(tableName = name, tableNameError = error))
         }
     }
 
@@ -331,7 +400,14 @@ class EditCreateViewModel(
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
-            current.copy(state = current.state.copy(properties = newProperties))
+            val error = validateProperty(index, property, newProperties)
+            val newErrors = current.state.propertyErrors.toMutableMap()
+            if (error != null) newErrors[index] = error else newErrors.remove(index)
+
+            current.copy(state = current.state.copy(
+                properties = newProperties,
+                propertyErrors = newErrors
+            ))
         }
     }
 
@@ -418,7 +494,8 @@ class EditCreateViewModel(
     fun updateNodeSchemaEditLabel(label: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
-            current.copy(state = current.state.copy(currentName = label))
+            val error = isSchemaNameUnique(label, current.state.originalSchema.id)
+            current.copy(state = current.state.copy(currentName = label, currentNameError = error))
         }
     }
 
@@ -450,7 +527,14 @@ class EditCreateViewModel(
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
-            current.copy(state = current.state.copy(properties = newProperties))
+            val error = validateProperty(index, property, newProperties)
+            val newErrors = current.state.propertyErrors.toMutableMap()
+            if (error != null) newErrors[index] = error else newErrors.remove(index)
+
+            current.copy(state = current.state.copy(
+                properties = newProperties,
+                propertyErrors = newErrors
+            ))
         }
     }
 
@@ -469,7 +553,8 @@ class EditCreateViewModel(
     fun updateEdgeSchemaEditLabel(label: String) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current
-            current.copy(state = current.state.copy(currentName = label))
+            val error = isSchemaNameUnique(label, current.state.originalSchema.id)
+            current.copy(state = current.state.copy(currentName = label, currentNameError = error))
         }
     }
 
@@ -501,7 +586,14 @@ class EditCreateViewModel(
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
-            current.copy(state = current.state.copy(properties = newProperties))
+            val error = validateProperty(index, property, newProperties)
+            val newErrors = current.state.propertyErrors.toMutableMap()
+            if (error != null) newErrors[index] = error else newErrors.remove(index)
+
+            current.copy(state = current.state.copy(
+                properties = newProperties,
+                propertyErrors = newErrors
+            ))
         }
     }
 

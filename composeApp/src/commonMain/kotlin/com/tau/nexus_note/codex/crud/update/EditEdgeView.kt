@@ -3,12 +3,15 @@ package com.tau.nexus_note.codex.crud.update
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.EdgeEditState
 
@@ -52,14 +55,73 @@ fun EditEdgeView(
             LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                 // UPDATED: Iterate over schema properties, get values from state.properties map
                 itemsIndexed(state.schema.properties) { index, schemaProperty ->
-                    OutlinedTextField(
-                        value = state.properties[schemaProperty.name] ?: "",
-                        onValueChange = {
-                            onPropertyChange(schemaProperty.name, it) // UPDATED: Pass property name (string)
-                        },
-                        label = { Text("${schemaProperty.name} (${schemaProperty.type})") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
+                    val currentValue = state.properties[schemaProperty.name] ?: ""
+                    val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    val onValueChange = { value: String -> onPropertyChange(schemaProperty.name, value) }
+
+                    when (schemaProperty.type) {
+                        "Number" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = {
+                                    if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
+                                        onValueChange(it)
+                                    }
+                                },
+                                label = { Text("${schemaProperty.name} (Number)") },
+                                modifier = modifier,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
+                        "LongText" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${schemaProperty.name} (LongText)") },
+                                modifier = modifier,
+                                singleLine = false,
+                                maxLines = 5
+                            )
+                        }
+                        "Date" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${schemaProperty.name} (Date)") },
+                                placeholder = { Text("YYYY-MM-DD") },
+                                modifier = modifier
+                            )
+                        }
+                        "Image", "Audio" -> {
+                            Row(
+                                modifier = modifier,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = currentValue,
+                                    onValueChange = onValueChange,
+                                    label = { Text("${schemaProperty.name} (${schemaProperty.type} Path)") },
+                                    modifier = Modifier.weight(1f),
+                                    readOnly = true
+                                )
+                                Button(
+                                    onClick = { /* TODO: Launch file picker */ },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Text("...")
+                                }
+                            }
+                        }
+                        else -> { // Default "Text"
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${schemaProperty.name} (Text)") },
+                                modifier = modifier,
+                                singleLine = true
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -160,9 +160,7 @@ class MainViewModel {
         _showNameDialog.value = false
         if (name.isBlank()) return
 
-        // Sanitize the name and ENSURE it ends with .sqlite
-        val dbName = name.trim().replace(Regex("[^a-zA-Z0-9_-]"), "_")
-        val finalName = if (dbName.endsWith(".sqlite")) dbName else "$dbName.sqlite"
+        val finalName = if (name.endsWith(".sqlite")) name else "$name.sqlite"
 
         val newPath = "${_codexBaseDirectory.value}/$finalName"
         val newItem = CodexItem(finalName, newPath)

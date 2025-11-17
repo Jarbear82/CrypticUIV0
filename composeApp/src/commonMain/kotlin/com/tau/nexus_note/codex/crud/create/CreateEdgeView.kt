@@ -1,9 +1,12 @@
 package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.ConnectionPair
 import com.tau.nexus_note.datamodels.EdgeCreationState
@@ -162,12 +165,73 @@ fun CreateEdgeView(
             // Properties
             // UPDATED: Iterate over properties from selectedSchema
             edgeCreationState.selectedSchema?.properties?.forEach { property ->
-                OutlinedTextField(
-                    value = edgeCreationState.properties[property.name] ?: "", // UPDATED: Use property.name
-                    onValueChange = { onPropertyChanged(property.name, it) }, // UPDATED: Use property.name
-                    label = { Text("${property.name}: ${property.type}") }, // UPDATED: Use property.name and .type
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                )
+                val currentValue = edgeCreationState.properties[property.name] ?: ""
+                val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                val onValueChange = { value: String -> onPropertyChanged(property.name, value) }
+
+                when (property.type) {
+                    "Number" -> {
+                        OutlinedTextField(
+                            value = currentValue,
+                            onValueChange = {
+                                if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
+                                    onValueChange(it)
+                                }
+                            },
+                            label = { Text("${property.name} (Number)") },
+                            modifier = modifier,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                    "LongText" -> {
+                        OutlinedTextField(
+                            value = currentValue,
+                            onValueChange = onValueChange,
+                            label = { Text("${property.name} (LongText)") },
+                            modifier = modifier,
+                            singleLine = false,
+                            maxLines = 5
+                        )
+                    }
+                    "Date" -> {
+                        OutlinedTextField(
+                            value = currentValue,
+                            onValueChange = onValueChange,
+                            label = { Text("${property.name} (Date)") },
+                            placeholder = { Text("YYYY-MM-DD") },
+                            modifier = modifier
+                        )
+                    }
+                    "Image", "Audio" -> {
+                        Row(
+                            modifier = modifier,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${property.name} (${property.type} Path)") },
+                                modifier = Modifier.weight(1f),
+                                readOnly = true
+                            )
+                            Button(
+                                onClick = { /* TODO: Launch file picker */ },
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text("...")
+                            }
+                        }
+                    }
+                    else -> { // Default "Text"
+                        OutlinedTextField(
+                            value = currentValue,
+                            onValueChange = onValueChange,
+                            label = { Text("${property.name} (Text)") },
+                            modifier = modifier,
+                            singleLine = true
+                        )
+                    }
+                }
             }
         }
 

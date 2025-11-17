@@ -1,9 +1,12 @@
 package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeCreationState
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
@@ -52,12 +55,75 @@ fun CreateNodeView(
 
         // UPDATED: Iterate over properties from selectedSchema
         nodeCreationState.selectedSchema?.properties?.forEach { property ->
-            OutlinedTextField(
-                value = nodeCreationState.properties[property.name] ?: "",
-                onValueChange = { onPropertyChanged(property.name, it) },
-                label = { Text("${property.name}: ${property.type}") },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-            )
+            val currentValue = nodeCreationState.properties[property.name] ?: ""
+            val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+
+            when (property.type) {
+                "Number" -> {
+                    OutlinedTextField(
+                        value = currentValue,
+                        onValueChange = {
+                            // Only allow valid numeric input
+                            if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
+                                onPropertyChanged(property.name, it)
+                            }
+                        },
+                        label = { Text("${property.name} (Number)") },
+                        modifier = modifier,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                "LongText" -> {
+                    OutlinedTextField(
+                        value = currentValue,
+                        onValueChange = { onPropertyChanged(property.name, it) },
+                        label = { Text("${property.name} (LongText)") },
+                        modifier = modifier,
+                        singleLine = false,
+                        maxLines = 5
+                    )
+                }
+                "Date" -> {
+                    OutlinedTextField(
+                        value = currentValue,
+                        onValueChange = { onPropertyChanged(property.name, it) },
+                        label = { Text("${property.name} (Date)") },
+                        placeholder = { Text("YYYY-MM-DD") },
+                        modifier = modifier
+                        // Note: A real implementation would use a DatePicker dialog
+                    )
+                }
+                "Image", "Audio" -> {
+                    // Placeholder for a future file picker
+                    Row(
+                        modifier = modifier,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = currentValue, // This would be a file path
+                            onValueChange = { onPropertyChanged(property.name, it) },
+                            label = { Text("${property.name} (${property.type} Path)") },
+                            modifier = Modifier.weight(1f),
+                            readOnly = true // Recommend read-only, set via button
+                        )
+                        Button(
+                            onClick = { /* TODO: Launch file picker */ },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text("...")
+                        }
+                    }
+                }
+                else -> { // Default "Text"
+                    OutlinedTextField(
+                        value = currentValue,
+                        onValueChange = { onPropertyChanged(property.name, it) },
+                        label = { Text("${property.name} (Text)") },
+                        modifier = modifier,
+                        singleLine = true
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

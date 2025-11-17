@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.utils.toCamelCase
+import com.tau.nexus_note.utils.toPascalCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,9 +36,12 @@ fun EditNodeSchemaView(
 
         OutlinedTextField(
             value = state.currentName, // UPDATED: Use currentName
-            onValueChange = onLabelChange,
+            onValueChange = { onLabelChange(it.toPascalCase()) },
             label = { Text("Table Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = state.currentNameError != null,
+            supportingText = { state.currentNameError?.let { Text(it) } },
+            singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -52,11 +57,13 @@ fun EditNodeSchemaView(
                     OutlinedTextField(
                         value = property.name, // UPDATED: Use name
                         onValueChange = {
-                            onPropertyChange(index, property.copy(name = it))
+                            onPropertyChange(index, property.copy(name = it.toCamelCase()))
                         },
                         label = { Text("Property Name") },
                         modifier = Modifier.weight(1f),
-                        isError = property.name.isBlank()
+                        isError = state.propertyErrors.containsKey(index) || property.name.isBlank(),
+                        supportingText = { state.propertyErrors[index]?.let { Text(it) } },
+                        singleLine = true
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ExposedDropdownMenuBox(
@@ -115,7 +122,10 @@ fun EditNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row {
-            Button(onClick = onSave) {
+            Button(
+                onClick = onSave,
+                enabled = state.currentName.isNotBlank() && state.currentNameError == null && state.propertyErrors.isEmpty()
+            ) {
                 Text("Save")
             }
             Spacer(modifier = Modifier.width(8.dp))

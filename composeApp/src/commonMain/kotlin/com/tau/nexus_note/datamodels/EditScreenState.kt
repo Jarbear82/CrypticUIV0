@@ -36,7 +36,9 @@ data class EdgeCreationState(
 // --- Data class for Node Schema Creation UI State ---
 data class NodeSchemaCreationState(
     val tableName: String = "",
-    val properties: List<SchemaProperty> = listOf(SchemaProperty("name", "Text", isDisplayProperty = true))
+    val properties: List<SchemaProperty> = listOf(SchemaProperty("name", "Text", isDisplayProperty = true)),
+    val tableNameError: String? = null,
+    val propertyErrors: Map<Int, String?> = emptyMap()
 )
 
 // --- Data class for Edge Schema Creation UI State ---
@@ -44,7 +46,9 @@ data class EdgeSchemaCreationState(
     val tableName: String = "",
     val connections: List<ConnectionPair> = emptyList(),
     val properties: List<SchemaProperty> = emptyList(),
-    val allNodeSchemas: List<SchemaDefinitionItem> = emptyList() // All NODE schemas
+    val allNodeSchemas: List<SchemaDefinitionItem> = emptyList(), // All NODE schemas
+    val tableNameError: String? = null,
+    val propertyErrors: Map<Int, String?> = emptyMap()
 )
 
 // --- Data classes for Editing Instances ---
@@ -68,7 +72,9 @@ data class EdgeEditState(
 data class NodeSchemaEditState(
     val originalSchema: SchemaDefinitionItem,
     val currentName: String,
-    val properties: List<SchemaProperty>
+    val properties: List<SchemaProperty>,
+    val currentNameError: String? = null,
+    val propertyErrors: Map<Int, String?> = emptyMap()
     // Note: Diffing logic will be in the ViewModel, comparing this to originalSchema
 )
 
@@ -76,5 +82,7 @@ data class EdgeSchemaEditState(
     val originalSchema: SchemaDefinitionItem,
     val currentName: String,
     val connections: List<ConnectionPair>,
-    val properties: List<SchemaProperty>
+    val properties: List<SchemaProperty>,
+    val currentNameError: String? = null,
+    val propertyErrors: Map<Int, String?> = emptyMap()
 )

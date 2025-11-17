@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.utils.toCamelCase
+import com.tau.nexus_note.utils.toScreamingSnakeCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,9 +49,12 @@ fun CreateEdgeSchemaView(
 
         OutlinedTextField(
             value = state.tableName,
-            onValueChange = onTableNameChange,
+            onValueChange = { onTableNameChange(it.toScreamingSnakeCase()) },
             label = { Text("Table Name") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = state.tableNameError != null,
+            supportingText = { state.tableNameError?.let { Text(it) } },
+            singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -163,10 +168,13 @@ fun CreateEdgeSchemaView(
                     OutlinedTextField(
                         value = property.name,
                         onValueChange = {
-                            onPropertyChange(index, property.copy(name = it))
+                            onPropertyChange(index, property.copy(name = it.toCamelCase()))
                         },
                         label = { Text("Property Name") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        isError = state.propertyErrors.containsKey(index) || property.name.isBlank(),
+                        supportingText = { state.propertyErrors[index]?.let { Text(it) } },
+                        singleLine = true
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ExposedDropdownMenuBox(
@@ -218,7 +226,7 @@ fun CreateEdgeSchemaView(
         Row {
             Button(
                 onClick = { onCreate(state) },
-                enabled = state.tableName.isNotBlank() && state.connections.isNotEmpty()
+                enabled = state.tableName.isNotBlank() && state.connections.isNotEmpty() && state.tableNameError == null && state.propertyErrors.isEmpty()
             ) {
                 Text("Create")
             }

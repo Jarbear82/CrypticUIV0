@@ -10,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.utils.toPascalCase
 
 @Composable
 fun CreateCodexDialog(
@@ -27,10 +28,10 @@ fun CreateCodexDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = it.toPascalCase() },
                     label = { Text("Codex Name") },
                     singleLine = true,
-                    placeholder = { Text("my-database") },
+                    placeholder = { Text("MyDatabase") },
                     suffix = { Text(".sqlite") }
                 )
             }
