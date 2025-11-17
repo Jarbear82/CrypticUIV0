@@ -49,7 +49,7 @@ fun CreateEdgeSchemaView(
 
         OutlinedTextField(
             value = state.tableName,
-            onValueChange = { onTableNameChange(it.toScreamingSnakeCase()) },
+            onValueChange = { onTableNameChange(it.replace(" ", "_").toScreamingSnakeCase()) },
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth(),
             isError = state.tableNameError != null,
