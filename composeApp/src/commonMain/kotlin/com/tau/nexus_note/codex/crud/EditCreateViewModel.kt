@@ -325,6 +325,16 @@ class EditCreateViewModel(
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
+
+            // If the new property is a display property, un-check all others.
+            val finalProperties = if (property.isDisplayProperty) {
+                newProperties.mapIndexed { i, p ->
+                    if (i == index) p else p.copy(isDisplayProperty = false)
+                }.toList()
+            } else {
+                newProperties
+            }
+
             val error = validateProperty(index, property, newProperties)
             val newErrors = current.state.propertyErrors.toMutableMap()
             if (error != null) newErrors[index] = error else newErrors.remove(index)
@@ -524,15 +534,26 @@ class EditCreateViewModel(
     fun updateNodeSchemaEditProperty(index: Int, property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
+
             val newProperties = current.state.properties.toMutableList().apply {
                 this[index] = property
             }
-            val error = validateProperty(index, property, newProperties)
+
+            // If the new property is a display property, un-check all others.
+            val finalProperties = if (property.isDisplayProperty) {
+                newProperties.mapIndexed { i, p ->
+                    if (i == index) p else p.copy(isDisplayProperty = false)
+                }.toList()
+            } else {
+                newProperties
+            }
+
+            val error = validateProperty(index, property, finalProperties)
             val newErrors = current.state.propertyErrors.toMutableMap()
             if (error != null) newErrors[index] = error else newErrors.remove(index)
 
             current.copy(state = current.state.copy(
-                properties = newProperties,
+                properties = finalProperties, // <-- Use the fixed list
                 propertyErrors = newErrors
             ))
         }
