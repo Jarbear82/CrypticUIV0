@@ -66,7 +66,7 @@ data class GraphPhysicsSettings(
 data class GraphRenderingSettings(
     val startSimulationOnLoad: Boolean = true,
     val showNodeLabels: Boolean = true,
-    val showEdgeLabels: Boolean = false,
+    val showEdgeLabels: Boolean = true,
     val showCrosshairs: Boolean = true
 ) {
     companion object {
