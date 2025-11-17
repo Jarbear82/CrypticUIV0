@@ -1,14 +1,20 @@
-package com.tau.nexus_note.views
+package com.tau.nexus_note.nexus
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,8 +30,12 @@ import com.tau.nexus_note.utils.labelToColor
 fun NexusView(viewModel: MainViewModel) {
     val codeices by viewModel.codicies.collectAsState()
     val baseDirectory by viewModel.codexBaseDirectory.collectAsState()
-    val showNameDialog by viewModel.showNameDialog.collectAsState()
     val showBaseDirPicker by viewModel.showBaseDirPicker.collectAsState()
+
+    // --- State for inline creation ---
+    val newCodexName by viewModel.newCodexName.collectAsState()
+    val codexNameError by viewModel.codexNameError.collectAsState()
+    val codexToDelete by viewModel.codexToDelete.collectAsState()
 
     // --- Dialogs ---
 
@@ -36,10 +46,12 @@ fun NexusView(viewModel: MainViewModel) {
         onResult = { viewModel.onBaseDirectorySelected(it) }
     )
 
-    if (showNameDialog) {
-        CreateCodexDialog(
-            onConfirm = { viewModel.onCodexNameEntered(it) },
-            onDismiss = { viewModel.onCodexNameCancelled() }
+
+    codexToDelete?.let { item ->
+        DeleteCodexDialog(
+            item = item,
+            onConfirm = { viewModel.confirmDeleteCodex() },
+            onDismiss = { viewModel.cancelDeleteCodex() }
         )
     }
 
@@ -52,7 +64,50 @@ fun NexusView(viewModel: MainViewModel) {
             "Welcome to Nexus Note",
             style = MaterialTheme.typography.headlineLarge
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- Create Codex ---
+        Row(
+            // Align items vertically. 'Bottom' works well with the text field's supporting text.
+            verticalAlignment = Alignment.CenterVertically,
+            // Add spacing between the items
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // This Text is now part of the row
+            Text(
+                "Create New Codex:",
+                style = MaterialTheme.typography.titleMedium,
+                // Align this text to the center of the row's height
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+
+            OutlinedTextField(
+                value = newCodexName,
+                onValueChange = { viewModel.validateCodexName(it) },
+                label = { Text("Codex Name") },
+                singleLine = true,
+                placeholder = { Text("MyDatabase") },
+                suffix = { Text(".sqlite") },
+                isError = codexNameError != null,
+                supportingText = {
+                    if (codexNameError != null) {
+                        Text(codexNameError!!)
+                    }
+                },
+                // Use .weight(1f) to fill all *remaining* horizontal space
+                modifier = Modifier.weight(1f)
+            )
+
+            Button(
+                onClick = { viewModel.onCodexNameConfirmed() },
+                enabled = newCodexName.isNotBlank() && codexNameError == null,
+            ) {
+                Text("Create and Open")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         // --- Database List ---
         Row(
@@ -60,7 +115,7 @@ fun NexusView(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Codicies in: $baseDirectory", style = MaterialTheme.typography.titleMedium)
+            Text("Existing Codicies in: $baseDirectory", style = MaterialTheme.typography.titleMedium)
             OutlinedButton(onClick = { viewModel.onChangeBaseDirectoryClicked() }) {
                 Text("Change")
             }
@@ -89,7 +144,24 @@ fun NexusView(viewModel: MainViewModel) {
                         supportingColor = colorInfo.composeFontColor,
                         leadingIconColor = colorInfo.composeFontColor,
                         trailingIconColor = colorInfo.composeFontColor
-                    )
+                    ),
+                    // --- Leading icon ---
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Storage,
+                            contentDescription = "Codex Icon"
+                        )
+                    },
+                    // --- Delete button ---
+                    trailingContent = {
+                        IconButton(onClick = { viewModel.requestDeleteCodex(graph) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Codex",
+                                tint = colorInfo.composeFontColor // Match icon tint
+                            )
+                        }
+                    }
                 )
             }
         }
@@ -102,14 +174,8 @@ fun NexusView(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Button(
-                onClick = { viewModel.onCreateNewCodexClicked() },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Create New Codex")
-            }
-            Button(
                 onClick = { viewModel.openInMemoryTerminal() },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Open In-Memory Terminal")
             }

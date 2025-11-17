@@ -78,3 +78,28 @@ actual fun getFileName(path: String): String {
 actual fun fileExists(path: String): Boolean {
     return File(path).exists()
 }
+
+/**
+ * JVM implementation for deleting a file and its associated .media directory.
+ */
+actual fun deleteFile(path: String) {
+    try {
+        val dbFile = File(path)
+        val mediaDir = File(dbFile.parent, "${dbFile.nameWithoutExtension}.media")
+
+        if (mediaDir.exists()) {
+            if (!mediaDir.deleteRecursively()) {
+                println("Warning: Could not delete media directory: ${mediaDir.absolutePath}")
+            }
+        }
+
+        if (dbFile.exists()) {
+            if (!dbFile.delete()) {
+                println("Warning: Could not delete database file: ${dbFile.absolutePath}")
+            }
+        }
+    } catch (e: Exception) {
+        // Throw an IOException so the ViewModel can catch it and show an error
+        throw IOException("Error deleting codex at: $path", e)
+    }
+}

@@ -9,9 +9,11 @@ import com.tau.nexus_note.settings.SettingsData
 import com.tau.nexus_note.settings.SettingsRepository
 import com.tau.nexus_note.settings.SettingsViewModel
 import com.tau.nexus_note.settings.createDataStore
+import com.tau.nexus_note.utils.deleteFile
 import com.tau.nexus_note.utils.getFileName
 import com.tau.nexus_note.utils.getHomeDirectoryPath
 import com.tau.nexus_note.utils.listFilesWithExtension
+import com.tau.nexus_note.utils.toPascalCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +26,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 enum class Screen {
     NEXUS,
@@ -45,22 +48,15 @@ class MainViewModel {
     val errorFlow = _errorFlow.asStateFlow()
 
     // --- Settings ---
-
-    // 1. Create the repository and DataStore
     private val dataStore = createDataStore()
     private val settingsRepository = SettingsRepository(dataStore)
 
     private val _appSettings = MutableStateFlow(SettingsData.Default)
     val appSettings: StateFlow<SettingsData> = _appSettings.asStateFlow()
 
-
-    // The SettingsViewModel is initialized with the in-memory flow
-    //    and a lambda that updates that flow.
     val settingsViewModel = SettingsViewModel(
-        settingsFlow = appSettings, // Pass the in-memory flow
+        settingsFlow = appSettings,
         onUpdateSettings = { newSettings ->
-            // Update the in-memory state instantly.
-            // The 'init' block collector will handle debouncing and saving.
             _appSettings.value = newSettings
         }
     )
@@ -80,24 +76,30 @@ class MainViewModel {
     private val _showBaseDirPicker = MutableStateFlow(false)
     val showBaseDirPicker = _showBaseDirPicker.asStateFlow()
 
-    private val _showNameDialog = MutableStateFlow(false)
-    val showNameDialog = _showNameDialog.asStateFlow()
+    // --- UPDATED: State for Naming (no dialog) ---
+    private val _newCodexName = MutableStateFlow("")
+    val newCodexName = _newCodexName.asStateFlow()
+
+    private val _codexNameError = MutableStateFlow<String?>(null)
+    val codexNameError = _codexNameError.asStateFlow()
+
+    // --- NEW: State for Deletion Dialog ---
+    private val _codexToDelete = MutableStateFlow<CodexItem?>(null)
+    val codexToDelete = _codexToDelete.asStateFlow()
+
+    // --- NEW: Track currently open codex ---
+    private val _openedCodexItem = MutableStateFlow<CodexItem?>(null)
 
     init {
         loadCodicies()
 
-        // --- Step 3 - Debounced Settings Loading & Saving ---
         viewModelScope.launch {
-            // 1. Load initial settings from disk just once
             _appSettings.value = settingsRepository.settings.first()
 
-            // 2. Set up the debounced saver.
-            //    This flow collects changes to the in-memory settings,
-            //    waits 1000ms, and then saves to disk.
             @OptIn(FlowPreview::class)
             _appSettings
-                .drop(1) // Don't save the initial value we just loaded
-                .debounce(1000L) // Wait 500ms after the last change
+                .drop(1)
+                .debounce(1000L)
                 .collect { settingsToSave ->
                     settingsRepository.saveSettings(settingsToSave)
                 }
@@ -109,7 +111,6 @@ class MainViewModel {
      */
     fun loadCodicies() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Use IO for file scanning
             try {
                 val files = listFilesWithExtension(_codexBaseDirectory.value, ".sqlite")
                 val graphs = files.map {
@@ -145,39 +146,102 @@ class MainViewModel {
         }
     }
 
+    // --- REMOVED: onCreateNewCodexClicked() ---
+
+    // --- UPDATED: Naming Logic ---
+
     /**
-     * Shows the dialog to name a new codex.
+     * Called on every keystroke in the NexusView text field.
+     * Validates the name and updates the error state.
      */
-    fun onCreateNewCodexClicked() {
-        _showNameDialog.value = true
+    fun validateCodexName(name: String) {
+        val pascalName = name.toPascalCase()
+        _newCodexName.value = pascalName
+
+        if (pascalName.isBlank()) {
+            _codexNameError.value = "Name cannot be blank."
+            return
+        }
+
+        val finalName = if (pascalName.endsWith(".sqlite")) pascalName else "$pascalName.sqlite"
+        val exists = _codicies.value.any { it.name.equals(finalName, ignoreCase = true) }
+        _codexNameError.value = if (exists) "A codex with this name already exists." else null
     }
 
     /**
      * Callback when the user confirms a name for a new codex.
      * This creates and opens the new database.
      */
-    fun onCodexNameEntered(name: String) {
-        _showNameDialog.value = false
-        if (name.isBlank()) return
+    fun onCodexNameConfirmed() {
+        val name = _newCodexName.value
+        if (name.isBlank() || _codexNameError.value != null) return
 
         val finalName = if (name.endsWith(".sqlite")) name else "$name.sqlite"
-
         val newPath = "${_codexBaseDirectory.value}/$finalName"
         val newItem = CodexItem(finalName, newPath)
 
-        // Open the graph (which initializes the DB file)
         openCodex(newItem)
-
-        // Add to the list
         _codicies.update { (it + newItem).distinctBy { it.path } }
+
+        // Clear the name fields
+        _newCodexName.value = ""
+        _codexNameError.value = null
     }
 
     /**
-     * Callback when the user cancels the "create name" dialog.
+     * Clears the codex name fields.
      */
-    fun onCodexNameCancelled() {
-        _showNameDialog.value = false
+    fun clearCodexName() {
+        _newCodexName.value = ""
+        _codexNameError.value = null
     }
+
+    // --- END: Naming Logic ---
+
+    // --- NEW: Deletion Logic ---
+
+    /**
+     * Shows the delete confirmation dialog for the selected codex.
+     */
+    fun requestDeleteCodex(item: CodexItem) {
+        _codexToDelete.value = item
+    }
+
+    /**
+     * Hides the delete confirmation dialog.
+     */
+    fun cancelDeleteCodex() {
+        _codexToDelete.value = null
+    }
+
+    /**
+     * Confirms deletion, closes the codex if it's open,
+     * deletes the file from disk, and refreshes the list.
+     */
+    fun confirmDeleteCodex() {
+        viewModelScope.launch {
+            val itemToDelete = _codexToDelete.value ?: return@launch
+            cancelDeleteCodex() // Close dialog immediately
+
+            // If the codex to delete is the one that's open, close it first.
+            if (itemToDelete.path == _openedCodexItem.value?.path) {
+                closeTerminal()
+            }
+
+            try {
+                // Perform file I/O on the IO dispatcher
+                withContext(Dispatchers.IO) {
+                    deleteFile(itemToDelete.path)
+                }
+                // Refresh the list
+                loadCodicies()
+            } catch (e: Exception) {
+                _errorFlow.value = "Error deleting file: ${e.message}"
+            }
+        }
+    }
+
+    // --- END: Deletion Logic ---
 
     /**
      * Opens a terminal session for a specific on-disk codex.
@@ -185,12 +249,13 @@ class MainViewModel {
     fun openCodex(item: CodexItem) {
         viewModelScope.launch {
             try {
+                clearCodexName() // Clear create field before opening
                 _codexViewModel.value?.onCleared() // Close previous one
                 val newService = SqliteDbService()
                 newService.initialize(item.path) // Initialize with file path
 
                 _codexViewModel.value = CodexViewModel(newService, appSettings)
-
+                _openedCodexItem.value = item // Track open codex
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open codex '${item.path}': ${e.message}"
@@ -208,12 +273,13 @@ class MainViewModel {
     fun openInMemoryTerminal() {
         viewModelScope.launch {
             try {
+                clearCodexName() // Clear create field before opening
                 _codexViewModel.value?.onCleared()
                 val newService = SqliteDbService()
                 newService.initialize(":memory:")
 
                 _codexViewModel.value = CodexViewModel(newService, appSettings)
-
+                _openedCodexItem.value = null // Not an on-disk codex
                 _selectedScreen.value = Screen.CODEX
             } catch (e: Exception) {
                 _errorFlow.value = "Failed to open in-memory database: ${e.message}"
@@ -225,13 +291,13 @@ class MainViewModel {
         viewModelScope.launch {
             _codexViewModel.value?.onCleared()
             _codexViewModel.value = null
+            _openedCodexItem.value = null // Clear tracked codex
             _selectedScreen.value = Screen.NEXUS
+            clearCodexName() // Clear create field
             // Refresh the list in case a new DB was created
             loadCodicies()
         }
     }
-
-
 
     fun onDispose() {
         // This will be called from the main App composable's onDispose

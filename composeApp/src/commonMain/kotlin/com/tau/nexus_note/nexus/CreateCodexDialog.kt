@@ -1,4 +1,4 @@
-package com.tau.nexus_note.views
+package com.tau.nexus_note.nexus
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,15 +10,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.utils.toPascalCase
 
 @Composable
 fun CreateCodexDialog(
-    onConfirm: (String) -> Unit,
+    name: String,
+    error: String?,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Create New Codex") },
@@ -28,18 +28,24 @@ fun CreateCodexDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it.toPascalCase() },
+                    onValueChange = onValueChange, // Lifted state
                     label = { Text("Codex Name") },
                     singleLine = true,
                     placeholder = { Text("MyDatabase") },
-                    suffix = { Text(".sqlite") }
+                    suffix = { Text(".sqlite") },
+                    isError = error != null, // Show error state
+                    supportingText = { // Show error message
+                        if (error != null) {
+                            Text(error)
+                        }
+                    }
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(name) },
-                enabled = name.isNotBlank()
+                onClick = onConfirm,
+                enabled = name.isNotBlank() && error == null // Enable only if valid
             ) {
                 Text("Create")
             }

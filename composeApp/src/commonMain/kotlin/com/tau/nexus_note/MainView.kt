@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.codex.CodexView
+import com.tau.nexus_note.nexus.NexusView
 import com.tau.nexus_note.settings.SettingsView // ADDED
 import com.tau.nexus_note.viewmodels.MainViewModel
 import com.tau.nexus_note.viewmodels.Screen

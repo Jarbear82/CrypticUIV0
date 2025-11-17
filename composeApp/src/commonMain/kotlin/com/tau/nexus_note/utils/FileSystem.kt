@@ -38,3 +38,9 @@ expect fun getFileName(path: String): String
  * Checks if a file or directory exists at the given path.
  */
 expect fun fileExists(path: String): Boolean
+
+/**
+ * Deletes a file at the given path.
+ * Implementations should also attempt to delete associated data (e.g., .media folder).
+ */
+expect fun deleteFile(path: String)
