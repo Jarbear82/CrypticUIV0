@@ -6,6 +6,7 @@ import com.tau.nexus_note.codex.crud.EditCreateViewModel
 import com.tau.nexus_note.codex.graph.GraphViewmodel
 import com.tau.nexus_note.codex.metadata.MetadataViewModel
 import com.tau.nexus_note.codex.schema.SchemaViewModel
+import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.settings.SettingsData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,43 +16,62 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel // --- ADDED: Import for the fix ---
+import kotlinx.coroutines.cancel
 
-// --- UPDATED ---
-// Constructor now accepts the settingsFlow
 class CodexViewModel(
     private val dbService: SqliteDbService,
     private val settingsFlow: StateFlow<SettingsData>
 ) {
-// --- END UPDATE ---
-
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
-    // 1. Create the Repository, passing it the scope and dbService
+    // 1. Create the Repository
     val repository = CodexRepository(dbService, viewModelScope)
 
-    // 2. Create child ViewModels, passing them the *repository*
+    // 2. Create child ViewModels
     val schemaViewModel = SchemaViewModel(repository, viewModelScope)
     val metadataViewModel = MetadataViewModel(repository, viewModelScope)
     val editCreateViewModel = EditCreateViewModel(repository, viewModelScope, schemaViewModel, metadataViewModel)
 
-    // --- UPDATED ---
-    // Pass the settingsFlow to the GraphViewmodel
     val graphViewModel = GraphViewmodel(
         viewModelScope = viewModelScope,
         settingsFlow = settingsFlow
     )
-    // --- END UPDATE ---
 
     // Expose Repository Error Flow
     val errorFlow = repository.errorFlow
     fun clearError() = repository.clearError()
 
+    // --- Layout State ---
+    // Explicitly tracks if the side panel/drawer is open
+    private val _isDetailPaneOpen = MutableStateFlow(false)
+    val isDetailPaneOpen = _isDetailPaneOpen.asStateFlow()
+
     init {
-        // Trigger initial data load
-        // FIX: Launch a coroutine to call the suspend function
         viewModelScope.launch {
             repository.refreshAll()
+        }
+
+        // Auto-open detail pane when an item is selected
+        viewModelScope.launch {
+            metadataViewModel.primarySelectedItem.collectLatest {
+                if (it != null) {
+                    _isDetailPaneOpen.value = true
+                    // Switch to metadata tab if we are not in edit mode
+                    if (editCreateViewModel.editScreenState.value is EditScreenState.None) {
+                        selectDataTab(DataViewTabs.METADATA)
+                    }
+                }
+            }
+        }
+
+        // Auto-open detail pane when editing starts
+        viewModelScope.launch {
+            editCreateViewModel.editScreenState.collectLatest {
+                if (it !is EditScreenState.None) {
+                    _isDetailPaneOpen.value = true
+                    selectDataTab(DataViewTabs.EDIT)
+                }
+            }
         }
 
         // Combine lists with visibility state
@@ -62,21 +82,14 @@ class CodexViewModel(
                 metadataViewModel.nodeVisibility,
                 metadataViewModel.edgeVisibility
             ) { nodes, edges, nodeViz, edgeViz ->
-
-                // Filter nodes based on their own visibility
                 val visibleNodes = nodes.filter { nodeViz[it.id] ?: true }
                 val visibleNodeIds = visibleNodes.map { it.id }.toSet()
-
-                // Filter edges based on their own visibility AND their nodes' visibility
                 val visibleEdges = edges.filter {
                     (edgeViz[it.id] ?: true) &&
                             (it.src.id in visibleNodeIds) &&
                             (it.dst.id in visibleNodeIds)
                 }
-
-                // Pass the *filtered* lists to the graph
                 visibleNodes to visibleEdges
-
             }.collectLatest { (visibleNodes, visibleEdges) ->
                 graphViewModel.updateGraphData(visibleNodes, visibleEdges)
             }
@@ -86,7 +99,6 @@ class CodexViewModel(
         viewModelScope.launch {
             schemaViewModel.schemaVisibility.collectLatest { schemaVizMap ->
                 schemaVizMap.forEach { (schemaId, isVisible) ->
-                    // Find if this schema is for nodes or edges
                     val isNodeSchema = repository.schema.value?.nodeSchemas?.any { it.id == schemaId } ?: false
                     if (isNodeSchema) {
                         metadataViewModel.setNodeVisibilityForSchema(schemaId, isVisible)
@@ -116,13 +128,23 @@ class CodexViewModel(
         _selectedViewTab.value = tab
     }
 
+    // --- Layout Handlers ---
+
+    fun openDetailPane() {
+        _isDetailPaneOpen.value = true
+    }
+
+    fun closeDetailPane() {
+        _isDetailPaneOpen.value = false
+        // Optional: Clear selection when closing drawer
+        metadataViewModel.clearSelectedItem()
+        editCreateViewModel.cancelAllEditing()
+    }
+
     fun onCleared() {
         graphViewModel.onCleared()
         dbService.close()
-        // --- THIS IS THE FIX ---
-        // Cancel the scope to stop all child coroutines (in this VM and GraphViewModel)
         viewModelScope.cancel()
-        // --- END FIX ---
     }
 }
 
