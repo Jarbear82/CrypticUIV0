@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,7 +41,7 @@ fun CreateEdgeView(
             onExpandedChange = { schemaExpanded = !schemaExpanded }
         ) {
             OutlinedTextField(
-                value = edgeCreationState.selectedSchema?.name ?: "Select Schema", // UPDATED: Use .name
+                value = edgeCreationState.selectedSchema?.name ?: "Select Schema",
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
@@ -53,7 +53,7 @@ fun CreateEdgeView(
             ) {
                 edgeCreationState.schemas.forEach { schema ->
                     DropdownMenuItem(
-                        text = { Text(schema.name) }, // UPDATED: Use .name
+                        text = { Text(schema.name) },
                         onClick = {
                             onSchemaSelected(schema)
                             schemaExpanded = false
@@ -63,7 +63,7 @@ fun CreateEdgeView(
             }
         }
 
-        // --- NEW Connection Pair Dropdown ---
+        // --- Connection Pair Dropdown ---
         // Only show this after schema is selected
         edgeCreationState.selectedSchema?.let {
             Spacer(modifier = Modifier.height(8.dp))
@@ -83,7 +83,7 @@ fun CreateEdgeView(
                     expanded = connectionExpanded,
                     onDismissRequest = { connectionExpanded = false }
                 ) {
-                    // UPDATED: Populate from the selected schema (nullable) connection list
+                    // Populate from the selected schema (nullable) connection list
                     (edgeCreationState.selectedSchema.connections ?: emptyList()).forEach { connection ->
                         DropdownMenuItem(
                             text = { Text("${connection.src} -> ${connection.dst}") },
@@ -106,7 +106,6 @@ fun CreateEdgeView(
                 onExpandedChange = { srcExpanded = !srcExpanded }
             ) {
                 OutlinedTextField(
-                    // UPDATED: Use displayProperty
                     value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Node",
                     onValueChange = {},
                     readOnly = true,
@@ -120,7 +119,6 @@ fun CreateEdgeView(
                     // Filter nodes based on selected connection's src
                     edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
                         DropdownMenuItem(
-                            // UPDATED: Use displayProperty
                             text = { Text("${node.label} : ${node.displayProperty}") },
                             onClick = {
                                 onSrcSelected(node)
@@ -137,7 +135,6 @@ fun CreateEdgeView(
                 onExpandedChange = { dstExpanded = !dstExpanded }
             ) {
                 OutlinedTextField(
-                    // UPDATED: Use displayProperty
                     value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Node",
                     onValueChange = {},
                     readOnly = true,
@@ -151,7 +148,6 @@ fun CreateEdgeView(
                     // Filter nodes based on selected connection's dst
                     edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
                         DropdownMenuItem(
-                            // UPDATED: Use displayProperty
                             text = { Text("${node.label} : ${node.displayProperty}") },
                             onClick = {
                                 onDstSelected(node)
@@ -163,7 +159,6 @@ fun CreateEdgeView(
             }
 
             // Properties
-            // UPDATED: Iterate over properties from selectedSchema
             edgeCreationState.selectedSchema?.properties?.forEach { property ->
                 val currentValue = edgeCreationState.properties[property.name] ?: ""
                 val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)

@@ -34,7 +34,6 @@ val schemaPropertyAdapter = object : ColumnAdapter<List<SchemaProperty>, String>
 /**
  * Adapter for `SchemaDefinition.connections_json`
  * Converts List<ConnectionPair> to/from a NON-NULL JSON String.
- * (This is the fix: Use the adapter that handles String)
  */
 val connectionPairAdapter = object : ColumnAdapter<List<ConnectionPair>, String> {
     override fun decode(databaseValue: String): List<ConnectionPair> {
@@ -55,10 +54,6 @@ val connectionPairAdapter = object : ColumnAdapter<List<ConnectionPair>, String>
  * Converts Map<String, String> to/from a JSON String.
  */
 val stringMapAdapter = object : ColumnAdapter<Map<String, String>, String> {
-    // THIS IS THE FIX: The serializer logic is moved *inside* the methods
-    // to avoid the type inference error at initialization.
-    // private val serializer = MapSerializer(String.serializer(), String.serializer()) // <- This was the error
-
     override fun decode(databaseValue: String): Map<String, String> {
         return dbJson.decodeFromString(MapSerializer(String.serializer(), String.serializer()), databaseValue)
     }

@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,7 +21,7 @@ import com.tau.nexus_note.utils.toPascalCase
 fun CreateNodeSchemaView(
     state: NodeSchemaCreationState,
     onTableNameChange: (String) -> Unit,
-    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onPropertyChange: (Int, SchemaProperty) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
     onCancel: () -> Unit,
@@ -89,12 +89,12 @@ fun CreateNodeSchemaView(
                         }
                     }
                     Checkbox(
-                        checked = property.isDisplayProperty, // UPDATED: Use isDisplayProperty
+                        checked = property.isDisplayProperty,
                         onCheckedChange = {
                             onPropertyChange(index, property.copy(isDisplayProperty = it))
                         }
                     )
-                    Text("Display") // UPDATED: Text changed from PK
+                    Text("Display")
                     IconButton(onClick = { onRemoveProperty(index) }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete Property")
                     }

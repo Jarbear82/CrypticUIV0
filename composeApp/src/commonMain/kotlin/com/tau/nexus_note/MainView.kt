@@ -1,6 +1,7 @@
-package com.tau.nexus_note.views
+package com.tau.nexus_note
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,13 +31,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.codex.CodexView
 import com.tau.nexus_note.nexus.NexusView
 import com.tau.nexus_note.settings.SettingsView
-import com.tau.nexus_note.viewmodels.MainViewModel
-import com.tau.nexus_note.viewmodels.Screen
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +52,7 @@ fun MainView(mainViewModel: MainViewModel) {
 
     // --- Error Handling Observers ---
     val mainError by mainViewModel.errorFlow.collectAsState()
-    val codexError by codexViewModel?.errorFlow?.collectAsState() ?: mutableStateOf<String?>(null)
+    val codexError by codexViewModel?.errorFlow?.collectAsState() ?: mutableStateOf(null)
 
     LaunchedEffect(mainError) {
         mainError?.let {
@@ -96,25 +96,12 @@ fun MainView(mainViewModel: MainViewModel) {
                         Screen.CODEX -> "Codex"
                         Screen.SETTINGS -> "Settings"
                     }
-                    Text(title.toString())
+                    Text(title)
                 },
-                actions = {
-                    // Show close button only when in terminal view
-                    if (selectedScreen == Screen.CODEX) {
-                        IconButton(onClick = {
-                            mainViewModel.closeTerminal()
-                        }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = "Close Codex"
-                            )
-                        }
-                    }
-                }
+                actions = { }
             )
         }
     ) { contentPadding ->
-        // Use a Row to place the NavigationRail and the Content side-by-side
         Row(modifier = Modifier.padding(contentPadding).fillMaxSize()) {
 
             NavigationRail {
@@ -126,7 +113,7 @@ fun MainView(mainViewModel: MainViewModel) {
                     label = { Text("Nexus") },
                     selected = selectedScreen == Screen.NEXUS,
                     onClick = {
-                        mainViewModel.closeTerminal()
+                        mainViewModel.closeCodex()
                     }
                 )
 

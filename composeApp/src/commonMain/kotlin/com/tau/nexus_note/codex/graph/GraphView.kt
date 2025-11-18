@@ -153,12 +153,10 @@ fun GraphView(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // --- NEW: CULLING LOGIC ---
             // Calculate the visible rectangle in world coordinates
             val worldTopLeft = viewModel.screenToWorld(Offset.Zero)
             val worldBottomRight = viewModel.screenToWorld(Offset(size.width, size.height))
             val visibleWorldRect = Rect(worldTopLeft, worldBottomRight)
-            // --- END CULLING LOGIC ---
 
             withTransform({
                 translate(left = center.x, top = center.y)
@@ -192,15 +190,13 @@ fun GraphView(
                     val nodeB = nodes[edge.targetId]
                     if (nodeA == null || nodeB == null) continue
 
-                    // --- NEW: CULLING CHECK ---
+                    // --- CULLING CHECK ---
                     // Inflate the visible rect slightly (e.g., by 200px in world space) to avoid pop-in
                     // This is an approximation: if *both* nodes are off-screen, skip drawing the edge
                     val cullingRect = visibleWorldRect.inflate(200f / transform.zoom)
                     if (!cullingRect.contains(nodeA.pos) && !cullingRect.contains(nodeB.pos)) {
                         continue
                     }
-                    // --- END CULLING CHECK ---
-
                     if (nodeA.id == nodeB.id) {
                         val index = selfLoopDrawIndex.getOrPut(nodeA.id) { 0 }
                         drawSelfLoop(
@@ -237,7 +233,7 @@ fun GraphView(
                 // --- 2. Draw Nodes ---
                 drawNodes(
                     nodes = nodes,
-                    visibleWorldRect = visibleWorldRect, // <-- NEW: Pass visible rect
+                    visibleWorldRect = visibleWorldRect,
                     textMeasurer = textMeasurer,
                     labelColor = labelColor,
                     selectionColor = selectionColor,
@@ -329,7 +325,6 @@ fun GraphView(
                     // Create Node
                     SmallFloatingActionButton(
                         onClick = { onAddNodeClick() },
-                        // Use primaryContainer to match the main FAB
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(Icons.Default.Hub, contentDescription = "Create Node")
@@ -337,7 +332,6 @@ fun GraphView(
                     // Create Edge
                     SmallFloatingActionButton(
                         onClick = { onAddEdgeClick() },
-                        // Use primaryContainer to match the main FAB
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(Icons.Default.Link, contentDescription = "Create Edge")
@@ -499,7 +493,7 @@ private fun DrawScope.drawArrowhead(from: Offset, to: Offset, color: Color, size
 @OptIn(ExperimentalTextApi::class)
 private fun DrawScope.drawNodes(
     nodes: Map<Long, GraphNode>,
-    visibleWorldRect: Rect, // <-- NEW: Use this for culling
+    visibleWorldRect: Rect,
     textMeasurer: TextMeasurer,
     labelColor: Color,
     selectionColor: Color,
@@ -517,7 +511,7 @@ private fun DrawScope.drawNodes(
     val secondaryId = secondarySelectedId
 
     for (node in nodes.values) {
-        // --- NEW: CULLING CHECK ---
+        // --- CULLING CHECK ---
         // Create a bounding box for the node and check if it overlaps the visible rect
         val nodeRect = Rect(
             left = node.pos.x - node.radius,
@@ -528,7 +522,6 @@ private fun DrawScope.drawNodes(
         if (!visibleWorldRect.overlaps(nodeRect)) {
             continue // Skip drawing this node
         }
-        // --- END CULLING CHECK ---
 
         val isSelected = node.id == primaryId || node.id == secondaryId
 

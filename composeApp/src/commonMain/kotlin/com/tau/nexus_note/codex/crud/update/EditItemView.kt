@@ -17,69 +17,63 @@ fun EditItemView(
     // The single state object that drives this view
     editScreenState: EditScreenState,
 
-    // --- UPDATED: Simplified Event Handlers ---
+    // --- Simplified Event Handlers ---
     onSaveClick: () -> Unit,
     onCancelClick: () -> Unit,
-    // --- END UPDATES ---
 
     // Node Creation Handlers
-    onNodeCreationSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
+    onNodeCreationSchemaSelected: (SchemaDefinitionItem) -> Unit,
     onNodeCreationPropertyChanged: (String, String) -> Unit,
-    // REMOVED: onNodeCreationCreateClick
 
     // Edge Creation Handlers
-    onEdgeCreationSchemaSelected: (SchemaDefinitionItem) -> Unit, // UPDATED: Parameter type
+    onEdgeCreationSchemaSelected: (SchemaDefinitionItem) -> Unit,
     onEdgeCreationConnectionSelected: (ConnectionPair) -> Unit,
     onEdgeCreationSrcSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationDstSelected: (NodeDisplayItem) -> Unit,
     onEdgeCreationPropertyChanged: (String, String) -> Unit,
-    // REMOVED: onEdgeCreationCreateClick
 
     // Node Schema Creation Handlers
-    // REMOVED: onNodeSchemaCreationCreateClick
     onNodeSchemaTableNameChange: (String) -> Unit,
-    onNodeSchemaPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onNodeSchemaPropertyChange: (Int, SchemaProperty) -> Unit,
     onAddNodeSchemaProperty: () -> Unit,
     onRemoveNodeSchemaProperty: (Int) -> Unit,
 
     // Edge Schema Creation Handlers
-    // REMOVED: onEdgeSchemaCreationCreateClick
     onEdgeSchemaTableNameChange: (String) -> Unit,
     onEdgeSchemaCreationAddConnection: (String, String) -> Unit,
     onEdgeSchemaCreationRemoveConnection: (Int) -> Unit,
-    onEdgeSchemaPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onEdgeSchemaPropertyChange: (Int, SchemaProperty) -> Unit,
     onAddEdgeSchemaProperty: () -> Unit,
     onRemoveEdgeSchemaProperty: (Int) -> Unit,
 
     // Node Edit Handlers
-    onNodeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
+    onNodeEditPropertyChange: (String, String) -> Unit,
 
     // Edge Edit Handlers
-    onEdgeEditPropertyChange: (String, String) -> Unit, // UPDATED: Key is String
+    onEdgeEditPropertyChange: (String, String) -> Unit,
 
     // Node Schema Edit Handlers
     onNodeSchemaEditLabelChange: (String) -> Unit,
-    onNodeSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onNodeSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit,
     onNodeSchemaEditAddProperty: () -> Unit,
     onNodeSchemaEditRemoveProperty: (Int) -> Unit,
 
     // Edge Schema Edit Handlers
     onEdgeSchemaEditLabelChange: (String) -> Unit,
-    onEdgeSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onEdgeSchemaEditPropertyChange: (Int, SchemaProperty) -> Unit,
     onEdgeSchemaEditAddProperty: () -> Unit,
     onEdgeSchemaEditRemoveProperty: (Int) -> Unit,
-    // ADDED: Handlers for editing connections
     onEdgeSchemaEditAddConnection: (src: String, dst: String) -> Unit,
     onEdgeSchemaEditRemoveConnection: (Int) -> Unit
 ) {
-    // Use a 'when' block to route to the correct composable
+    // Route to the correct composable
     when (editScreenState) {
         is EditScreenState.CreateNode -> {
             CreateNodeView(
                 nodeCreationState = editScreenState.state,
                 onSchemaSelected = onNodeCreationSchemaSelected,
                 onPropertyChanged = onNodeCreationPropertyChanged,
-                onCreateClick = onSaveClick, // UPDATED
+                onCreateClick = onSaveClick,
                 onCancelClick = onCancelClick
             )
         }
@@ -91,7 +85,7 @@ fun EditItemView(
                 onSrcSelected = onEdgeCreationSrcSelected,
                 onDstSelected = onEdgeCreationDstSelected,
                 onPropertyChanged = onEdgeCreationPropertyChanged,
-                onCreateClick = onSaveClick, // UPDATED
+                onCreateClick = onSaveClick,
                 onCancelClick = onCancelClick
             )
         }
@@ -102,7 +96,7 @@ fun EditItemView(
                 onPropertyChange = onNodeSchemaPropertyChange,
                 onAddProperty = onAddNodeSchemaProperty,
                 onRemoveProperty = onRemoveNodeSchemaProperty,
-                onCreate = { onSaveClick() }, // UPDATED
+                onCreate = { onSaveClick() },
                 onCancel = onCancelClick
             )
         }
@@ -115,7 +109,7 @@ fun EditItemView(
                 onPropertyChange = onEdgeSchemaPropertyChange,
                 onAddProperty = onAddEdgeSchemaProperty,
                 onRemoveProperty = onRemoveEdgeSchemaProperty,
-                onCreate = { onSaveClick() }, // UPDATED
+                onCreate = { onSaveClick() },
                 onCancel = onCancelClick
             )
         }
@@ -123,7 +117,7 @@ fun EditItemView(
             EditNodeView(
                 state = editScreenState.state,
                 onPropertyChange = onNodeEditPropertyChange,
-                onSave = onSaveClick, // UPDATED
+                onSave = onSaveClick,
                 onCancel = onCancelClick
             )
         }
@@ -131,7 +125,7 @@ fun EditItemView(
             EditEdgeView(
                 state = editScreenState.state,
                 onPropertyChange = onEdgeEditPropertyChange,
-                onSave = onSaveClick, // UPDATED
+                onSave = onSaveClick,
                 onCancel = onCancelClick
             )
         }
@@ -142,7 +136,7 @@ fun EditItemView(
                 onPropertyChange = onNodeSchemaEditPropertyChange,
                 onAddProperty = onNodeSchemaEditAddProperty,
                 onRemoveProperty = onNodeSchemaEditRemoveProperty,
-                onSave = onSaveClick, // UPDATED
+                onSave = onSaveClick,
                 onCancel = onCancelClick
             )
         }
@@ -153,10 +147,10 @@ fun EditItemView(
                 onPropertyChange = onEdgeSchemaEditPropertyChange,
                 onAddProperty = onEdgeSchemaEditAddProperty,
                 onRemoveProperty = onEdgeSchemaEditRemoveProperty,
-                onSave = onSaveClick, // UPDATED
+                onSave = onSaveClick,
                 onCancel = onCancelClick,
-                onAddConnection = onEdgeSchemaEditAddConnection, // ADDED
-                onRemoveConnection = onEdgeSchemaEditRemoveConnection, // ADDED
+                onAddConnection = onEdgeSchemaEditAddConnection,
+                onRemoveConnection = onEdgeSchemaEditRemoveConnection,
             )
         }
         is EditScreenState.None -> {

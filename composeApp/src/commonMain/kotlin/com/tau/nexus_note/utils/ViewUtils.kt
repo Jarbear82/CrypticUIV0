@@ -37,14 +37,19 @@ fun hexToColor(hex: String): Color {
     return try {
         val cleanHex = hex.removePrefix("#")
         val colorLong = cleanHex.toLong(16)
-        if (cleanHex.length == 6) {
-            // No alpha
-            Color(colorLong or 0xFF000000)
-        } else if (cleanHex.length == 8) {
-            // With alpha
-            Color(colorLong)
-        } else {
-            Color.Magenta // Invalid length
+
+        when (cleanHex.length) {
+            6 -> {
+                // No alpha
+                Color(colorLong or 0xFF000000)
+            }
+            8 -> {
+                // With alpha
+                Color(colorLong)
+            }
+            else -> {
+                Color.Magenta // Invalid length
+            }
         }
     } catch (e: Exception) {
         Color.Magenta // Parse error

@@ -26,7 +26,7 @@ fun EditEdgeView(
         Text("Edit Edge: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- UPDATED ---
+
         // Using onSurfaceVariant for secondary, "muted" text
         Text(
             "From: ${state.src.label} (${state.src.displayProperty})",
@@ -38,22 +38,19 @@ fun EditEdgeView(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        // --- END UPDATE ---
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
-        if (state.schema.properties.isEmpty()) { // UPDATED: Check schema for properties
+        if (state.schema.properties.isEmpty()) {
             Text(
                 "No properties to edit.",
                 style = MaterialTheme.typography.bodySmall,
-                // --- UPDATED ---
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                // --- END UPDATE ---
             )
         } else {
             LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                // UPDATED: Iterate over schema properties, get values from state.properties map
+                // Iterate over schema properties, get values from state.properties map
                 itemsIndexed(state.schema.properties) { index, schemaProperty ->
                     val currentValue = state.properties[schemaProperty.name] ?: ""
                     val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)

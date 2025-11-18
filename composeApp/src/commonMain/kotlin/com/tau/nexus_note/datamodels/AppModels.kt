@@ -12,7 +12,7 @@ data class CodexItem(
 
 /**
  * Data class for Database Metadata.
- * (Currently unused but good to keep).
+ * (Currently unused).
  */
 data class DBMetaData(
     val name: String,

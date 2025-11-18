@@ -93,7 +93,6 @@ fun GraphSettingsView(
                 range = 0.1f..10f,
                 enabled = false
             )
-            // --- END UPDATE ---
 
             Spacer(Modifier.height(16.dp))
             Button(

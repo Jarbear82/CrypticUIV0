@@ -8,15 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.tau.nexus_note.settings.ThemeMode
 import com.tau.nexus_note.utils.getFontColor
 import com.tau.nexus_note.utils.hexToColor
-import com.tau.nexus_note.viewmodels.rememberMainViewModel
-import com.tau.nexus_note.views.MainView
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable

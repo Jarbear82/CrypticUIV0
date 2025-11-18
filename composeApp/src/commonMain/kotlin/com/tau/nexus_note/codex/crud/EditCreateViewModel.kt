@@ -5,17 +5,14 @@ import com.tau.nexus_note.datamodels.EditScreenState
 import com.tau.nexus_note.datamodels.NodeCreationState
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.datamodels.EdgeCreationState
-import com.tau.nexus_note.datamodels.EdgeEditState
 import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
-import com.tau.nexus_note.datamodels.NodeEditState
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.codex.metadata.MetadataViewModel
 import com.tau.nexus_note.codex.schema.SchemaViewModel
 import com.tau.nexus_note.CodexRepository
-import com.tau.nexus_note.codex.schema.SchemaData
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.NodeDisplayItem
 import kotlinx.coroutines.CoroutineScope
@@ -25,10 +22,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.collections.emptyList
-import kotlin.collections.get
 
 class EditCreateViewModel(
     private val repository: CodexRepository,
@@ -117,7 +112,6 @@ class EditCreateViewModel(
             println("Save aborted due to validation errors.")
             return // Don't save
         }
-        // --- END VALIDATION ---
 
         viewModelScope.launch {
             // Perform the database operation based on the current state
@@ -165,7 +159,7 @@ class EditCreateViewModel(
 
     // --- Node Creation ---
     fun initiateNodeCreation() {
-        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
         metadataViewModel.clearSelectedItem()
         _editScreenState.value = EditScreenState.CreateNode(
             NodeCreationState(schemas = nodeSchemas)
@@ -211,7 +205,7 @@ class EditCreateViewModel(
     // --- Edge Creation ---
     fun initiateEdgeCreation() {
         // Fetches new SchemaData and filters for edge schemas
-        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList<SchemaDefinitionItem>()
+        val edgeSchemas = schemaViewModel.schema.value?.edgeSchemas ?: emptyList()
         if (metadataViewModel.nodeList.value.isEmpty()) {
             metadataViewModel.listNodes()
         }
@@ -365,9 +359,9 @@ class EditCreateViewModel(
 
     // --- Edge Schema Creation ---
     fun initiateEdgeSchemaCreation() {
-        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList<SchemaDefinitionItem>()
+        val nodeSchemas = schemaViewModel.schema.value?.nodeSchemas ?: emptyList()
         viewModelScope.launch {
-            metadataViewModel.setItemToEdit("CreateEdgeSchema") // Keep this for cancel logic
+            metadataViewModel.setItemToEdit("CreateEdgeSchema")
         }
         _editScreenState.value = EditScreenState.CreateEdgeSchema(
             EdgeSchemaCreationState(allNodeSchemas = nodeSchemas)
@@ -553,7 +547,7 @@ class EditCreateViewModel(
             if (error != null) newErrors[index] = error else newErrors.remove(index)
 
             current.copy(state = current.state.copy(
-                properties = finalProperties, // <-- Use the fixed list
+                properties = finalProperties,
                 propertyErrors = newErrors
             ))
         }
@@ -568,7 +562,7 @@ class EditCreateViewModel(
                 currentName = schema.name,
                 connections = schema.connections ?: emptyList(),
                 properties = schema.properties,
-                allNodeSchemas = allNodeSchemas // ADDED
+                allNodeSchemas = allNodeSchemas
             )
         )
     }

@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,18 +23,14 @@ import com.tau.nexus_note.utils.toScreamingSnakeCase
 fun CreateEdgeSchemaView(
     state: EdgeSchemaCreationState,
     onTableNameChange: (String) -> Unit,
-    // Callbacks for managing the connection pair list
     onAddConnection: (src: String, dst: String) -> Unit,
     onRemoveConnection: (Int) -> Unit,
-    // Callbacks for managing properties
     onPropertyChange: (Int, SchemaProperty) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
-    // Create/Cancel
     onCreate: (EdgeSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
-    // UPDATED: Define your new supported types
     val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
 
     // --- Local state for the "Add Connection" UI ---
@@ -78,7 +74,6 @@ fun CreateEdgeSchemaView(
                     expanded = newSrcExpanded,
                     onDismissRequest = { newSrcExpanded = false }
                 ) {
-                    // UPDATED: Use new SchemaDefinitionItem and .name
                     state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
                             text = { Text(schema.name) },
@@ -108,7 +103,6 @@ fun CreateEdgeSchemaView(
                     expanded = newDstExpanded,
                     onDismissRequest = { newDstExpanded = false }
                 ) {
-                    // UPDATED: Use new SchemaDefinitionItem and .name
                     state.allNodeSchemas.forEach { schema ->
                         DropdownMenuItem(
                             text = { Text(schema.name) },

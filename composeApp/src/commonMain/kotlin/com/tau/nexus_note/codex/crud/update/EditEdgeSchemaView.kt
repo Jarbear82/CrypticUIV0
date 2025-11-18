@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
@@ -29,7 +28,6 @@ fun EditEdgeSchemaView(
     onRemoveProperty: (Int) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
-    // ADDED: Handlers for editing connections
     onAddConnection: (src: String, dst: String) -> Unit,
     onRemoveConnection: (Int) -> Unit
 ) {
@@ -57,7 +55,7 @@ fun EditEdgeSchemaView(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // UPDATED: Section for adding/removing connection pairs
+        // Section for adding/removing connection pairs
         Text("Connection Pairs", style = MaterialTheme.typography.titleMedium)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             // Source Table Dropdown
@@ -133,10 +131,7 @@ fun EditEdgeSchemaView(
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- List of current connection pairs ---
-        // --- UPDATED ---
-        // Replaced hard-coded border with theme's outline color
         LazyColumn(modifier = Modifier.heightIn(max = 150.dp).border(1.dp, MaterialTheme.colorScheme.outline)) {
-            // --- END UPDATE ---
             itemsIndexed(state.connections) { index, connection ->
                 ListItem(
                     headlineContent = {
@@ -167,7 +162,7 @@ fun EditEdgeSchemaView(
                     modifier = Modifier.padding(vertical = 4.dp)
                 ) {
                     OutlinedTextField(
-                        value = property.name, // UPDATED: Use name
+                        value = property.name,
                         onValueChange = {
                             onPropertyChange(index, property.copy(name = it.toCamelCase()))
                         },
@@ -183,7 +178,7 @@ fun EditEdgeSchemaView(
                         onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = property.type, // UPDATED: Use type
+                            value = property.type,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -205,14 +200,11 @@ fun EditEdgeSchemaView(
                         }
                     }
                     IconButton(onClick = { onRemoveProperty(index) }) {
-                        // --- UPDATED ---
-                        // Replaced Color.Red with theme's error color
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Property",
                             tint = MaterialTheme.colorScheme.error
                         )
-                        // --- END UPDATE ---
                     }
                 }
             }

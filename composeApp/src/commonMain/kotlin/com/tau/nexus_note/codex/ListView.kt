@@ -1,4 +1,4 @@
-package com.tau.nexus_note.views
+package com.tau.nexus_note.codex
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.codex.SearchableListHeader
 import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.utils.labelToColor

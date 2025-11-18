@@ -29,10 +29,7 @@ fun DeleteSchemaConfirmationDialog(
         text = { Text(text) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                // --- UPDATED ---
-                // Used the theme's error color for a semantic destructive action
                 Text("Delete", color = MaterialTheme.colorScheme.error)
-                // --- END UPDATE ---
             }
         },
         dismissButton = {

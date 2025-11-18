@@ -89,7 +89,6 @@ class QuadTree(val boundary: Rect) {
 
     /**
      * Recursively calculates the total repulsion force on a target node.
-     * This is the core of the Barnes-Hut algorithm.
      */
     fun applyRepulsion(targetNode: GraphNode, options: PhysicsOptions, theta: Float): Offset {
         var netForce = Offset.Zero
@@ -132,7 +131,6 @@ class QuadTree(val boundary: Rect) {
 
     /**
      * Helper to calculate direct node-to-node force, including collision.
-     * This is the same logic as the old engine, but now used by the QuadTree.
      */
     private fun calculateForce(nodeA: GraphNode, nodeB: GraphNode, options: PhysicsOptions): Offset {
         val delta = nodeB.pos - nodeA.pos

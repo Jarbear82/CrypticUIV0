@@ -1,10 +1,9 @@
-package com.tau.nexus_note.viewmodels
+package com.tau.nexus_note
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.tau.nexus_note.datamodels.CodexItem
 import com.tau.nexus_note.codex.CodexViewModel
-import com.tau.nexus_note.SqliteDbService
 import com.tau.nexus_note.settings.SettingsData
 import com.tau.nexus_note.settings.SettingsRepository
 import com.tau.nexus_note.settings.SettingsViewModel
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -70,8 +68,8 @@ class MainViewModel {
     private val _codexBaseDirectory = MutableStateFlow(getHomeDirectoryPath())
     val codexBaseDirectory = _codexBaseDirectory.asStateFlow()
 
-    private val _codicies = MutableStateFlow<List<CodexItem>>(emptyList())
-    val codicies = _codicies.asStateFlow()
+    private val _codices = MutableStateFlow<List<CodexItem>>(emptyList())
+    val codices = _codices.asStateFlow()
 
     private val _showBaseDirPicker = MutableStateFlow(false)
     val showBaseDirPicker = _showBaseDirPicker.asStateFlow()
@@ -92,7 +90,7 @@ class MainViewModel {
     val openedCodexItem = _openedCodexItem.asStateFlow()
 
     init {
-        loadCodicies()
+        loadCodices()
 
         viewModelScope.launch {
             _appSettings.value = settingsRepository.settings.first()
@@ -110,7 +108,7 @@ class MainViewModel {
     /**
      * Scans the base directory for valid SQLiteDB files (.sqlite).
      */
-    fun loadCodicies() {
+    fun loadCodices() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val files = listFilesWithExtension(_codexBaseDirectory.value, ".sqlite")
@@ -119,7 +117,7 @@ class MainViewModel {
                 }
 
                 viewModelScope.launch(Dispatchers.Main) {
-                    _codicies.value = graphs
+                    _codices.value = graphs
                 }
             } catch (e: Exception) {
                 viewModelScope.launch(Dispatchers.Main) {
@@ -143,7 +141,7 @@ class MainViewModel {
         _showBaseDirPicker.value = false
         path?.let {
             _codexBaseDirectory.value = it
-            loadCodicies()
+            loadCodices()
         }
     }
 
@@ -165,7 +163,7 @@ class MainViewModel {
         }
 
         val finalName = if (pascalName.endsWith(".sqlite")) pascalName else "$pascalName.sqlite"
-        val exists = _codicies.value.any { it.name.equals(finalName, ignoreCase = true) }
+        val exists = _codices.value.any { it.name.equals(finalName, ignoreCase = true) }
         _codexNameError.value = if (exists) "A codex with this name already exists." else null
     }
 
@@ -182,7 +180,7 @@ class MainViewModel {
         val newItem = CodexItem(finalName, newPath)
 
         openCodex(newItem)
-        _codicies.update { (it + newItem).distinctBy { it.path } }
+        _codices.update { (it + newItem).distinctBy { it.path } }
 
         // Clear the name fields
         _newCodexName.value = ""
@@ -226,7 +224,7 @@ class MainViewModel {
 
             // If the codex to delete is the one that's open, close it first.
             if (itemToDelete.path == _openedCodexItem.value?.path) {
-                closeTerminal()
+                closeCodex()
             }
 
             try {
@@ -235,7 +233,7 @@ class MainViewModel {
                     deleteFile(itemToDelete.path)
                 }
                 // Refresh the list
-                loadCodicies()
+                loadCodices()
             } catch (e: Exception) {
                 _errorFlow.value = "Error deleting file: ${e.message}"
             }
@@ -288,7 +286,7 @@ class MainViewModel {
         }
     }
 
-    fun closeTerminal() {
+    fun closeCodex() {
         viewModelScope.launch {
             _codexViewModel.value?.onCleared()
             _codexViewModel.value = null
@@ -296,7 +294,7 @@ class MainViewModel {
             _selectedScreen.value = Screen.NEXUS
             clearCodexName() // Clear create field
             // Refresh the list in case a new DB was created
-            loadCodicies()
+            loadCodices()
         }
     }
 

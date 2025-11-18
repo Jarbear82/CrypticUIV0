@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
@@ -22,7 +21,7 @@ import com.tau.nexus_note.utils.toPascalCase
 fun EditNodeSchemaView(
     state: NodeSchemaEditState,
     onLabelChange: (String) -> Unit,
-    onPropertyChange: (Int, SchemaProperty) -> Unit, // UPDATED: Parameter type
+    onPropertyChange: (Int, SchemaProperty) -> Unit,
     onAddProperty: () -> Unit,
     onRemoveProperty: (Int) -> Unit,
     onSave: () -> Unit,
@@ -35,7 +34,7 @@ fun EditNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = state.currentName, // UPDATED: Use currentName
+            value = state.currentName,
             onValueChange = { onLabelChange(it.toPascalCase()) },
             label = { Text("Table Name") },
             modifier = Modifier.fillMaxWidth(),
@@ -55,7 +54,7 @@ fun EditNodeSchemaView(
                     modifier = Modifier.padding(vertical = 4.dp)
                 ) {
                     OutlinedTextField(
-                        value = property.name, // UPDATED: Use name
+                        value = property.name,
                         onValueChange = {
                             onPropertyChange(index, property.copy(name = it.toCamelCase()))
                         },
@@ -71,7 +70,7 @@ fun EditNodeSchemaView(
                         onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = property.type, // UPDATED: Use type
+                            value = property.type,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -93,21 +92,18 @@ fun EditNodeSchemaView(
                         }
                     }
                     Checkbox(
-                        checked = property.isDisplayProperty, // UPDATED: Use isDisplayProperty
+                        checked = property.isDisplayProperty,
                         onCheckedChange = {
                             onPropertyChange(index, property.copy(isDisplayProperty = it))
                         }
                     )
-                    Text("Display") // UPDATED: Text changed from PK
+                    Text("Display")
                     IconButton(onClick = { onRemoveProperty(index) }) {
-                        // --- UPDATED ---
-                        // Replaced Color.Red with theme's error color
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Property",
                             tint = MaterialTheme.colorScheme.error
                         )
-                        // --- END UPDATE ---
                     }
                 }
             }

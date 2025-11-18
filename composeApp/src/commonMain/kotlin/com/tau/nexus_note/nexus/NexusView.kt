@@ -23,12 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.utils.DirectoryPicker
-import com.tau.nexus_note.viewmodels.MainViewModel
+import com.tau.nexus_note.MainViewModel
 import com.tau.nexus_note.utils.labelToColor
 
 @Composable
 fun NexusView(viewModel: MainViewModel) {
-    val codeices by viewModel.codicies.collectAsState()
+    val codices by viewModel.codices.collectAsState()
     val baseDirectory by viewModel.codexBaseDirectory.collectAsState()
     val showBaseDirPicker by viewModel.showBaseDirPicker.collectAsState()
 
@@ -66,7 +66,7 @@ fun NexusView(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Existing Codicies in: $baseDirectory", style = MaterialTheme.typography.titleMedium)
+            Text("Existing Codices in: $baseDirectory", style = MaterialTheme.typography.titleMedium)
             OutlinedButton(onClick = { viewModel.onChangeBaseDirectoryClicked() }) {
                 Text("Change")
             }
@@ -74,16 +74,16 @@ fun NexusView(viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(modifier = Modifier.weight(1f)) {
-            if (codeices.isEmpty()) {
+            if (codices.isEmpty()) {
                 item {
                     Text(
-                        "No codicies found in this directory.",
+                        "No codices found in this directory.",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
-            items(codeices) { graph ->
+            items(codices) { graph ->
                 val colorInfo = labelToColor(graph.path)
                 ListItem(
                     headlineContent = { Text(graph.name) },
@@ -149,7 +149,7 @@ fun NexusView(viewModel: MainViewModel) {
         // --- Actions ---
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.Center
         ) {
             Button(
                 onClick = { viewModel.onCodexNameConfirmed() },
@@ -159,7 +159,6 @@ fun NexusView(viewModel: MainViewModel) {
             }
             Button(
                 onClick = { viewModel.openInMemoryTerminal() },
-                // modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Open In-Memory Terminal")
             }

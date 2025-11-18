@@ -6,16 +6,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.NodeDisplayItem
-import com.tau.nexus_note.datamodels.SchemaDefinitionItem
 import com.tau.nexus_note.codex.crud.DeleteSchemaConfirmationDialog
 import com.tau.nexus_note.codex.crud.update.EditItemView
 import com.tau.nexus_note.codex.graph.DetangleSettingsDialog
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView
 import com.tau.nexus_note.codex.schema.SchemaView
-import com.tau.nexus_note.views.ListView
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable

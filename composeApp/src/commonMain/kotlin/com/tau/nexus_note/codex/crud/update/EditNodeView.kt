@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.update // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +18,7 @@ import com.tau.nexus_note.datamodels.NodeEditState
 @Composable
 fun EditNodeView(
     state: NodeEditState,
-    onPropertyChange: (String, String) -> Unit, // UPDATED: Key is now a String
+    onPropertyChange: (String, String) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -28,7 +28,7 @@ fun EditNodeView(
 
         Text("Properties", style = MaterialTheme.typography.titleMedium)
         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-            // UPDATED: Iterate over schema properties, get values from state.properties map
+            // Iterate over schema properties, get values from state.properties map
             itemsIndexed(state.schema.properties) { index, schemaProperty ->
                 val currentValue = state.properties[schemaProperty.name] ?: ""
                 val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)

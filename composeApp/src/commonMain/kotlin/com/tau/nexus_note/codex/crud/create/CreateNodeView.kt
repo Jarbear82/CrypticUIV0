@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex.crud.create // UPDATED: Package name
+package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,7 +43,7 @@ fun CreateNodeView(
             ) {
                 nodeCreationState.schemas.forEach { schema ->
                     DropdownMenuItem(
-                        text = { Text(schema.name) }, // UPDATED: Use .name
+                        text = { Text(schema.name) },
                         onClick = {
                             onSchemaSelected(schema)
                             expanded = false
@@ -53,7 +53,7 @@ fun CreateNodeView(
             }
         }
 
-        // UPDATED: Iterate over properties from selectedSchema
+        // Iterate over properties from selectedSchema
         nodeCreationState.selectedSchema?.properties?.forEach { property ->
             val currentValue = nodeCreationState.properties[property.name] ?: ""
             val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
