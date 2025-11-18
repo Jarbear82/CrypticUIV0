@@ -30,7 +30,7 @@ fun SettingsView(
         // --- Navigation Rail ---
         NavigationRail(
             modifier = Modifier.fillMaxHeight(),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Spacer(Modifier.height(8.dp))
             SettingsCategory.entries.forEach { category ->

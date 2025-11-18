@@ -60,55 +60,6 @@ fun NexusView(viewModel: MainViewModel) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
     ) {
-        Text(
-            "Welcome to Nexus Note",
-            style = MaterialTheme.typography.headlineLarge
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // --- Create Codex ---
-        Row(
-            // Align items vertically. 'Bottom' works well with the text field's supporting text.
-            verticalAlignment = Alignment.CenterVertically,
-            // Add spacing between the items
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // This Text is now part of the row
-            Text(
-                "Create New Codex:",
-                style = MaterialTheme.typography.titleMedium,
-                // Align this text to the center of the row's height
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
-
-            OutlinedTextField(
-                value = newCodexName,
-                onValueChange = { viewModel.validateCodexName(it) },
-                label = { Text("Codex Name") },
-                singleLine = true,
-                placeholder = { Text("MyDatabase") },
-                suffix = { Text(".sqlite") },
-                isError = codexNameError != null,
-                supportingText = {
-                    if (codexNameError != null) {
-                        Text(codexNameError!!)
-                    }
-                },
-                // Use .weight(1f) to fill all *remaining* horizontal space
-                modifier = Modifier.weight(1f)
-            )
-
-            Button(
-                onClick = { viewModel.onCodexNameConfirmed() },
-                enabled = newCodexName.isNotBlank() && codexNameError == null,
-            ) {
-                Text("Create and Open")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         // --- Database List ---
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -168,14 +119,47 @@ fun NexusView(viewModel: MainViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- Create Codex ---
+
+        // This Text is now part of the row
+        Text(
+            "Create New Codex:",
+            style = MaterialTheme.typography.titleMedium,
+            // Align this text to the center of the row's height
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        OutlinedTextField(
+            value = newCodexName,
+            onValueChange = { viewModel.validateCodexName(it) },
+            label = { Text("Codex Name") },
+            singleLine = true,
+            placeholder = { Text("MyDatabase") },
+            suffix = { Text(".sqlite") },
+            isError = codexNameError != null,
+            supportingText = {
+                if (codexNameError != null) {
+                    Text(codexNameError!!)
+                }
+            },
+            // Use .weight(1f) to fill all *remaining* horizontal space
+            modifier = Modifier.align(Alignment.CenterHorizontally).fillMaxWidth()
+        )
+
         // --- Actions ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Button(
+                onClick = { viewModel.onCodexNameConfirmed() },
+                enabled = newCodexName.isNotBlank() && codexNameError == null,
+            ) {
+                Text("Create and Open")
+            }
+            Button(
                 onClick = { viewModel.openInMemoryTerminal() },
-                modifier = Modifier.fillMaxWidth()
+                // modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Open In-Memory Terminal")
             }
