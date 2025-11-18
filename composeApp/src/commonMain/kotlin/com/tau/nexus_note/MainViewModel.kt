@@ -87,8 +87,9 @@ class MainViewModel {
     private val _codexToDelete = MutableStateFlow<CodexItem?>(null)
     val codexToDelete = _codexToDelete.asStateFlow()
 
-    // --- NEW: Track currently open codex ---
+    // --- Track currently open codex ---
     private val _openedCodexItem = MutableStateFlow<CodexItem?>(null)
+    val openedCodexItem = _openedCodexItem.asStateFlow()
 
     init {
         loadCodicies()
