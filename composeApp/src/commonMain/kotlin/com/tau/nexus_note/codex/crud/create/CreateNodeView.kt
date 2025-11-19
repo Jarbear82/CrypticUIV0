@@ -1,7 +1,9 @@
 package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,112 +24,120 @@ fun CreateNodeView(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(8.dp)) {
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text("Create Node", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
         ) {
-            OutlinedTextField(
-                value = nodeCreationState.selectedSchema?.name ?: "Select Schema",
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
-            )
-            ExposedDropdownMenu(
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onExpandedChange = { expanded = !expanded }
             ) {
-                nodeCreationState.schemas.forEach { schema ->
-                    DropdownMenuItem(
-                        text = { Text(schema.name) },
-                        onClick = {
-                            onSchemaSelected(schema)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        // Iterate over properties from selectedSchema
-        nodeCreationState.selectedSchema?.properties?.forEach { property ->
-            val currentValue = nodeCreationState.properties[property.name] ?: ""
-            val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-
-            when (property.type) {
-                "Number" -> {
-                    OutlinedTextField(
-                        value = currentValue,
-                        onValueChange = {
-                            // Only allow valid numeric input
-                            if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
-                                onPropertyChanged(property.name, it)
+                OutlinedTextField(
+                    value = nodeCreationState.selectedSchema?.name ?: "Select Schema",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    nodeCreationState.schemas.forEach { schema ->
+                        DropdownMenuItem(
+                            text = { Text(schema.name) },
+                            onClick = {
+                                onSchemaSelected(schema)
+                                expanded = false
                             }
-                        },
-                        label = { Text("${property.name} (Number)") },
-                        modifier = modifier,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                }
-                "LongText" -> {
-                    OutlinedTextField(
-                        value = currentValue,
-                        onValueChange = { onPropertyChanged(property.name, it) },
-                        label = { Text("${property.name} (LongText)") },
-                        modifier = modifier,
-                        singleLine = false,
-                        maxLines = 5
-                    )
-                }
-                "Date" -> {
-                    OutlinedTextField(
-                        value = currentValue,
-                        onValueChange = { onPropertyChanged(property.name, it) },
-                        label = { Text("${property.name} (Date)") },
-                        placeholder = { Text("YYYY-MM-DD") },
-                        modifier = modifier
-                        // Note: A real implementation would use a DatePicker dialog
-                    )
-                }
-                "Image", "Audio" -> {
-                    // Placeholder for a future file picker
-                    Row(
-                        modifier = modifier,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = currentValue, // This would be a file path
-                            onValueChange = { onPropertyChanged(property.name, it) },
-                            label = { Text("${property.name} (${property.type} Path)") },
-                            modifier = Modifier.weight(1f),
-                            readOnly = true // Recommend read-only, set via button
                         )
-                        Button(
-                            onClick = { /* TODO: Launch file picker */ },
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
-                            Text("...")
-                        }
                     }
                 }
-                else -> { // Default "Text"
-                    OutlinedTextField(
-                        value = currentValue,
-                        onValueChange = { onPropertyChanged(property.name, it) },
-                        label = { Text("${property.name} (Text)") },
-                        modifier = modifier,
-                        singleLine = true
-                    )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Iterate over properties
+            if (nodeCreationState.selectedSchema != null) {
+                nodeCreationState.selectedSchema.properties.forEach { property ->
+                    val currentValue = nodeCreationState.properties[property.name] ?: ""
+                    val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+
+                    when (property.type) {
+                        "Number" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = {
+                                    if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
+                                        onPropertyChanged(property.name, it)
+                                    }
+                                },
+                                label = { Text("${property.name} (Number)") },
+                                modifier = modifier,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
+                        "LongText" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = { onPropertyChanged(property.name, it) },
+                                label = { Text("${property.name} (LongText)") },
+                                modifier = modifier,
+                                singleLine = false,
+                                maxLines = 5
+                            )
+                        }
+                        "Date" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = { onPropertyChanged(property.name, it) },
+                                label = { Text("${property.name} (Date)") },
+                                placeholder = { Text("YYYY-MM-DD") },
+                                modifier = modifier
+                            )
+                        }
+                        "Image", "Audio" -> {
+                            Row(
+                                modifier = modifier,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = currentValue,
+                                    onValueChange = { onPropertyChanged(property.name, it) },
+                                    label = { Text("${property.name} (${property.type} Path)") },
+                                    modifier = Modifier.weight(1f),
+                                    readOnly = true
+                                )
+                                Button(
+                                    onClick = { /* TODO: Launch file picker */ },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Text("...")
+                                }
+                            }
+                        }
+                        else -> { // Default "Text"
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = { onPropertyChanged(property.name, it) },
+                                label = { Text("${property.name} (Text)") },
+                                modifier = modifier,
+                                singleLine = true
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Fixed Buttons
         Row {
             Button(onClick = onCreateClick) {
                 Text("Create")

@@ -1,9 +1,9 @@
 package com.tau.nexus_note.codex.crud.update
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -22,14 +22,19 @@ fun EditNodeView(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("Edit Node: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall) // UPDATED: Use schema.name
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+        Text("Edit Node: ${state.schema.name}", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
-
         Text("Properties", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-            // Iterate over schema properties, get values from state.properties map
-            itemsIndexed(state.schema.properties) { index, schemaProperty ->
+
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Iterate over schema properties
+            state.schema.properties.forEach { schemaProperty ->
                 val currentValue = state.properties[schemaProperty.name] ?: ""
                 val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 val onValueChange = { value: String -> onPropertyChange(schemaProperty.name, value) }
@@ -39,7 +44,6 @@ fun EditNodeView(
                         OutlinedTextField(
                             value = currentValue,
                             onValueChange = {
-                                // Only allow valid numeric input
                                 if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
                                     onValueChange(it)
                                 }
@@ -74,7 +78,7 @@ fun EditNodeView(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedTextField(
-                                value = currentValue, // This would be a file path
+                                value = currentValue,
                                 onValueChange = onValueChange,
                                 label = { Text("${schemaProperty.name} (${schemaProperty.type} Path)") },
                                 modifier = Modifier.weight(1f),
@@ -103,6 +107,7 @@ fun EditNodeView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Fixed Buttons
         Row {
             Button(onClick = onSave) {
                 Text("Save")

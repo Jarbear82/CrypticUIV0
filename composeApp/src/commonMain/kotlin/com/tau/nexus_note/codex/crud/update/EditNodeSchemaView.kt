@@ -1,8 +1,9 @@
 package com.tau.nexus_note.codex.crud.update
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -22,101 +23,199 @@ fun EditNodeSchemaView(
     state: NodeSchemaEditState,
     onLabelChange: (String) -> Unit,
     onPropertyChange: (Int, SchemaProperty) -> Unit,
-    onAddProperty: () -> Unit,
+    onAddProperty: (SchemaProperty) -> Unit,
     onRemoveProperty: (Int) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
     val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    // --- Local state for the "Add Property" UI ---
+    var newPropName by remember { mutableStateOf("") }
+    var newPropType by remember { mutableStateOf("Text") }
+    var newIsDisplay by remember { mutableStateOf(false) }
+    var typeExpanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = state.currentName,
-            onValueChange = { onLabelChange(it.toPascalCase()) },
-            label = { Text("Table Name") },
-            modifier = Modifier.fillMaxWidth(),
-            isError = state.currentNameError != null,
-            supportingText = { state.currentNameError?.let { Text(it) } },
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Table Name
+            OutlinedTextField(
+                value = state.currentName,
+                onValueChange = { onLabelChange(it.toPascalCase()) },
+                label = { Text("Table Name") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = state.currentNameError != null,
+                supportingText = { state.currentNameError?.let { Text(it) } },
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Properties", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-            itemsIndexed(state.properties) { index, property ->
-                // Note: isDeleted logic is handled in the ViewModel, not the view
-                var expanded by remember { mutableStateOf(false) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+            // --- Add Property Input Row (Unified UI) ---
+            Text("Properties", style = MaterialTheme.typography.titleMedium)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Property Name
+                OutlinedTextField(
+                    value = newPropName,
+                    onValueChange = { newPropName = it.toCamelCase() },
+                    label = { Text("Name") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Property Type
+                ExposedDropdownMenuBox(
+                    expanded = typeExpanded,
+                    onExpandedChange = { typeExpanded = !typeExpanded },
+                    modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = property.name,
-                        onValueChange = {
-                            onPropertyChange(index, property.copy(name = it.toCamelCase()))
-                        },
-                        label = { Text("Property Name") },
-                        modifier = Modifier.weight(1f),
-                        isError = state.propertyErrors.containsKey(index) || property.name.isBlank(),
-                        supportingText = { state.propertyErrors[index]?.let { Text(it) } },
-                        singleLine = true
+                        value = newPropType,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                    ExposedDropdownMenu(
+                        expanded = typeExpanded,
+                        onDismissRequest = { typeExpanded = false }
                     ) {
-                        OutlinedTextField(
-                            value = property.type,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).width(120.dp),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            dataTypes.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type) },
-                                    onClick = {
-                                        onPropertyChange(index, property.copy(type = type))
-                                        expanded = false
-                                    },
-                                )
-                            }
+                        dataTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type) },
+                                onClick = {
+                                    newPropType = type
+                                    typeExpanded = false
+                                }
+                            )
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Display Checkbox
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Display", style = MaterialTheme.typography.labelSmall)
                     Checkbox(
-                        checked = property.isDisplayProperty,
-                        onCheckedChange = {
-                            onPropertyChange(index, property.copy(isDisplayProperty = it))
-                        }
+                        checked = newIsDisplay,
+                        onCheckedChange = { newIsDisplay = it }
                     )
-                    Text("Display")
-                    IconButton(onClick = { onRemoveProperty(index) }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete Property",
-                            tint = MaterialTheme.colorScheme.error
+                }
+
+                // Add Button
+                IconButton(
+                    onClick = {
+                        onAddProperty(
+                            SchemaProperty(
+                                name = newPropName,
+                                type = newPropType,
+                                isDisplayProperty = newIsDisplay
+                            )
                         )
+                        newPropName = ""
+                        newPropType = "Text"
+                        newIsDisplay = false
+                    },
+                    enabled = newPropName.isNotBlank()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Property")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // --- Existing Properties List ---
+            Column(
+                modifier = Modifier
+                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
+                    .fillMaxWidth()
+            ) {
+                state.properties.forEachIndexed { index, property ->
+                    var expanded by remember { mutableStateOf(false) }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = property.name,
+                            onValueChange = {
+                                onPropertyChange(index, property.copy(name = it.toCamelCase()))
+                            },
+                            label = { Text("Name") },
+                            modifier = Modifier.weight(1f),
+                            isError = state.propertyErrors.containsKey(index) || property.name.isBlank(),
+                            supportingText = { state.propertyErrors[index]?.let { Text(it) } },
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { expanded = !expanded },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            OutlinedTextField(
+                                value = property.type,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth(),
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                dataTypes.forEach { type ->
+                                    DropdownMenuItem(
+                                        text = { Text(type) },
+                                        onClick = {
+                                            onPropertyChange(index, property.copy(type = type))
+                                            expanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Checkbox(
+                                checked = property.isDisplayProperty,
+                                onCheckedChange = {
+                                    onPropertyChange(index, property.copy(isDisplayProperty = it))
+                                }
+                            )
+                        }
+                        IconButton(onClick = { onRemoveProperty(index) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Property",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    if (index < state.properties.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }
         }
 
-        Button(onClick = onAddProperty) {
-            Icon(Icons.Default.Add, contentDescription = "Add Property")
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Add Property")
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Fixed Buttons
         Row {
             Button(
                 onClick = onSave,

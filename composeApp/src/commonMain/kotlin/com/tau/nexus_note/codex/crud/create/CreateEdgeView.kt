@@ -1,7 +1,9 @@
 package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,200 +33,201 @@ fun CreateEdgeView(
     var srcExpanded by remember { mutableStateOf(false) }
     var dstExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(8.dp)) {
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text("Create Edge", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Schema Dropdown
-        ExposedDropdownMenuBox(
-            expanded = schemaExpanded,
-            onExpandedChange = { schemaExpanded = !schemaExpanded }
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
         ) {
-            OutlinedTextField(
-                value = edgeCreationState.selectedSchema?.name ?: "Select Schema",
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
-                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = schemaExpanded,
-                onDismissRequest = { schemaExpanded = false }
-            ) {
-                edgeCreationState.schemas.forEach { schema ->
-                    DropdownMenuItem(
-                        text = { Text(schema.name) },
-                        onClick = {
-                            onSchemaSelected(schema)
-                            schemaExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        // --- Connection Pair Dropdown ---
-        // Only show this after schema is selected
-        edgeCreationState.selectedSchema?.let {
-            Spacer(modifier = Modifier.height(8.dp))
+            // Schema Dropdown
             ExposedDropdownMenuBox(
-                expanded = connectionExpanded,
-                onExpandedChange = { connectionExpanded = !connectionExpanded }
+                expanded = schemaExpanded,
+                onExpandedChange = { schemaExpanded = !schemaExpanded }
             ) {
                 OutlinedTextField(
-                    // Display selected connection
-                    value = edgeCreationState.selectedConnection?.let { "${it.src} -> ${it.dst}" } ?: "Select Connection Type",
+                    value = edgeCreationState.selectedSchema?.name ?: "Select Schema",
                     onValueChange = {},
                     readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = connectionExpanded) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = schemaExpanded) },
                     modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
                 )
                 ExposedDropdownMenu(
+                    expanded = schemaExpanded,
+                    onDismissRequest = { schemaExpanded = false }
+                ) {
+                    edgeCreationState.schemas.forEach { schema ->
+                        DropdownMenuItem(
+                            text = { Text(schema.name) },
+                            onClick = {
+                                onSchemaSelected(schema)
+                                schemaExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // --- Connection Pair Dropdown ---
+            edgeCreationState.selectedSchema?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                ExposedDropdownMenuBox(
                     expanded = connectionExpanded,
-                    onDismissRequest = { connectionExpanded = false }
+                    onExpandedChange = { connectionExpanded = !connectionExpanded }
                 ) {
-                    // Populate from the selected schema (nullable) connection list
-                    (edgeCreationState.selectedSchema.connections ?: emptyList()).forEach { connection ->
-                        DropdownMenuItem(
-                            text = { Text("${connection.src} -> ${connection.dst}") },
-                            onClick = {
-                                onConnectionSelected(connection)
-                                connectionExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- Source/Destination/Properties ---
-        // Only show these after connection type is selected
-        edgeCreationState.selectedConnection?.let {
-            // Source Node Dropdown
-            ExposedDropdownMenuBox(
-                expanded = srcExpanded,
-                onExpandedChange = { srcExpanded = !srcExpanded }
-            ) {
-                OutlinedTextField(
-                    value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Node",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
-                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
-                )
-                ExposedDropdownMenu(
-                    expanded = srcExpanded,
-                    onDismissRequest = { srcExpanded = false }
-                ) {
-                    // Filter nodes based on selected connection's src
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
-                        DropdownMenuItem(
-                            text = { Text("${node.label} : ${node.displayProperty}") },
-                            onClick = {
-                                onSrcSelected(node)
-                                srcExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Destination Node Dropdown
-            ExposedDropdownMenuBox(
-                expanded = dstExpanded,
-                onExpandedChange = { dstExpanded = !dstExpanded }
-            ) {
-                OutlinedTextField(
-                    value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Node",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
-                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
-                )
-                ExposedDropdownMenu(
-                    expanded = dstExpanded,
-                    onDismissRequest = { dstExpanded = false }
-                ) {
-                    // Filter nodes based on selected connection's dst
-                    edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
-                        DropdownMenuItem(
-                            text = { Text("${node.label} : ${node.displayProperty}") },
-                            onClick = {
-                                onDstSelected(node)
-                                dstExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Properties
-            edgeCreationState.selectedSchema?.properties?.forEach { property ->
-                val currentValue = edgeCreationState.properties[property.name] ?: ""
-                val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                val onValueChange = { value: String -> onPropertyChanged(property.name, value) }
-
-                when (property.type) {
-                    "Number" -> {
-                        OutlinedTextField(
-                            value = currentValue,
-                            onValueChange = {
-                                if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
-                                    onValueChange(it)
+                    OutlinedTextField(
+                        value = edgeCreationState.selectedConnection?.let { "${it.src} -> ${it.dst}" } ?: "Select Connection Type",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = connectionExpanded) },
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = connectionExpanded,
+                        onDismissRequest = { connectionExpanded = false }
+                    ) {
+                        (edgeCreationState.selectedSchema.connections ?: emptyList()).forEach { connection ->
+                            DropdownMenuItem(
+                                text = { Text("${connection.src} -> ${connection.dst}") },
+                                onClick = {
+                                    onConnectionSelected(connection)
+                                    connectionExpanded = false
                                 }
-                            },
-                            label = { Text("${property.name} (Number)") },
-                            modifier = modifier,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
+                            )
+                        }
                     }
-                    "LongText" -> {
-                        OutlinedTextField(
-                            value = currentValue,
-                            onValueChange = onValueChange,
-                            label = { Text("${property.name} (LongText)") },
-                            modifier = modifier,
-                            singleLine = false,
-                            maxLines = 5
-                        )
+                }
+            }
+
+            // --- Source/Destination/Properties ---
+            edgeCreationState.selectedConnection?.let {
+                // Source Node Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = srcExpanded,
+                    onExpandedChange = { srcExpanded = !srcExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = edgeCreationState.src?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Source Node",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = srcExpanded) },
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = srcExpanded,
+                        onDismissRequest = { srcExpanded = false }
+                    ) {
+                        edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.src }.forEach { node ->
+                            DropdownMenuItem(
+                                text = { Text("${node.label} : ${node.displayProperty}") },
+                                onClick = {
+                                    onSrcSelected(node)
+                                    srcExpanded = false
+                                }
+                            )
+                        }
                     }
-                    "Date" -> {
-                        OutlinedTextField(
-                            value = currentValue,
-                            onValueChange = onValueChange,
-                            label = { Text("${property.name} (Date)") },
-                            placeholder = { Text("YYYY-MM-DD") },
-                            modifier = modifier
-                        )
+                }
+
+                // Destination Node Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = dstExpanded,
+                    onExpandedChange = { dstExpanded = !dstExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = edgeCreationState.dst?.let { "${it.label} : ${it.displayProperty}" } ?: "Select Destination Node",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dstExpanded) },
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth().padding(top = 8.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = dstExpanded,
+                        onDismissRequest = { dstExpanded = false }
+                    ) {
+                        edgeCreationState.availableNodes.filter { it.label == edgeCreationState.selectedConnection.dst }.forEach { node ->
+                            DropdownMenuItem(
+                                text = { Text("${node.label} : ${node.displayProperty}") },
+                                onClick = {
+                                    onDstSelected(node)
+                                    dstExpanded = false
+                                }
+                            )
+                        }
                     }
-                    "Image", "Audio" -> {
-                        Row(
-                            modifier = modifier,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                }
+
+                // Properties
+                edgeCreationState.selectedSchema?.properties?.forEach { property ->
+                    val currentValue = edgeCreationState.properties[property.name] ?: ""
+                    val modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    val onValueChange = { value: String -> onPropertyChanged(property.name, value) }
+
+                    when (property.type) {
+                        "Number" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = {
+                                    if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
+                                        onValueChange(it)
+                                    }
+                                },
+                                label = { Text("${property.name} (Number)") },
+                                modifier = modifier,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                        }
+                        "LongText" -> {
                             OutlinedTextField(
                                 value = currentValue,
                                 onValueChange = onValueChange,
-                                label = { Text("${property.name} (${property.type} Path)") },
-                                modifier = Modifier.weight(1f),
-                                readOnly = true
+                                label = { Text("${property.name} (LongText)") },
+                                modifier = modifier,
+                                singleLine = false,
+                                maxLines = 5
                             )
-                            Button(
-                                onClick = { /* TODO: Launch file picker */ },
-                                modifier = Modifier.padding(start = 8.dp)
+                        }
+                        "Date" -> {
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${property.name} (Date)") },
+                                placeholder = { Text("YYYY-MM-DD") },
+                                modifier = modifier
+                            )
+                        }
+                        "Image", "Audio" -> {
+                            Row(
+                                modifier = modifier,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("...")
+                                OutlinedTextField(
+                                    value = currentValue,
+                                    onValueChange = onValueChange,
+                                    label = { Text("${property.name} (${property.type} Path)") },
+                                    modifier = Modifier.weight(1f),
+                                    readOnly = true
+                                )
+                                Button(
+                                    onClick = { /* TODO: Launch file picker */ },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Text("...")
+                                }
                             }
                         }
-                    }
-                    else -> { // Default "Text"
-                        OutlinedTextField(
-                            value = currentValue,
-                            onValueChange = onValueChange,
-                            label = { Text("${property.name} (Text)") },
-                            modifier = modifier,
-                            singleLine = true
-                        )
+                        else -> { // Default "Text"
+                            OutlinedTextField(
+                                value = currentValue,
+                                onValueChange = onValueChange,
+                                label = { Text("${property.name} (Text)") },
+                                modifier = modifier,
+                                singleLine = true
+                            )
+                        }
                     }
                 }
             }
@@ -232,7 +235,7 @@ fun CreateEdgeView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Create/Cancel Buttons
+        // Fixed Buttons
         Row {
             Button(onClick = onCreateClick, enabled = edgeCreationState.src != null && edgeCreationState.dst != null) {
                 Text("Create")
