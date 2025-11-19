@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.utils.toCamelCase
@@ -28,11 +29,9 @@ fun EditNodeSchemaView(
     onSave: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
-
     // --- Local state for the "Add Property" UI ---
     var newPropName by remember { mutableStateOf("") }
-    var newPropType by remember { mutableStateOf("Text") }
+    var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var newIsDisplay by remember { mutableStateOf(false) }
     var typeExpanded by remember { mutableStateOf(false) }
 
@@ -83,7 +82,7 @@ fun EditNodeSchemaView(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = newPropType,
+                        value = newPropType.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Type") },
@@ -94,9 +93,9 @@ fun EditNodeSchemaView(
                         expanded = typeExpanded,
                         onDismissRequest = { typeExpanded = false }
                     ) {
-                        dataTypes.forEach { type ->
+                        CodexPropertyDataTypes.entries.forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(type.displayName) },
                                 onClick = {
                                     newPropType = type
                                     typeExpanded = false
@@ -128,7 +127,7 @@ fun EditNodeSchemaView(
                             )
                         )
                         newPropName = ""
-                        newPropType = "Text"
+                        newPropType = CodexPropertyDataTypes.TEXT
                         newIsDisplay = false
                     },
                     enabled = newPropName.isNotBlank()
@@ -169,7 +168,7 @@ fun EditNodeSchemaView(
                             modifier = Modifier.weight(1f)
                         ) {
                             OutlinedTextField(
-                                value = property.type,
+                                value = property.type.displayName,
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -179,9 +178,9 @@ fun EditNodeSchemaView(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                dataTypes.forEach { type ->
+                                CodexPropertyDataTypes.entries.forEach { type ->
                                     DropdownMenuItem(
-                                        text = { Text(type) },
+                                        text = { Text(type.displayName) },
                                         onClick = {
                                             onPropertyChange(index, property.copy(type = type))
                                             expanded = false

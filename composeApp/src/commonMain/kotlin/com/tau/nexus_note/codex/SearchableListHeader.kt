@@ -110,7 +110,10 @@ fun SearchableListHeader(
         trailingContent = {
             if (onAddClick != null) {
                 IconButton(onClick = onAddClick) {
-                    Icon(Icons.Default.Add, contentDescription = addContentDescription)
+                    Icon(Icons.Default.Add,
+                        contentDescription = addContentDescription,
+                        tint = MaterialTheme.colorScheme.primary
+                        )
                 }
             }
         }

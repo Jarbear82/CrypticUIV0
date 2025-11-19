@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SchemaProperty(
     val name: String,
-    val type: String,
+    val type: CodexPropertyDataTypes,
     val isDisplayProperty: Boolean = false // New: Marks this as the one to show in lists
 )
 

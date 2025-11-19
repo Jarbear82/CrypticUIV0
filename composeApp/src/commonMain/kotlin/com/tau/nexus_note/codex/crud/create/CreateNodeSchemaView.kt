@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.utils.toCamelCase
@@ -29,11 +30,9 @@ fun CreateNodeSchemaView(
     onCancel: () -> Unit,
     onCreate: (NodeSchemaCreationState) -> Unit
 ) {
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
-
     // --- Local state for the "Add Property" UI ---
     var newPropName by remember { mutableStateOf("") }
-    var newPropType by remember { mutableStateOf("Text") }
+    var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var newIsDisplay by remember { mutableStateOf(false) }
     var typeExpanded by remember { mutableStateOf(false) }
 
@@ -84,7 +83,7 @@ fun CreateNodeSchemaView(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = newPropType,
+                        value = newPropType.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Type") },
@@ -95,9 +94,9 @@ fun CreateNodeSchemaView(
                         expanded = typeExpanded,
                         onDismissRequest = { typeExpanded = false }
                     ) {
-                        dataTypes.forEach { type ->
+                        CodexPropertyDataTypes.entries.forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(type.displayName) },
                                 onClick = {
                                     newPropType = type
                                     typeExpanded = false
@@ -129,7 +128,7 @@ fun CreateNodeSchemaView(
                             )
                         )
                         newPropName = ""
-                        newPropType = "Text"
+                        newPropType = CodexPropertyDataTypes.TEXT
                         newIsDisplay = false
                     },
                     enabled = newPropName.isNotBlank()
@@ -149,7 +148,7 @@ fun CreateNodeSchemaView(
                 state.properties.forEachIndexed { index, property ->
                     ListItem(
                         headlineContent = { Text(property.name) },
-                        supportingContent = { Text(property.type) },
+                        supportingContent = { Text(property.type.displayName) },
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (property.isDisplayProperty) {

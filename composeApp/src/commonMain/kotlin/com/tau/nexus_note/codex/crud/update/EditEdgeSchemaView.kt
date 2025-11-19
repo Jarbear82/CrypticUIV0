@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.utils.toCamelCase
@@ -31,9 +32,6 @@ fun EditEdgeSchemaView(
     onAddConnection: (src: String, dst: String) -> Unit,
     onRemoveConnection: (Int) -> Unit
 ) {
-    // Define supported types
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
-
     // --- Local state for the "Add Connection" UI ---
     var newSrcTable by remember { mutableStateOf<String?>(null) }
     var newSrcExpanded by remember { mutableStateOf(false) }
@@ -42,7 +40,7 @@ fun EditEdgeSchemaView(
 
     // --- Local state for the "Add Property" UI ---
     var newPropName by remember { mutableStateOf("") }
-    var newPropType by remember { mutableStateOf("Text") }
+    var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var typeExpanded by remember { mutableStateOf(false) }
 
     // Outer Column fills the screen
@@ -205,7 +203,7 @@ fun EditEdgeSchemaView(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = newPropType,
+                        value = newPropType.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Type") },
@@ -216,9 +214,9 @@ fun EditEdgeSchemaView(
                         expanded = typeExpanded,
                         onDismissRequest = { typeExpanded = false }
                     ) {
-                        dataTypes.forEach { type ->
+                        CodexPropertyDataTypes.entries.forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(type.displayName) },
                                 onClick = {
                                     newPropType = type
                                     typeExpanded = false
@@ -241,7 +239,7 @@ fun EditEdgeSchemaView(
                             )
                         )
                         newPropName = ""
-                        newPropType = "Text"
+                        newPropType = CodexPropertyDataTypes.TEXT
                     },
                     enabled = newPropName.isNotBlank()
                 ) {
@@ -276,7 +274,7 @@ fun EditEdgeSchemaView(
                             onExpandedChange = { expanded = !expanded }
                         ) {
                             OutlinedTextField(
-                                value = property.type,
+                                value = property.type.displayName,
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -286,9 +284,9 @@ fun EditEdgeSchemaView(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                dataTypes.forEach { type ->
+                                CodexPropertyDataTypes.entries.forEach { type ->
                                     DropdownMenuItem(
-                                        text = { Text(type) },
+                                        text = { Text(type.displayName) },
                                         onClick = {
                                             onPropertyChange(index, property.copy(type = type))
                                             expanded = false

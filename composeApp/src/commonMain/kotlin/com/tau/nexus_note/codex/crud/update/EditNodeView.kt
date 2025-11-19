@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeEditState
 
 @Composable
@@ -40,7 +41,7 @@ fun EditNodeView(
                 val onValueChange = { value: String -> onPropertyChange(schemaProperty.name, value) }
 
                 when (schemaProperty.type) {
-                    "Number" -> {
+                    CodexPropertyDataTypes.NUMBER -> {
                         OutlinedTextField(
                             value = currentValue,
                             onValueChange = {
@@ -53,7 +54,7 @@ fun EditNodeView(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
                     }
-                    "LongText" -> {
+                    CodexPropertyDataTypes.LONG_TEXT -> {
                         OutlinedTextField(
                             value = currentValue,
                             onValueChange = onValueChange,
@@ -63,7 +64,7 @@ fun EditNodeView(
                             maxLines = 5
                         )
                     }
-                    "Date" -> {
+                    CodexPropertyDataTypes.DATE -> {
                         OutlinedTextField(
                             value = currentValue,
                             onValueChange = onValueChange,
@@ -72,7 +73,7 @@ fun EditNodeView(
                             modifier = modifier
                         )
                     }
-                    "Image", "Audio" -> {
+                    CodexPropertyDataTypes.IMAGE, CodexPropertyDataTypes.AUDIO -> {
                         Row(
                             modifier = modifier,
                             verticalAlignment = Alignment.CenterVertically
@@ -80,7 +81,7 @@ fun EditNodeView(
                             OutlinedTextField(
                                 value = currentValue,
                                 onValueChange = onValueChange,
-                                label = { Text("${schemaProperty.name} (${schemaProperty.type} Path)") },
+                                label = { Text("${schemaProperty.name} (${schemaProperty.type.displayName} Path)") },
                                 modifier = Modifier.weight(1f),
                                 readOnly = true
                             )

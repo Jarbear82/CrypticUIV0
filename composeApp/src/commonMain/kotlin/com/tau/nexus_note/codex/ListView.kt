@@ -99,10 +99,8 @@ fun ListView(
             onLoadMoreEdges()
         }
     }
-// --- END NEW PAGINATION LOGIC ---
 
 
-// User requested "side by side lists"
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Nodes List ---
         Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
@@ -112,7 +110,13 @@ fun ListView(
                 onSearchTextChange = onNodeSearchChange,
                 onAddClick = onAddNodeClick,
                 addContentDescription = "New Node",
-                leadingContent = { Icon(Icons.Default.Hub, contentDescription = "Node")},
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Hub,
+                        contentDescription = "Node",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             LazyColumn(state = nodeLazyListState) { // <-- NEW: Added state
@@ -171,11 +175,17 @@ fun ListView(
                 onSearchTextChange = onEdgeSearchChange,
                 onAddClick = onAddEdgeClick,
                 addContentDescription = "New Edge",
-                leadingContent = { Icon(Icons.Default.Link, contentDescription = "Link")},
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = "Link",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            LazyColumn(state = edgeLazyListState) { // <-- NEW: Added state
-                val filteredEdges = paginatedEdges.filter { // <-- MODIFIED: Use paginatedEdges
+            LazyColumn(state = edgeLazyListState) {
+                val filteredEdges = paginatedEdges.filter {
                     it.label.contains(edgeSearchText, ignoreCase = true) ||
                             it.src.displayProperty.contains(edgeSearchText, ignoreCase = true) ||
                             it.dst.displayProperty.contains(edgeSearchText, ignoreCase = true)

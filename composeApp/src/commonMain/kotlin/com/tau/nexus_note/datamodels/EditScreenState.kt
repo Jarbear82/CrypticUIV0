@@ -36,7 +36,8 @@ data class EdgeCreationState(
 // --- Data class for Node Schema Creation UI State ---
 data class NodeSchemaCreationState(
     val tableName: String = "",
-    val properties: List<SchemaProperty> = listOf(SchemaProperty("name", "Text", isDisplayProperty = true)),
+    val properties: List<SchemaProperty> = listOf(SchemaProperty("name",
+        CodexPropertyDataTypes.TEXT, isDisplayProperty = true)),
     val tableNameError: String? = null,
     val propertyErrors: Map<Int, String?> = emptyMap()
 )

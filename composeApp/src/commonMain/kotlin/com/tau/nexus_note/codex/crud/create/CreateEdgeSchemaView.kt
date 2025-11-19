@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.EdgeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
 import com.tau.nexus_note.utils.toCamelCase
@@ -31,8 +32,6 @@ fun CreateEdgeSchemaView(
     onCreate: (EdgeSchemaCreationState) -> Unit,
     onCancel: () -> Unit
 ) {
-    val dataTypes = listOf("Text", "LongText", "Image", "Audio", "Date", "Number")
-
     // --- Local state for the "Add Connection" UI ---
     var newSrcTable by remember { mutableStateOf<String?>(null) }
     var newSrcExpanded by remember { mutableStateOf(false) }
@@ -41,7 +40,7 @@ fun CreateEdgeSchemaView(
 
     // --- Local state for the "Add Property" UI ---
     var newPropName by remember { mutableStateOf("") }
-    var newPropType by remember { mutableStateOf("Text") }
+    var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var typeExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
@@ -205,7 +204,7 @@ fun CreateEdgeSchemaView(
                     modifier = Modifier.weight(1f)
                 ) {
                     OutlinedTextField(
-                        value = newPropType,
+                        value = newPropType.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Type") },
@@ -216,9 +215,9 @@ fun CreateEdgeSchemaView(
                         expanded = typeExpanded,
                         onDismissRequest = { typeExpanded = false }
                     ) {
-                        dataTypes.forEach { type ->
+                        CodexPropertyDataTypes.entries.forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(type.displayName) },
                                 onClick = {
                                     newPropType = type
                                     typeExpanded = false
@@ -230,7 +229,7 @@ fun CreateEdgeSchemaView(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Add Button (Display property option removed for Edges)
+                // Add Button
                 IconButton(
                     onClick = {
                         onAddProperty(
@@ -241,7 +240,7 @@ fun CreateEdgeSchemaView(
                             )
                         )
                         newPropName = ""
-                        newPropType = "Text"
+                        newPropType = CodexPropertyDataTypes.TEXT
                     },
                     enabled = newPropName.isNotBlank()
                 ) {
@@ -276,7 +275,7 @@ fun CreateEdgeSchemaView(
                             onExpandedChange = { expanded = !expanded }
                         ) {
                             OutlinedTextField(
-                                value = property.type,
+                                value = property.type.displayName,
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -286,9 +285,9 @@ fun CreateEdgeSchemaView(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                dataTypes.forEach { type ->
+                                CodexPropertyDataTypes.entries.forEach { type ->
                                     DropdownMenuItem(
-                                        text = { Text(type) },
+                                        text = { Text(type.displayName) },
                                         onClick = {
                                             onPropertyChange(index, property.copy(type = type))
                                             expanded = false
@@ -297,7 +296,6 @@ fun CreateEdgeSchemaView(
                                 }
                             }
                         }
-                        // Display checkbox removed for Edges
                         IconButton(onClick = {
                             onRemoveProperty(index)
                         }) {

@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.ConnectionPair
 import com.tau.nexus_note.datamodels.EdgeCreationState
 import com.tau.nexus_note.datamodels.NodeDisplayItem
@@ -167,7 +168,7 @@ fun CreateEdgeView(
                     val onValueChange = { value: String -> onPropertyChanged(property.name, value) }
 
                     when (property.type) {
-                        "Number" -> {
+                        CodexPropertyDataTypes.NUMBER -> {
                             OutlinedTextField(
                                 value = currentValue,
                                 onValueChange = {
@@ -180,7 +181,7 @@ fun CreateEdgeView(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                             )
                         }
-                        "LongText" -> {
+                        CodexPropertyDataTypes.LONG_TEXT -> {
                             OutlinedTextField(
                                 value = currentValue,
                                 onValueChange = onValueChange,
@@ -190,7 +191,7 @@ fun CreateEdgeView(
                                 maxLines = 5
                             )
                         }
-                        "Date" -> {
+                        CodexPropertyDataTypes.DATE -> {
                             OutlinedTextField(
                                 value = currentValue,
                                 onValueChange = onValueChange,
@@ -199,7 +200,7 @@ fun CreateEdgeView(
                                 modifier = modifier
                             )
                         }
-                        "Image", "Audio" -> {
+                        CodexPropertyDataTypes.IMAGE, CodexPropertyDataTypes.AUDIO -> {
                             Row(
                                 modifier = modifier,
                                 verticalAlignment = Alignment.CenterVertically
@@ -207,7 +208,7 @@ fun CreateEdgeView(
                                 OutlinedTextField(
                                     value = currentValue,
                                     onValueChange = onValueChange,
-                                    label = { Text("${property.name} (${property.type} Path)") },
+                                    label = { Text("${property.name} (${property.type.displayName} Path)") },
                                     modifier = Modifier.weight(1f),
                                     readOnly = true
                                 )
