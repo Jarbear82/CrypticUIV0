@@ -27,7 +27,7 @@ data class GraphNode(
     val radius: Float,
     val colorInfo: ColorInfo,
     var isFixed: Boolean = false,
-    // --- ADDED: State for ForceAtlas2 Adaptive Speed ---
+    // --- State for ForceAtlas2 Adaptive Speed ---
     var oldForce: Offset = Offset.Zero,
     var swinging: Float = 0f,
     var traction: Float = 0f

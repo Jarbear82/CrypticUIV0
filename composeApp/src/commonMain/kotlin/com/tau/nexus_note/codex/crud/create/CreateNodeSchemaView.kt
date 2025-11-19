@@ -16,6 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeSchemaCreationState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.ui.components.CodexDropdown
+import com.tau.nexus_note.ui.components.CodexSectionHeader
+import com.tau.nexus_note.ui.components.FormActionRow
 import com.tau.nexus_note.utils.toCamelCase
 import com.tau.nexus_note.utils.toPascalCase
 
@@ -34,11 +37,9 @@ fun CreateNodeSchemaView(
     var newPropName by remember { mutableStateOf("") }
     var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var newIsDisplay by remember { mutableStateOf(false) }
-    var typeExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-        Text("Create Node Schema", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        CodexSectionHeader("Create Node Schema")
 
         // Scrollable Content
         Column(
@@ -76,34 +77,15 @@ fun CreateNodeSchemaView(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Property Type
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = !typeExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = newPropType.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                // Property Type using CodexDropdown
+                Box(modifier = Modifier.weight(1f)) {
+                    CodexDropdown(
+                        label = "Type",
+                        options = CodexPropertyDataTypes.entries,
+                        selectedOption = newPropType,
+                        onOptionSelected = { newPropType = it },
+                        displayTransform = { it.displayName }
                     )
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
-                    ) {
-                        CodexPropertyDataTypes.entries.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.displayName) },
-                                onClick = {
-                                    newPropType = type
-                                    typeExpanded = false
-                                }
-                            )
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -180,19 +162,13 @@ fun CreateNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- Fixed Actions ---
-        Row {
-            Button(
-                onClick = { onCreate(state) },
-                enabled = state.tableName.isNotBlank()
-                        && state.tableNameError == null
-                        && state.properties.isNotEmpty()
-            ) {
-                Text("Create")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onCancel) {
-                Text("Cancel")
-            }
-        }
+        FormActionRow(
+            primaryLabel = "Create",
+            onPrimaryClick = { onCreate(state) },
+            primaryEnabled = state.tableName.isNotBlank()
+                    && state.tableNameError == null
+                    && state.properties.isNotEmpty(),
+            onSecondaryClick = onCancel
+        )
     }
 }

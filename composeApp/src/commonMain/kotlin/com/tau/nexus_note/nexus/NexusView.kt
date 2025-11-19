@@ -1,6 +1,5 @@
 package com.tau.nexus_note.nexus
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,8 +9,6 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -24,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.utils.DirectoryPicker
 import com.tau.nexus_note.MainViewModel
+import com.tau.nexus_note.ui.components.CodexAlertDialog
+import com.tau.nexus_note.ui.components.CodexListItem
 import com.tau.nexus_note.utils.labelToColor
 
 @Composable
@@ -48,10 +47,13 @@ fun NexusView(viewModel: MainViewModel) {
 
 
     codexToDelete?.let { item ->
-        DeleteCodexDialog(
-            item = item,
+        CodexAlertDialog(
+            title = "Delete Codex?",
+            text = "Are you sure you want to permanently delete the codex file '${item.name}'? This will also delete its associated media folder.\n\nThis action cannot be undone.",
+            confirmLabel = "Delete",
             onConfirm = { viewModel.confirmDeleteCodex() },
-            onDismiss = { viewModel.cancelDeleteCodex() }
+            onDismiss = { viewModel.cancelDeleteCodex() },
+            isDestructive = true
         )
     }
 
@@ -85,31 +87,24 @@ fun NexusView(viewModel: MainViewModel) {
             }
             items(codices) { graph ->
                 val colorInfo = labelToColor(graph.path)
-                ListItem(
-                    headlineContent = { Text(graph.name) },
-                    supportingContent = { Text(graph.path) },
-                    modifier = Modifier.clickable { viewModel.openCodex(graph) },
-                    colors = ListItemDefaults.colors(
-                        containerColor = colorInfo.composeColor,
-                        headlineColor = colorInfo.composeFontColor,
-                        supportingColor = colorInfo.composeFontColor,
-                        leadingIconColor = colorInfo.composeFontColor,
-                        trailingIconColor = colorInfo.composeFontColor
-                    ),
-                    // --- Leading icon ---
+                CodexListItem(
+                    headline = graph.name,
+                    supportingText = graph.path,
+                    colorSeed = graph.path,
+                    onClick = { viewModel.openCodex(graph) },
                     leadingContent = {
                         Icon(
                             Icons.Default.Storage,
-                            contentDescription = "Codex Icon"
+                            contentDescription = "Codex Icon",
+                            tint = colorInfo.composeFontColor
                         )
                     },
-                    // --- Delete button ---
                     trailingContent = {
                         IconButton(onClick = { viewModel.requestDeleteCodex(graph) }) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete Codex",
-                                tint = colorInfo.composeFontColor // Match icon tint
+                                tint = colorInfo.composeFontColor
                             )
                         }
                     }
@@ -121,11 +116,9 @@ fun NexusView(viewModel: MainViewModel) {
 
         // --- Create Codex ---
 
-        // This Text is now part of the row
         Text(
             "Create New Codex:",
             style = MaterialTheme.typography.titleMedium,
-            // Align this text to the center of the row's height
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
 
@@ -142,7 +135,6 @@ fun NexusView(viewModel: MainViewModel) {
                     Text(codexNameError!!)
                 }
             },
-            // Use .weight(1f) to fill all *remaining* horizontal space
             modifier = Modifier.align(Alignment.CenterHorizontally).fillMaxWidth()
         )
 

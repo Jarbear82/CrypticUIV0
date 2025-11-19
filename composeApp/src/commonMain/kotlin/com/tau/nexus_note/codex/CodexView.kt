@@ -10,12 +10,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeDisplayItem
-import com.tau.nexus_note.codex.crud.DeleteSchemaConfirmationDialog
 import com.tau.nexus_note.codex.crud.update.EditItemView
 import com.tau.nexus_note.codex.graph.DetangleSettingsDialog
 import com.tau.nexus_note.codex.graph.GraphView
 import com.tau.nexus_note.codex.metadata.MetadataView
 import com.tau.nexus_note.codex.schema.SchemaView
+import com.tau.nexus_note.ui.components.CodexAlertDialog
 import com.tau.nexus_note.ui.components.TwoPaneLayout
 import kotlinx.coroutines.flow.collectLatest
 
@@ -185,11 +185,19 @@ fun CodexView(viewModel: CodexViewModel) {
                     // Dialog handling within the pane context
                     val itemToDelete = schemaToDelete
                     if (itemToDelete != null && selectedDataTab == DataViewTabs.SCHEMA) {
-                        DeleteSchemaConfirmationDialog(
-                            item = itemToDelete,
-                            dependencyCount = dependencyCount,
+                        val text = if (dependencyCount == 0L) {
+                            "Are you sure you want to delete the schema '${itemToDelete.name}'?"
+                        } else {
+                            "Warning: This schema is used by $dependencyCount node(s) or edge(s). Deleting '${itemToDelete.name}' will also delete all of them.\n\nAre you sure you want to continue?"
+                        }
+
+                        CodexAlertDialog(
+                            title = "Delete Schema?",
+                            text = text,
+                            confirmLabel = "Delete",
                             onConfirm = { viewModel.schemaViewModel.confirmDeleteSchema() },
-                            onDismiss = { viewModel.schemaViewModel.clearDeleteSchemaRequest() }
+                            onDismiss = { viewModel.schemaViewModel.clearDeleteSchemaRequest() },
+                            isDestructive = true
                         )
                     }
 

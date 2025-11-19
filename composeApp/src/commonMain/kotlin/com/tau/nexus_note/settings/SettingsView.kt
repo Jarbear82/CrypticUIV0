@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tau.nexus_note.ui.components.CodexSectionHeader
 import com.tau.nexus_note.utils.hexToColor
 import kotlin.math.roundToInt
 
@@ -52,31 +53,31 @@ fun SettingsView(
             when (selectedCategory) {
                 SettingsCategory.APPEARANCE -> {
                     item {
-                        SectionHeader("Appearance & Theme")
+                        CodexSectionHeader("Appearance & Theme")
                         ThemeSettingsSection(settings.theme, viewModel)
                     }
                 }
                 SettingsCategory.GRAPH -> {
                     item {
-                        SectionHeader("Graph View")
+                        CodexSectionHeader("Graph View")
                         GraphSettingsSection(settings, viewModel)
                     }
                 }
                 SettingsCategory.DATA -> {
                     item {
-                        SectionHeader("Data & Codex")
+                        CodexSectionHeader("Data & Codex")
                         DataSettingsSection(settings.data, viewModel)
                     }
                 }
                 SettingsCategory.GENERAL -> {
                     item {
-                        SectionHeader("General")
+                        CodexSectionHeader("General")
                         GeneralSettingsSection(settings.general, viewModel)
                     }
                 }
                 SettingsCategory.ABOUT -> {
                     item {
-                        SectionHeader("About")
+                        CodexSectionHeader("About")
                         AboutSection()
                     }
                 }
@@ -87,15 +88,6 @@ fun SettingsView(
 
 }
 
-@Composable
-private fun SectionHeader(title: String) {
-    Column {
-        Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        HorizontalDivider(modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
-    }
-}
-
 // --- Appearance Section ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +95,7 @@ private fun ThemeSettingsSection(
     theme: ThemeSettings,
     viewModel: SettingsViewModel
 ) {
-// --- UPDATED: Theme Mode Dropdown ---
+// --- Theme Mode Dropdown ---
     SettingDropdown(
         label = "Theme Mode",
         selected = theme.themeMode.name,
@@ -111,14 +103,14 @@ private fun ThemeSettingsSection(
         onSelected = { viewModel.onThemeModeChange(ThemeMode.valueOf(it)) }
     )
 
-// --- ADDED: Single Accent Color Picker (always visible) ---
+// --- Single Accent Color Picker (always visible) ---
     ColorSettingItem(
         label = "Accent Color",
         color = Color(theme.accentColor),
         onColorChange = { viewModel.onAccentColorChange(it) }
     )
 
-// --- UPDATED: Conditional visibility for Custom Background ---
+// --- Conditional visibility for Custom Background ---
     AnimatedVisibility(visible = theme.themeMode == ThemeMode.CUSTOM) {
         Column(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp)
@@ -135,7 +127,7 @@ private fun ThemeSettingsSection(
         }
     }
 
-// --- ADDED: Simplified Reset Button ---
+// --- Reset Button ---
     Spacer(Modifier.height(16.dp))
     Button(
         onClick = viewModel::onResetTheme,
@@ -315,6 +307,11 @@ private fun DataSettingsSection(
         checked = data.autoLoadLastCodex,
         onCheckedChange = viewModel::onAutoLoadLastCodexChange
     )
+    SettingToggle(
+        label = "Auto-Refresh Codex Data",
+        checked = data.autoRefreshCodex,
+        onCheckedChange = viewModel::onAutoRefreshCodexChange
+    )
 // Add other data settings here
 
 
@@ -361,13 +358,13 @@ private fun GeneralSettingsSection(
 private fun AboutSection() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Nexus Note Version 1.0.0", style = MaterialTheme.typography.bodyLarge)
-        Button(onClick = { /* TODO / }, modifier = Modifier.fillMaxWidth()) {
-Text("Check for Updates")
-}
-Button(onClick = { / TODO / }, modifier = Modifier.fillMaxWidth()) {
-Text("View Licenses")
-}
-Button(onClick = { / TODO */ }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
+            Text("Check for Updates")
+        }
+        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
+            Text("View Licenses")
+        }
+        Button(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth()) {
             Text("View README")
         }
     }
@@ -471,10 +468,8 @@ private fun SettingDropdown(
 }
 
 /**
-
-A compact, two-row widget for editing a color.
-
-Includes label, color preview, hex input, and RGB sliders.
+ * A compact, two-row widget for editing a color.
+ * Includes label, color preview, hex input, and RGB sliders.
  */
 @OptIn(ExperimentalStdlibApi::class)
 @Composable
@@ -492,7 +487,7 @@ private fun ColorSettingItem(
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.small)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-// Top row: Label, Preview, Hex
+        // Top row: Label, Preview, Hex
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

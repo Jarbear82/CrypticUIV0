@@ -1,25 +1,13 @@
 package com.tau.nexus_note.codex.metadata
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
 import com.tau.nexus_note.datamodels.NodeDisplayItem
-import com.tau.nexus_note.utils.labelToColor
+import com.tau.nexus_note.ui.components.CodexSectionHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +24,6 @@ fun MetadataView(
     onDeleteEdgeClick: (EdgeDisplayItem) -> Unit,
     onAddNodeClick: () -> Unit,
     onAddEdgeClick: () -> Unit,
-// ADDED: Refresh handlers
     onListAllClick: () -> Unit,
     onListNodesClick: () -> Unit,
     onListEdgesClick: () -> Unit
@@ -44,8 +31,7 @@ fun MetadataView(
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
 
         // --- Selection Details ---
-        Text("Selection Details", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(8.dp))
+        CodexSectionHeader("Selection Details")
 
         val primaryNode = primarySelectedItem as? NodeDisplayItem
         val secondaryNode = secondarySelectedItem as? NodeDisplayItem
@@ -71,11 +57,10 @@ fun MetadataView(
             Text("No item selected.", style = MaterialTheme.typography.bodyMedium)
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // --- Data Refresh ---
-        Text("Data Management", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        CodexSectionHeader("Data Management")
 
         Button(
             onClick = onListAllClick,
@@ -105,6 +90,4 @@ fun MetadataView(
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
     }
-
-
 }

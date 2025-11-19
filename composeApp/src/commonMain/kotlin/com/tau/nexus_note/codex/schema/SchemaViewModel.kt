@@ -27,20 +27,20 @@ class SchemaViewModel(
     private val _schemaDependencyCount = MutableStateFlow(0L)
     val schemaDependencyCount = _schemaDependencyCount.asStateFlow()
 
-    // --- ADDED: Search State ---
+    // --- Search State ---
     private val _nodeSchemaSearchText = MutableStateFlow("")
     val nodeSchemaSearchText = _nodeSchemaSearchText.asStateFlow()
 
     private val _edgeSchemaSearchText = MutableStateFlow("")
     val edgeSchemaSearchText = _edgeSchemaSearchText.asStateFlow()
 
-    // --- ADDED: Visibility State ---
+    // --- Visibility State ---
     private val _schemaVisibility = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
     val schemaVisibility = _schemaVisibility.asStateFlow()
 
 
     fun showSchema() {
-        // (FIXED) Launch a coroutine to call the suspend function
+        // Launch a coroutine to call the suspend function
         viewModelScope.launch {
             repository.refreshSchema()
         }
@@ -76,7 +76,7 @@ class SchemaViewModel(
         _schemaDependencyCount.value = 0
     }
 
-    // --- ADDED: Search Handlers ---
+    // --- Search Handlers ---
     fun onNodeSchemaSearchChange(text: String) {
         _nodeSchemaSearchText.value = text
     }
@@ -85,7 +85,7 @@ class SchemaViewModel(
         _edgeSchemaSearchText.value = text
     }
 
-    // --- ADDED: Toggle Function ---
+    // --- Toggle Function ---
     fun toggleSchemaVisibility(schemaId: Long) {
         _schemaVisibility.update {
             val newMap = it.toMutableMap()

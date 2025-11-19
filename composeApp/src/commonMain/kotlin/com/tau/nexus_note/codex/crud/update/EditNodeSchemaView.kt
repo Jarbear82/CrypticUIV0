@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.ui.components.CodexDropdown
+import com.tau.nexus_note.ui.components.CodexSectionHeader
+import com.tau.nexus_note.ui.components.FormActionRow
 import com.tau.nexus_note.utils.toCamelCase
 import com.tau.nexus_note.utils.toPascalCase
 
@@ -33,11 +36,9 @@ fun EditNodeSchemaView(
     var newPropName by remember { mutableStateOf("") }
     var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
     var newIsDisplay by remember { mutableStateOf(false) }
-    var typeExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-        Text("Edit Node Schema", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        CodexSectionHeader("Edit Node Schema")
 
         // Scrollable Content
         Column(
@@ -76,33 +77,14 @@ fun EditNodeSchemaView(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Property Type
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = !typeExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = newPropType.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                Box(modifier = Modifier.weight(1f)) {
+                    CodexDropdown(
+                        label = "Type",
+                        options = CodexPropertyDataTypes.entries,
+                        selectedOption = newPropType,
+                        onOptionSelected = { newPropType = it },
+                        displayTransform = { it.displayName }
                     )
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
-                    ) {
-                        CodexPropertyDataTypes.entries.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.displayName) },
-                                onClick = {
-                                    newPropType = type
-                                    typeExpanded = false
-                                }
-                            )
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -145,7 +127,6 @@ fun EditNodeSchemaView(
                     .fillMaxWidth()
             ) {
                 state.properties.forEachIndexed { index, property ->
-                    var expanded by remember { mutableStateOf(false) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -162,32 +143,14 @@ fun EditNodeSchemaView(
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = property.type.displayName,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth(),
+                        Box(modifier = Modifier.weight(1f)) {
+                            CodexDropdown(
+                                label = "Type",
+                                options = CodexPropertyDataTypes.entries,
+                                selectedOption = property.type,
+                                onOptionSelected = { onPropertyChange(index, property.copy(type = it)) },
+                                displayTransform = { it.displayName }
                             )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                CodexPropertyDataTypes.entries.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = { Text(type.displayName) },
-                                        onClick = {
-                                            onPropertyChange(index, property.copy(type = type))
-                                            expanded = false
-                                        },
-                                    )
-                                }
-                            }
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Checkbox(
@@ -215,17 +178,11 @@ fun EditNodeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Fixed Buttons
-        Row {
-            Button(
-                onClick = onSave,
-                enabled = state.currentName.isNotBlank() && state.currentNameError == null && state.propertyErrors.isEmpty()
-            ) {
-                Text("Save")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onCancel) {
-                Text("Cancel")
-            }
-        }
+        FormActionRow(
+            primaryLabel = "Save",
+            onPrimaryClick = onSave,
+            primaryEnabled = state.currentName.isNotBlank() && state.currentNameError == null && state.propertyErrors.isEmpty(),
+            onSecondaryClick = onCancel
+        )
     }
 }

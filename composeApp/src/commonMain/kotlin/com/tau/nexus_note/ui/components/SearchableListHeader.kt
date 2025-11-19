@@ -1,4 +1,4 @@
-package com.tau.nexus_note.codex
+package com.tau.nexus_note.ui.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -54,7 +54,7 @@ fun SearchableListHeader(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 4.dp) // Add spacing
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
                         OutlinedTextField(
                             value = searchText,

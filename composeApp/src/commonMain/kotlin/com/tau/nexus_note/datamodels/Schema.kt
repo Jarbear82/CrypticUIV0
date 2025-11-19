@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 data class SchemaProperty(
     val name: String,
     val type: CodexPropertyDataTypes,
-    val isDisplayProperty: Boolean = false // New: Marks this as the one to show in lists
+    val isDisplayProperty: Boolean = false
 )
 
 /**
@@ -20,7 +20,7 @@ data class SchemaProperty(
  * @param src The name of the source node schema (e.t., "Person").
  * @param dst The name of the destination node schema (e.g., "Location").
  */
-@Serializable // Also serializable for storing in SchemaDefinition properties
+@Serializable // For storing in SchemaDefinition properties
 data class ConnectionPair(
     val src: String,
     val dst: String

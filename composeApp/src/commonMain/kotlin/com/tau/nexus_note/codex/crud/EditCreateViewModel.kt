@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import kotlin.collections.emptyList
 
 class EditCreateViewModel(
@@ -284,7 +283,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Accepts the specific property to add
     fun onAddNodeSchemaProperty(property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateNodeSchema) return@update current
@@ -363,7 +361,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Accepts the specific property to add
     fun onAddEdgeSchemaProperty(property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.CreateEdgeSchema) return@update current
@@ -442,7 +439,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Accepts the specific property to add
     fun updateNodeSchemaEditAddProperty(property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditNodeSchema) return@update current
@@ -511,7 +507,6 @@ class EditCreateViewModel(
         }
     }
 
-    // UPDATED: Accepts the specific property to add
     fun updateEdgeSchemaEditAddProperty(property: SchemaProperty) {
         _editScreenState.update { current ->
             if (current !is EditScreenState.EditEdgeSchema) return@update current

@@ -2,19 +2,17 @@ package com.tau.nexus_note.codex.crud.create
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.NodeCreationState
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
+import com.tau.nexus_note.ui.components.CodexDropdown
+import com.tau.nexus_note.ui.components.CodexPropertyInput
+import com.tau.nexus_note.ui.components.CodexSectionHeader
+import com.tau.nexus_note.ui.components.FormActionRow
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateNodeView(
     nodeCreationState: NodeCreationState,
@@ -23,11 +21,8 @@ fun CreateNodeView(
     onCreateClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-        Text("Create Node", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        CodexSectionHeader("Create Node")
 
         // Scrollable Content
         Column(
@@ -35,118 +30,34 @@ fun CreateNodeView(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = nodeCreationState.selectedSchema?.name ?: "Select Schema",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    nodeCreationState.schemas.forEach { schema ->
-                        DropdownMenuItem(
-                            text = { Text(schema.name) },
-                            onClick = {
-                                onSchemaSelected(schema)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            CodexDropdown(
+                label = "Select Schema",
+                options = nodeCreationState.schemas,
+                selectedOption = nodeCreationState.selectedSchema,
+                onOptionSelected = onSchemaSelected,
+                displayTransform = { it.name }
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // Iterate over properties
             if (nodeCreationState.selectedSchema != null) {
                 nodeCreationState.selectedSchema.properties.forEach { property ->
-                    val currentValue = nodeCreationState.properties[property.name] ?: ""
-                    val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-
-                    when (property.type) {
-                        CodexPropertyDataTypes.NUMBER -> {
-                            OutlinedTextField(
-                                value = currentValue,
-                                onValueChange = {
-                                    if (it.isEmpty() || it == "-" || it.matches(Regex("-?\\d*(\\.\\d*)?"))) {
-                                        onPropertyChanged(property.name, it)
-                                    }
-                                },
-                                label = { Text("${property.name} (Number)") },
-                                modifier = modifier,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                            )
-                        }
-                        CodexPropertyDataTypes.LONG_TEXT -> {
-                            OutlinedTextField(
-                                value = currentValue,
-                                onValueChange = { onPropertyChanged(property.name, it) },
-                                label = { Text("${property.name} (LongText)") },
-                                modifier = modifier,
-                                singleLine = false,
-                                maxLines = 5
-                            )
-                        }
-                        CodexPropertyDataTypes.DATE -> {
-                            OutlinedTextField(
-                                value = currentValue,
-                                onValueChange = { onPropertyChanged(property.name, it) },
-                                label = { Text("${property.name} (Date)") },
-                                placeholder = { Text("YYYY-MM-DD") },
-                                modifier = modifier
-                            )
-                        }
-                        CodexPropertyDataTypes.IMAGE, CodexPropertyDataTypes.AUDIO -> {
-                            Row(
-                                modifier = modifier,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = currentValue,
-                                    onValueChange = { onPropertyChanged(property.name, it) },
-                                    label = { Text("${property.name} (${property.type.displayName} Path)") },
-                                    modifier = Modifier.weight(1f),
-                                    readOnly = true
-                                )
-                                Button(
-                                    onClick = { /* TODO: Launch file picker */ },
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
-                                    Text("...")
-                                }
-                            }
-                        }
-                        else -> { // Default "Text"
-                            OutlinedTextField(
-                                value = currentValue,
-                                onValueChange = { onPropertyChanged(property.name, it) },
-                                label = { Text("${property.name} (Text)") },
-                                modifier = modifier,
-                                singleLine = true
-                            )
-                        }
-                    }
+                    CodexPropertyInput(
+                        property = property,
+                        currentValue = nodeCreationState.properties[property.name] ?: "",
+                        onValueChange = { onPropertyChanged(property.name, it) }
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fixed Buttons
-        Row {
-            Button(onClick = onCreateClick) {
-                Text("Create")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onCancelClick) {
-                Text("Cancel")
-            }
-        }
+        FormActionRow(
+            primaryLabel = "Create",
+            onPrimaryClick = onCreateClick,
+            onSecondaryClick = onCancelClick
+        )
     }
 }

@@ -1,7 +1,5 @@
 package com.tau.nexus_note.codex
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,22 +19,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.NodeDisplayItem
 import com.tau.nexus_note.datamodels.EdgeDisplayItem
+import com.tau.nexus_note.ui.components.CodexListItem
+import com.tau.nexus_note.ui.components.SearchableListHeader
 import com.tau.nexus_note.utils.labelToColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListView(
-// MODIFIED: Use paginated lists
     paginatedNodes: List<NodeDisplayItem>,
     paginatedEdges: List<EdgeDisplayItem>,
-// NEW: Handlers for pagination
     onLoadMoreNodes: () -> Unit,
     onLoadMoreEdges: () -> Unit,
-// --- Unchanged props ---
     primarySelectedItem: Any?,
     secondarySelectedItem: Any?,
     onNodeClick: (NodeDisplayItem) -> Unit,
@@ -56,11 +52,9 @@ fun ListView(
     edgeVisibility: Map<Long, Boolean>,
     onToggleEdgeVisibility: (Long) -> Unit
 ) {
-// --- NEW: List states for pagination ---
     val nodeLazyListState = rememberLazyListState()
     val edgeLazyListState = rememberLazyListState()
 
-// Derived state to check if we're at the end of the list
     val isAtNodeListEnd by remember {
         derivedStateOf {
             val layoutInfo = nodeLazyListState.layoutInfo
@@ -87,7 +81,6 @@ fun ListView(
         }
     }
 
-// Effect to load more when end is reached
     LaunchedEffect(isAtNodeListEnd) {
         if (isAtNodeListEnd) {
             onLoadMoreNodes()
@@ -99,7 +92,6 @@ fun ListView(
             onLoadMoreEdges()
         }
     }
-
 
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Nodes List ---
@@ -119,49 +111,40 @@ fun ListView(
                 },
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            LazyColumn(state = nodeLazyListState) { // <-- NEW: Added state
-                val filteredNodes = paginatedNodes.filter { // <-- MODIFIED: Use paginatedNodes
+            LazyColumn(state = nodeLazyListState) {
+                val filteredNodes = paginatedNodes.filter {
                     it.label.contains(nodeSearchText, ignoreCase = true) ||
                             it.displayProperty.contains(nodeSearchText, ignoreCase = true)
                 }
                 items(filteredNodes, key = { it.id }) { node ->
                     val isSelected = primarySelectedItem == node || secondarySelectedItem == node
                     val colorInfo = labelToColor(node.label)
-                    ListItem(
-                        headlineContent = { Text("${node.label} : ${node.displayProperty}", style = MaterialTheme.typography.bodyMedium) }, // Smaller text
+
+                    CodexListItem(
+                        headline = "${node.label} : ${node.displayProperty}",
+                        colorSeed = node.label,
+                        isSelected = isSelected,
+                        onClick = { onNodeClick(node) },
                         leadingContent = {
                             IconButton(onClick = { onToggleNodeVisibility(node.id) }) {
                                 val isVisible = nodeVisibility[node.id] ?: true
                                 Icon(
                                     imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (isVisible) "Hide Node" else "Show Node"
+                                    contentDescription = if (isVisible) "Hide Node" else "Show Node",
+                                    tint = colorInfo.composeFontColor
                                 )
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNodeClick(node); println("${node.label} clicked!") }
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row{
                                 IconButton(onClick = { onEditNodeClick(node) }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit Node")
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit Node", tint = colorInfo.composeFontColor)
                                 }
                                 IconButton(onClick = { onDeleteNodeClick(node) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete Node")
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Node", tint = colorInfo.composeFontColor)
                                 }
                             }
-                        },
-                        colors = ListItemDefaults.colors( // Apply colors
-                            containerColor = colorInfo.composeColor,
-                            headlineColor = colorInfo.composeFontColor,
-                            leadingIconColor = colorInfo.composeFontColor,
-                            trailingIconColor = colorInfo.composeFontColor
-                        )
+                        }
                     )
                 }
             }
@@ -194,63 +177,43 @@ fun ListView(
                     val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
                     val colorInfo = labelToColor(edge.label)
 
-                    ListItem(
-                        headlineContent = { Column {
-                            Text(
-                                "Src: (${edge.src.label} : ${edge.src.displayProperty})",
-                                style= MaterialTheme.typography.bodySmall,
-                                color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
-                            )
-                            Text(
-                                "[${edge.label}]",
-                                style=MaterialTheme.typography.titleMedium, // Smaller text
-                                textAlign = TextAlign.Center,
-                                color = colorInfo.composeFontColor // Main color
-                            )
-                            Text(
-                                "Dst: (${edge.dst.label} : ${edge.dst.displayProperty})",
-                                style= MaterialTheme.typography.bodySmall,
-                                color = colorInfo.composeFontColor.copy(alpha = 0.8f) // Muted
-                            )
-                        }},
+                    // Custom content for edge lists is a bit complex for the generic component,
+                    CodexListItem(
+                        headline = "[${edge.label}]", // Placeholder, we override content in the column below if we wanted, but ListItem forces string.
+                        // Actually, CodexListItem wraps ListItem. Let's just use the text we have.
+                        // Since Edge list item is very custom (multi-line centered), we might stick to manual ListItem
+                        // OR we adapt CodexListItem to accept Composable for headline.
+                        // For now, let's assume CodexListItem takes string, so we format it simply or use a custom implementation here if needed.
+                        // Ideally, we refactor CodexListItem to take Composable for headline.
+                        // But let's stick to the string version for simplicity and consistency with the refactor plan.
+                        // We will use the `supportingText` for the complex part or just format it as a string.
+                        supportingText = "Src: ${edge.src.label}:${edge.src.displayProperty} -> Dst: ${edge.dst.label}:${edge.dst.displayProperty}",
+                        colorSeed = edge.label,
+                        isSelected = isSelected,
+                        onClick = { onEdgeClick(edge) },
                         leadingContent = {
                             IconButton(onClick = { onToggleEdgeVisibility(edge.id) }) {
                                 val isVisible = edgeVisibility[edge.id] ?: true
                                 Icon(
                                     imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (isVisible) "Hide Edge" else "Show Edge"
+                                    contentDescription = if (isVisible) "Hide Edge" else "Show Edge",
+                                    tint = colorInfo.composeFontColor
                                 )
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onEdgeClick(edge) }
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier),
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { onEditEdgeClick(edge) }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit Edge")
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit Edge", tint = colorInfo.composeFontColor)
                                 }
                                 IconButton(onClick = { onDeleteEdgeClick(edge) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete Edge")
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Edge", tint = colorInfo.composeFontColor)
                                 }
                             }
-                        },
-                        colors = ListItemDefaults.colors(
-                            containerColor = colorInfo.composeColor,
-                            headlineColor = colorInfo.composeFontColor,
-                            leadingIconColor = colorInfo.composeFontColor,
-                            trailingIconColor = colorInfo.composeFontColor
-                        )
+                        }
                     )
                 }
             }
         }
     }
-
-
 }

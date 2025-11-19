@@ -16,6 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.tau.nexus_note.datamodels.CodexPropertyDataTypes
 import com.tau.nexus_note.datamodels.EdgeSchemaEditState
 import com.tau.nexus_note.datamodels.SchemaProperty
+import com.tau.nexus_note.ui.components.CodexDropdown
+import com.tau.nexus_note.ui.components.CodexSectionHeader
+import com.tau.nexus_note.ui.components.FormActionRow
 import com.tau.nexus_note.utils.toCamelCase
 import com.tau.nexus_note.utils.toScreamingSnakeCase
 
@@ -34,19 +37,15 @@ fun EditEdgeSchemaView(
 ) {
     // --- Local state for the "Add Connection" UI ---
     var newSrcTable by remember { mutableStateOf<String?>(null) }
-    var newSrcExpanded by remember { mutableStateOf(false) }
     var newDstTable by remember { mutableStateOf<String?>(null) }
-    var newDstExpanded by remember { mutableStateOf(false) }
 
     // --- Local state for the "Add Property" UI ---
     var newPropName by remember { mutableStateOf("") }
     var newPropType by remember { mutableStateOf(CodexPropertyDataTypes.TEXT) }
-    var typeExpanded by remember { mutableStateOf(false) }
 
     // Outer Column fills the screen
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-        Text("Edit Edge Schema", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        CodexSectionHeader("Edit Edge Schema")
 
         // Scrollable Content Area (Takes up remaining space)
         Column(
@@ -69,61 +68,25 @@ fun EditEdgeSchemaView(
             Text("Connection Pairs", style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 // Source Table Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = newSrcExpanded,
-                    onExpandedChange = { newSrcExpanded = !newSrcExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = newSrcTable ?: "From...",
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newSrcExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                Box(modifier = Modifier.weight(1f)) {
+                    CodexDropdown(
+                        label = "From...",
+                        options = state.allNodeSchemas,
+                        selectedOption = state.allNodeSchemas.find { it.name == newSrcTable },
+                        onOptionSelected = { newSrcTable = it.name },
+                        displayTransform = { it.name }
                     )
-                    ExposedDropdownMenu(
-                        expanded = newSrcExpanded,
-                        onDismissRequest = { newSrcExpanded = false }
-                    ) {
-                        state.allNodeSchemas.forEach { schema ->
-                            DropdownMenuItem(
-                                text = { Text(schema.name) },
-                                onClick = {
-                                    newSrcTable = schema.name
-                                    newSrcExpanded = false
-                                }
-                            )
-                        }
-                    }
                 }
                 Spacer(Modifier.width(8.dp))
                 // Destination Table Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = newDstExpanded,
-                    onExpandedChange = { newDstExpanded = !newDstExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = newDstTable ?: "To...",
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newDstExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                Box(modifier = Modifier.weight(1f)) {
+                    CodexDropdown(
+                        label = "To...",
+                        options = state.allNodeSchemas,
+                        selectedOption = state.allNodeSchemas.find { it.name == newDstTable },
+                        onOptionSelected = { newDstTable = it.name },
+                        displayTransform = { it.name }
                     )
-                    ExposedDropdownMenu(
-                        expanded = newDstExpanded,
-                        onDismissRequest = { newDstExpanded = false }
-                    ) {
-                        state.allNodeSchemas.forEach { schema ->
-                            DropdownMenuItem(
-                                text = { Text(schema.name) },
-                                onClick = {
-                                    newDstTable = schema.name
-                                    newDstExpanded = false
-                                }
-                            )
-                        }
-                    }
                 }
                 Spacer(Modifier.width(8.dp))
                 // Add Button
@@ -197,33 +160,14 @@ fun EditEdgeSchemaView(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Property Type
-                ExposedDropdownMenuBox(
-                    expanded = typeExpanded,
-                    onExpandedChange = { typeExpanded = !typeExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = newPropType.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
-                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).fillMaxWidth()
+                Box(modifier = Modifier.weight(1f)) {
+                    CodexDropdown(
+                        label = "Type",
+                        options = CodexPropertyDataTypes.entries,
+                        selectedOption = newPropType,
+                        onOptionSelected = { newPropType = it },
+                        displayTransform = { it.displayName }
                     )
-                    ExposedDropdownMenu(
-                        expanded = typeExpanded,
-                        onDismissRequest = { typeExpanded = false }
-                    ) {
-                        CodexPropertyDataTypes.entries.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.displayName) },
-                                onClick = {
-                                    newPropType = type
-                                    typeExpanded = false
-                                }
-                            )
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -252,7 +196,6 @@ fun EditEdgeSchemaView(
             // List of properties (Using Column loop)
             Column {
                 state.properties.forEachIndexed { index, property ->
-                    var expanded by remember { mutableStateOf(false) }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 4.dp)
@@ -269,31 +212,14 @@ fun EditEdgeSchemaView(
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = !expanded }
-                        ) {
-                            OutlinedTextField(
-                                value = property.type.displayName,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable).width(120.dp),
+                        Box(modifier = Modifier.width(140.dp)) {
+                            CodexDropdown(
+                                label = "Type",
+                                options = CodexPropertyDataTypes.entries,
+                                selectedOption = property.type,
+                                onOptionSelected = { onPropertyChange(index, property.copy(type = it)) },
+                                displayTransform = { it.displayName }
                             )
-                            ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                CodexPropertyDataTypes.entries.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = { Text(type.displayName) },
-                                        onClick = {
-                                            onPropertyChange(index, property.copy(type = type))
-                                            expanded = false
-                                        },
-                                    )
-                                }
-                            }
                         }
                         // Display checkbox removed for Edges
                         IconButton(onClick = { onRemoveProperty(index) }) {
@@ -314,17 +240,11 @@ fun EditEdgeSchemaView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- Actions (Fixed at Bottom) ---
-        Row {
-            Button(
-                onClick = onSave,
-                enabled = state.currentName.isNotBlank() && state.connections.isNotEmpty() && state.currentNameError == null && state.propertyErrors.isEmpty()
-            ) {
-                Text("Save")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = onCancel) {
-                Text("Cancel")
-            }
-        }
+        FormActionRow(
+            primaryLabel = "Save",
+            onPrimaryClick = onSave,
+            primaryEnabled = state.currentName.isNotBlank() && state.connections.isNotEmpty() && state.currentNameError == null && state.propertyErrors.isEmpty(),
+            onSecondaryClick = onCancel
+        )
     }
 }

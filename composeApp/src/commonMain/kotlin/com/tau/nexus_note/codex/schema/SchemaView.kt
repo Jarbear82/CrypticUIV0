@@ -4,16 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -33,13 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.tau.nexus_note.codex.SearchableListHeader
-import com.tau.nexus_note.codex.schema.SchemaData
+import com.tau.nexus_note.ui.components.SearchableListHeader
 import com.tau.nexus_note.datamodels.ConnectionPair
 import com.tau.nexus_note.datamodels.SchemaDefinitionItem
-import com.tau.nexus_note.utils.labelToColor
 
 @Composable
 fun SchemaView(
@@ -95,14 +88,19 @@ fun SchemaView(
                 items(filteredNodeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
 
-                    SchemaListItem(
-                        item = table,
+                    // Using CodexListItem but customized to display property list in supporting text
+                    val propertiesText = table.properties.joinToString(separator = "\n") { prop ->
+                        val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
+                        "  - ${prop.name}: ${prop.type}$suffix"
+                    }
+
+                    CodexListItem(
+                        headline = table.name,
+                        supportingText = propertiesText,
+                        colorSeed = table.name,
                         isSelected = isSelected,
                         onClick = { onNodeClick(table) },
-                        modifier = Modifier.padding(top = 4.dp, bottom = 0.dp, start = 10.dp, end = 10.dp),
-                        content = { fontColor ->
-                            NodeSchemaContent(table = table, fontColor = fontColor)
-                        },
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
                         actions = { fontColor ->
                             NodeSchemaActions(
                                 table = table,
@@ -145,18 +143,18 @@ fun SchemaView(
                 items(filteredEdgeSchemas, key = { it.id }) { table ->
                     val isSelected = primarySelectedItem == table
 
-                    SchemaListItem(
-                        item = table,
+                    // Constructing connections text
+                    val connectionText = (table.connections ?: emptyList()).joinToString("\n") {
+                        "(${it.src}) -> (${it.dst})"
+                    }
+
+                    CodexListItem(
+                        headline = table.name,
+                        supportingText = connectionText.ifBlank { "No connections" },
+                        colorSeed = table.name,
                         isSelected = isSelected,
                         onClick = { onEdgeClick(table) },
-                        modifier = Modifier.padding(top = 4.dp, bottom = 0.dp, start = 10.dp, end = 10.dp),
-                        content = { fontColor ->
-                            EdgeSchemaContent(
-                                table = table,
-                                fontColor = fontColor,
-                                onAddEdgeClick = onAddEdgeClick
-                            )
-                        },
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
                         actions = { fontColor ->
                             EdgeSchemaActions(
                                 table = table,
@@ -164,7 +162,8 @@ fun SchemaView(
                                 schemaVisibility = schemaVisibility,
                                 onToggleSchemaVisibility = onToggleSchemaVisibility,
                                 onEditEdgeClick = onEditEdgeClick,
-                                onDeleteEdgeClick = onDeleteEdgeClick
+                                onDeleteEdgeClick = onDeleteEdgeClick,
+                                onAddEdgeClick = onAddEdgeClick // Passed to use in actions row if needed, or custom logic
                             )
                         }
                     )
@@ -174,23 +173,25 @@ fun SchemaView(
     }
 }
 
-/**
- * A reusable composable that provides the common frame (background, border, title, dividers)
- * for a schema list item, accepting unique content and actions via slots.
- */
+// Extended CodexListItem to support bottom actions row (custom expansion of the component for SchemaView)
 @Composable
-private fun SchemaListItem(
-    item: SchemaDefinitionItem,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+private fun CodexListItem(
+    headline: String,
     modifier: Modifier = Modifier,
-    content: @Composable (fontColor: Color) -> Unit,
+    supportingText: String? = null,
+    colorSeed: String = headline,
+    isSelected: Boolean = false,
+    onClick: () -> Unit,
     actions: @Composable (fontColor: Color) -> Unit
 ) {
-    val colorInfo = labelToColor(item.name)
+    // Reuse the base component but wrap it or re-implement slightly to allow bottom actions row
+    // Since CodexListItem is a wrapper around ListItem, we can't easily inject a bottom row *inside* ListItem.
+    // So we create a composite here similar to the original SchemaListItem but using our style utils.
+
+    val colorInfo = com.tau.nexus_note.utils.labelToColor(colorSeed)
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .background(colorInfo.composeColor)
@@ -198,52 +199,36 @@ private fun SchemaListItem(
                 width = if (isSelected) 2.dp else 1.dp,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
-            .then(modifier) // Apply caller-specific padding
     ) {
         // Title
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-            content = {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colorInfo.composeFontColor,
-                )
-            }
-        )
-        // Using outline is more semantically correct for a divider
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleLarge,
+                color = colorInfo.composeFontColor,
+            )
+        }
         HorizontalDivider(color = colorInfo.composeFontColor)
 
-        // Unique Content Slot
-        content(colorInfo.composeFontColor)
+        if (supportingText != null) {
+            Text(
+                text = supportingText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorInfo.composeFontColor,
+                modifier = Modifier.padding(8.dp)
+            )
+        }
 
-        // Using outline is more semantically correct for a divider
         HorizontalDivider(color = colorInfo.composeFontColor)
 
-        // Unique Actions Slot
+        // Actions
         actions(colorInfo.composeFontColor)
     }
 }
 
-/**
- * Displays the specific content for a Node Schema (its properties).
- */
-@Composable
-private fun NodeSchemaContent(table: SchemaDefinitionItem, fontColor: Color) {
-    Text(
-        text = table.properties.joinToString(separator = "\n") { prop ->
-            val suffix = if (prop.isDisplayProperty) ": (Display)" else ""
-            "  - ${prop.name}: ${prop.type}$suffix"
-        },
-        style = MaterialTheme.typography.bodyLarge,
-        color = fontColor
-    )
-}
-
-/**
- * Displays the specific action buttons for a Node Schema.
- */
 @Composable
 private fun NodeSchemaActions(
     table: SchemaDefinitionItem,
@@ -290,43 +275,6 @@ private fun NodeSchemaActions(
     }
 }
 
-/**
- * Displays the specific content for an Edge Schema (its connection pairs).
- */
-@Composable
-private fun EdgeSchemaContent(
-    table: SchemaDefinitionItem,
-    fontColor: Color,
-    onAddEdgeClick: (SchemaDefinitionItem, ConnectionPair) -> Unit
-) {
-    Column {
-        (table.connections ?: emptyList()).forEach {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "(${it.src}) -> (${it.dst})",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = fontColor
-                )
-                IconButton(
-                    onClick = { onAddEdgeClick(table, it) },
-                    modifier = Modifier.wrapContentHeight()
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "New Edge",
-                        tint = fontColor
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Displays the specific action buttons for an Edge Schema.
- */
 @Composable
 private fun EdgeSchemaActions(
     table: SchemaDefinitionItem,
@@ -334,34 +282,47 @@ private fun EdgeSchemaActions(
     schemaVisibility: Map<Long, Boolean>,
     onToggleSchemaVisibility: (Long) -> Unit,
     onEditEdgeClick: (SchemaDefinitionItem) -> Unit,
-    onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit
+    onDeleteEdgeClick: (SchemaDefinitionItem) -> Unit,
+    onAddEdgeClick: (SchemaDefinitionItem, ConnectionPair) -> Unit
 ) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        itemVerticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
-            val isVisible = schemaVisibility[table.id] ?: true
-            Icon(
-                imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
-                tint = fontColor
-            )
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        // Quick add buttons for connections
+        (table.connections ?: emptyList()).forEach { conn ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Add ${conn.src}->${conn.dst}", style=MaterialTheme.typography.bodySmall, color=fontColor)
+                IconButton(onClick = { onAddEdgeClick(table, conn) }) {
+                    Icon(Icons.Default.Add, "Add Edge", tint = fontColor)
+                }
+            }
         }
-        IconButton(onClick = { onEditEdgeClick(table) }) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Edit Edge Schema",
-                tint = fontColor
-            )
-        }
-        IconButton(onClick = { onDeleteEdgeClick(table) }) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete Edge Schema",
-                tint = fontColor
-            )
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            itemVerticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            IconButton(onClick = { onToggleSchemaVisibility(table.id) }) {
+                val isVisible = schemaVisibility[table.id] ?: true
+                Icon(
+                    imageVector = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (isVisible) "Hide Schema" else "Show Schema",
+                    tint = fontColor
+                )
+            }
+            IconButton(onClick = { onEditEdgeClick(table) }) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit Edge Schema",
+                    tint = fontColor
+                )
+            }
+            IconButton(onClick = { onDeleteEdgeClick(table) }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete Edge Schema",
+                    tint = fontColor
+                )
+            }
         }
     }
 }
