@@ -52,6 +52,7 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
@@ -147,7 +148,9 @@ fun GraphView(
                 viewModel.onResize(it)
             }
     ) {
+        // --- UPDATED: Explicitly use FontFamily.Monospace ---
         val edgeLabelStyle = TextStyle(
+            fontFamily = FontFamily.Monospace,
             fontSize = (10.sp.value / transform.zoom.coerceAtLeast(0.1f)).coerceIn(8.sp.value, 14.sp.value).sp,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -505,7 +508,13 @@ private fun DrawScope.drawNodes(
     val minSize = 8.sp
     val maxSize = 14.sp
     val fontSize = ((12.sp.value / zoom.coerceAtLeast(0.1f)).coerceIn(minSize.value, maxSize.value)).sp
-    val style = TextStyle(fontSize = fontSize, color = labelColor)
+
+    // --- UPDATED: Explicitly use FontFamily.Monospace ---
+    val style = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = fontSize,
+        color = labelColor
+    )
 
     val primaryId = primarySelectedId
     val secondaryId = secondarySelectedId
