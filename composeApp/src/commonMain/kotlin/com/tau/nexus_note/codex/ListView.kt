@@ -177,16 +177,8 @@ fun ListView(
                     val isSelected = primarySelectedItem == edge.src && secondarySelectedItem == edge.dst
                     val colorInfo = labelToColor(edge.label)
 
-                    // Custom content for edge lists is a bit complex for the generic component,
                     CodexListItem(
-                        headline = "[${edge.label}]", // Placeholder, we override content in the column below if we wanted, but ListItem forces string.
-                        // Actually, CodexListItem wraps ListItem. Let's just use the text we have.
-                        // Since Edge list item is very custom (multi-line centered), we might stick to manual ListItem
-                        // OR we adapt CodexListItem to accept Composable for headline.
-                        // For now, let's assume CodexListItem takes string, so we format it simply or use a custom implementation here if needed.
-                        // Ideally, we refactor CodexListItem to take Composable for headline.
-                        // But let's stick to the string version for simplicity and consistency with the refactor plan.
-                        // We will use the `supportingText` for the complex part or just format it as a string.
+                        headline = "[${edge.label}]",
                         supportingText = "Src: ${edge.src.label}:${edge.src.displayProperty} -> Dst: ${edge.dst.label}:${edge.dst.displayProperty}",
                         colorSeed = edge.label,
                         isSelected = isSelected,
